@@ -1,9 +1,32 @@
-[functions]
-  node_bundler = "esbuild"
+[build]
+  publish = "."
+  command = ""
+  functions = "netlify/functions"
 
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
+# Netlify Identity (Login/Signup)
+[[redirects]]
+  from = "/.netlify/identity"
+  to = "/.netlify/identity"
+  status = 200
+  force = true
+
+# ---- BLOBS Stores ----
+[[blobs]]
+  name = "entries"
+  retention = "manual"
+
+[[blobs]]
+  name = "images"
+  retention = "manual"
+
+# ---- Security Headers ----
 [[headers]]
-  for = "/.netlify/functions/*"
+  for = "/*"
   [headers.values]
-  Access-Control-Allow-Origin = "*"
-  Access-Control-Allow-Methods = "GET,POST,PATCH,OPTIONS"
-  Access-Control-Allow-Headers = "Content-Type, Authorization"
+    Access-Control-Allow-Origin = "*"
+    Content-Security-Policy = "default-src 'self' https://*.netlify.app; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.netlify.app; connect-src 'self' https://*.netlify.app https://api.netlify.com"
