@@ -1,3 +1,4 @@
+// netlify/functions/entries-list.js
 import { getStore } from "@netlify/blobs";
 
 export default async (req, context) => {
@@ -10,14 +11,22 @@ export default async (req, context) => {
   }
 
   const store = getStore("entries");
-  const { keys } = await store.list();
+
+  // v6: list() liefert { blobs: [{ key, size, uploadedAt, ... }], directories: [] }
+  const { blobs } = await store.list();
   const out = [];
-  for (const k of keys) {
-    const item = await store.getJSON(k);
+  for (const b of blobs) {
+    const item = await store.getJSON(b.key);
     if (item && item.status === status) out.push(item);
   }
-  out.sort((a,b) => (b.createdAt||"").localeCompare(a.createdAt||""));
+
+  // Neueste zuerst
+  out.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
   return json(200, out);
 };
 
-const json = (s, b) => new Response(JSON.stringify(b), { status: s, headers: { "content-type":"application/json", "Access-Control-Allow-Origin":"*" }});
+const json = (s, b) =>
+  new Response(JSON.stringify(b), {
+    status: s,
+    headers: { "content-type": "application/json", "Access-Control-Allow-Origin": "*" },
+  });
