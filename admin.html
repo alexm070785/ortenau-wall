@@ -136,5 +136,22 @@
       window.addEventListener('unhandledrejection', (ev)=> log('Promise Error:', ev.reason));
     });
   </script>
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+<script>
+  if (window.netlifyIdentity) {
+    // Wenn Token im Link steckt, öffne direkt das Passwort-Reset-Fenster
+    window.netlifyIdentity.on("init", user => {
+      if (!user && window.location.hash.includes("recovery_token")) {
+        window.netlifyIdentity.open();
+      }
+    });
+
+    // Nach Login weiterleiten ins Admin
+    window.netlifyIdentity.on("login", () => {
+      document.location.href = "/admin.html";
+    });
+  }
+</script>
+
 </body>
 </html>
