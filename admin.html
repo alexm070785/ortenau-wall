@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Admin Diagnose – Ortenau-Wall</title>
+  <style>
+    body{margin:0;font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial}
+    .wrap{max-width:900px;margin:20px auto;padding:0 14px}
+    .card{border:1px solid #e5e7eb;border-radius:12px;background:#fff;box-shadow:0 6px 20px rgba(0,0,0,.06)}
+    .hdr{padding:12px 14px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between}
+    .body{padding:14px}
+    .btn{appearance:none;border:1px solid #e5e7eb;background:#fff;padding:8px 12px;border-radius:10px;cursor:pointer}
+    .btn:hover{box-shadow:0 2px 8px rgba(0,0,0,.06)}
+    .row{display:flex;gap:8px;flex-wrap:wrap}
+    .badge{display:inline-block;padding:4px 8px;border-radius:999px;border:1px solid #e5e7eb;background:#f9fafb;font-size:12px}
+    #status{font-weight:600}
+    pre{background:#0b1021;color:#eaeefc;padding:10px;border-radius:10px;overflow:auto;max-height:220px}
+    .warn{color:#a16207}
+    .ok{color:#15803d}
+    #overlayHint{position:fixed;right:10px;bottom:10px;background:#111827;color:#fff;padding:8px 10px;border-radius:10px;opacity:.9;font-size:12px;z-index:999999}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="hdr">
+        <div>Admin Diagnose</div>
+        <div>
+          <span class="badge">User: <span id="who">unbekannt</span></span>
+          <span class="badge">JS: <span id="jsok" class="warn">lädt…</span></span>
+          <span class="badge">Identity: <span id="idok" class="warn">lädt…</span></span>
+        </div>
+      </div>
+      <div class="body">
+        <p id="status">Status: Initialisiere…</p>
+
+        <h3>1) Klick-Test</h3>
+        <div class="row">
+          <!-- inline onclick test -->
+          <button class="btn" onclick="alert('INLINE-CLICK OK')">Inline-Button</button>
+
+          <!-- addEventListener test -->
+          <button class="btn" id="btnJS">JS-Button</button>
+
+          <!-- delegated event test -->
+          <div id="delegateBox" style="display:inline-block">
+            <button class="btn" data-act="delegated">Delegierter Button</button>
+          </div>
+        </div>
+
+        <h3>2) Login / Identity</h3>
+        <div class="row">
+          <button class="btn" id="btnLogin">🔐 Login öffnen</button>
+          <button class="btn" id="btnLogout">🚪 Logout</button>
+          <button class="btn" id="btnUser">👤 User anzeigen</button>
+          <button class="btn" id="btnLoadPending">📥 Pending laden (API)</button>
+        </div>
+
+        <h3>Konsole & Log</h3>
+        <pre id="log">Log startet…</pre>
+      </div>
+    </div>
+  </div>
+
+  <div id="overlayHint" style="display:none">Overlay blockiert Klicks!</div>
+
+  <!-- Netlify Identity (Widget zuerst laden!) -->
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script>
+    // ===== kleine Utils =====
+    const $ = sel => document.querySelector(sel);
+    const log = (...args)=>{ const t=$('#log'); t.textContent += "\\n" + args.map(a=>typeof a==='object'?JSON.stringify(a,null,2):a).join(' '); t.scrollTop=t.scrollHeight; console.log(...args); };
+    const set = (sel, txt, cls)=>{ const n=$(sel); if(!n) return; n.textContent = txt; if(cls){ n.className=''; n.classList.add(cls); } };
+
+    // ===== JS bereit =====
+    document.addEventListener('DOMContentLoaded', ()=>{
+      set('#jsok','OK','ok');
+      set('#status','JS geladen. Warte auf Identity…','ok');
+
+      // Klick-Tests
+      $('#btnJS').addEventListener('click', ()=> alert('ADD-EVENT-CLICK OK'));
+      $('#delegateBox').addEventListener('click', (e)=>{
+        if(e.target && e.target.dataset.act==='delegated') alert('DELEGATED-CLICK OK');
+      });
+
+      // Overlay-Detector: wenn oberstes Element bei Mauszeiger > body und pointer-events aktiv → Hinweis
+      document.addEventListener('mousemove', (e)=>{
+        const el = document.elementFromPoint(e.clientX, e.clientY);
+        if(!el) return;
+        const isOverlay = getComputedStyle(el).position === 'fixed' && getComputedStyle(el).pointerEvents !== 'none' && el.id !== 'overlayHint';
+        $('#overlayHint').style.display = isOverlay ? 'block' : 'none';
+      });
+
+      // Identity Init
+      try{
+        netlifyIdentity.on('init', user=>{
+          set('#idok','OK','ok');
+          $('#who').textContent = user ? (user.user_metadata?.full_name || user.email) : 'nicht eingeloggt';
+          set('#status', user ? 'Eingeloggt' : 'Nicht eingeloggt', user ? 'ok':'warn');
+        });
+        netlifyIdentity.on('login', user=>{
+          log('Login OK', user?.email||'');
+          location.reload();
+        });
+        netlifyIdentity.on('logout', ()=>{
+          log('Logout OK');
+          location.reload();
+        });
+        netlifyIdentity.init();
+      }catch(err){
+        set('#idok','FEHLER','warn'); log('Identity Fehler:', err);
+      }
+
+      // Login/Logout Buttons
+      $('#btnLogin').addEventListener('click', ()=> netlifyIdentity.open('login'));
+      $('#btnLogout').addEventListener('click', ()=> netlifyIdentity.logout());
+      $('#btnUser').addEventListener('click', ()=> log('currentUser:', netlifyIdentity.currentUser()));
+
+      // Pending laden (API)
+      $('#btnLoadPending').addEventListener('click', async ()=>{
+        try{
+          const user = netlifyIdentity.currentUser();
+          const token = user && await user.jwt();
+          const res = await fetch('/.netlify/functions/entries-list?status=pending', {
+            headers: { Authorization: token ? 'Bearer ' + token : '' }
+          });
+          log('API status', res.status);
+          const data = await res.json().catch(()=> ({}));
+          log('API data', data);
+        }catch(e){ log('API Fehler', String(e)); }
+      });
+
+      // Globale Fehler abfangen
+      window.addEventListener('error', (ev)=> log('JS Error:', ev.message, ev.filename+':'+ev.lineno));
+      window.addEventListener('unhandledrejection', (ev)=> log('Promise Error:', ev.reason));
+    });
+  </script>
+</body>
+</html>
