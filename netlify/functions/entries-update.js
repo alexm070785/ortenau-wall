@@ -1,6 +1,6 @@
 import { getStore } from '@netlify/blobs';
 
-export const config = { path: '/entries-update' }; // >>> explizite Route
+export const config = { path: '/entries-update' }; // Plus Redirect
 
 const json = (b, init = {}) =>
   new Response(JSON.stringify(b), {
@@ -8,7 +8,7 @@ const json = (b, init = {}) =>
     headers: { 'content-type': 'application/json', ...(init.headers || {}) },
   });
 
-// Bildpfade vereinheitlichen (alte Dateinamen -> Blob-URL)
+// Bildpfade vereinheitlichen
 function norm(u) {
   if (!u) return u;
   if (u.startsWith('http') || u.startsWith('/_blob/')) return u;
@@ -16,7 +16,6 @@ function norm(u) {
 }
 
 export default async (req, context) => {
-  // Admin-/Identity-Prüfung
   try {
     const { user } = context;
     if (!user) return json({ error: 'Unauthorized' }, { status: 401 });
@@ -42,7 +41,6 @@ export default async (req, context) => {
 
     const item = JSON.parse(raw);
 
-    // Aktionen
     if (body.action === 'approve') {
       item.status = 'approved';
       item.approvedAt = new Date().toISOString();
@@ -55,7 +53,6 @@ export default async (req, context) => {
       item.updatedAt = new Date().toISOString();
     }
 
-    // Bildpfade korrigieren
     if (item.thumbUrl) item.thumbUrl = norm(item.thumbUrl);
     if (Array.isArray(item.images)) item.images = item.images.map(norm);
 
