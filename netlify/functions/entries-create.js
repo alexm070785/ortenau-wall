@@ -1,23 +1,26 @@
 // netlify/functions/entries-create.js
 import { getStore } from '@netlify/blobs';
 
-const json = (b, init={}) => new Response(JSON.stringify(b), {
-  ...init, headers: { 'content-type': 'application/json', ...(init.headers||{}) }
-});
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET,POST,PATCH,OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
 
-export const config = { path: '/entries-create' }; // optional
+const json = (b, init = {}) =>
+  new Response(JSON.stringify(b), {
+    ...init,
+    headers: {
+      'content-type': 'application/json',
+      ...CORS,
+      ...(init.headers || {}),
+    },
+  });
 
 export default async (req) => {
   try {
     if (req.method === 'OPTIONS') {
-      return new Response(null, {
-        status: 204,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET,POST,PATCH,OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        }
-      });
+      return new Response(null, { status: 204, headers: CORS });
     }
 
     if (req.method !== 'POST') {
@@ -37,21 +40,28 @@ export default async (req) => {
         form.get('strasse') || '',
         form.get('hausnr') || '',
         form.get('plz') || '',
-        form.get('ort') || ''
-      ].filter(Boolean).join(' '),
+        form.get('ort') || '',
+      ]
+        .filter(Boolean)
+        .join(' '),
       menuText: form.get('menuText') || '',
       featured: false,
       images: [],
     };
 
-    // Bilder in "images"-Store speichern
+    // Bilder -> images-Store
     const imgStore = getStore('images');
     const files = form.getAll('menuImages') || [];
     for (const file of files) {
       if (!(file instanceof Blob)) continue;
-      const filename = `img_${Date.now()}_${Math.random().toString(36).slice(2)}.${(file.type.split('/')[1]||'jpg')}`;
+      const ext =
+        typeof file.type === 'string' && file.type.includes('/')
+          ? file.type.split('/')[1]
+          : 'jpg';
+      const filename = `img_${Date.now()}_${Math.random()
+        .toString(36)
+        .slice(2)}.${ext}`;
       await imgStore.set(filename, file);
-      // gleich korrekten Pfad merken
       entry.images.push(`/_blob/images/${filename}`);
     }
     if (entry.images.length) entry.thumbUrl = entry.images[0];
@@ -62,7 +72,6 @@ export default async (req) => {
     await entStore.set(id, JSON.stringify(entry));
 
     return json({ ok: true, id }, { status: 200 });
-
   } catch (e) {
     console.error('entries-create error', e);
     return json({ error: 'create_failed' }, { status: 500 });
