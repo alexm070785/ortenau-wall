@@ -11,262 +11,236 @@
     --shadowHover:0 6px 18px rgba(0,0,0,.12);
   }
   *{box-sizing:border-box}
-  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;background:var(--bg);color:var(--text)}
-  header{background:var(--accent);border-bottom:1px solid #b0b0b0;position:sticky;top:0;z-index:10}
-  .head{max-width:1200px;margin:0 auto;padding:10px 14px;display:flex;gap:10px;align-items:center;justify-content:space-between}
-  .btn{padding:8px 12px;border:1px solid #d0d0d0;border-radius:10px;background:#fff;cursor:pointer;box-shadow:var(--shadow)}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;background:var(--bg);color:var(--text);}
+  header{position:sticky;top:0;z-index:10;background:var(--accent);border-bottom:1px solid #b0b0b0}
+  .head{max-width:1160px;margin:0 auto;display:flex;gap:8px;align-items:center;justify-content:space-between;padding:12px 16px;}
+  .btn{padding:8px 12px;border-radius:10px;border:1px solid #d0d0d0;background:#fff;cursor:pointer;box-shadow:var(--shadow)}
   .btn:hover{box-shadow:var(--shadowHover)}
-  .btn.primary{background:#4f4f4f;border-color:#4f4f4f;color:#fff}
-  .tabs{display:flex;gap:8px}
-  main{max-width:1200px;margin:14px auto;padding:0 14px}
-  .card{background:#fff;border-radius:12px;box-shadow:var(--shadow);overflow:hidden}
+  .btn.primary{background:#4f4f4f;color:#fff;border-color:#4f4f4f}
+  .wrap{max-width:1160px;margin:16px auto;padding:0 16px}
+  .card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow)}
+  .toolbar{display:flex;gap:8px;align-items:center;justify-content:flex-start;padding:8px}
+  .pill{padding:7px 12px;border:1px solid #d0d0d0;border-radius:999px;background:#fff;cursor:pointer}
+  .pill.active{background:#e9e9e9;font-weight:700}
   table{width:100%;border-collapse:collapse}
-  th,td{padding:10px;border-bottom:1px solid #eee;text-align:left;font-size:.95rem;vertical-align:top}
-  thead{background:#fafafa}
+  th,td{border-bottom:1px solid #eee;padding:10px;text-align:left;font-size:.95rem}
+  th{background:#fafafa}
   .muted{color:var(--muted)}
-  .actions-row{display:flex;gap:8px}
-  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;background:#2d7a3e;color:#fff;border-radius:10px;padding:10px 14px;box-shadow:var(--shadow);opacity:0;transition:opacity .2s,transform .2s;pointer-events:none}
-  .toast.show{opacity:1;transform:translate(-50%,0)}
+  #toast{position:fixed;right:16px;bottom:56px;background:#2d7a3e;color:#fff;padding:12px 14px;border-radius:10px;box-shadow:var(--shadow);
+         opacity:0;transform:translateY(8px);transition:all .25s;z-index:9999}
 </style>
 </head>
 <body>
+
 <header>
   <div class="head">
-    <div style="display:flex;align-items:center;gap:10px;">
+    <div style="display:flex;gap:8px;align-items:center">
       <strong>Ortenau-Wall · Admin</strong>
-      <span id="userEmail" class="muted"></span>
+      <span class="muted" data-admin-email></span>
     </div>
-    <div style="display:flex;gap:8px;align-items:center;">
-      <div class="tabs">
-        <button id="btnPending"  class="btn">Pending</button>
-        <button id="btnApproved" class="btn">Approved</button>
-      </div>
-      <button id="btnReload" class="btn">🔄 Aktualisieren</button>
-      <button id="btnLogin"  class="btn">🔐 Login</button>
-      <button id="btnLogout" class="btn">🚪 Logout</button>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="pill" id="tabPending"  data-tab="pending">Pending</button>
+      <button class="pill" id="tabApproved" data-tab="approved">Approved</button>
+      <button class="btn" id="refreshBtn">🔄 Aktualisieren</button>
+      <button class="btn" id="loginBtn"  data-login>🔐 Login</button>
+      <button class="btn" id="logoutBtn" data-logout>🚪 Logout</button>
     </div>
   </div>
 </header>
 
-<main>
+<main class="wrap">
   <div class="card">
-    <table aria-label="Warteschlange">
-      <thead>
-        <tr>
-          <th>Bild</th>
-          <th>Name &amp; Adresse</th>
-          <th>Ort</th>
-          <th>Kat.</th>
-          <th>Eingereicht</th>
-          <th>Aktion</th>
-        </tr>
-      </thead>
-      <tbody id="rows">
-        <tr><td colspan="6" class="muted">Lade…</td></tr>
-      </tbody>
-    </table>
+    <div class="toolbar">
+      <span class="muted">Warteschlange</span>
+    </div>
+    <div style="overflow:auto">
+      <table aria-label="Einträge">
+        <thead>
+          <tr>
+            <th style="width:80px">Bild</th>
+            <th>Name &amp; Adresse</th>
+            <th>Ort</th>
+            <th>Kat.</th>
+            <th>Eingereicht</th>
+            <th style="width:220px">Aktion</th>
+          </tr>
+        </thead>
+        <tbody id="adminTableBody">
+          <tr><td colspan="6" class="muted" style="padding:14px 12px">Lade…</td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </main>
 
-<div id="toast" class="toast" role="status" aria-live="polite">–</div>
+<div id="toast" role="status" aria-live="polite"></div>
 
 <!-- Netlify Identity Widget -->
 <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 
 <script>
-/* ============================================================
-   1) Hilfsfunktionen (Toast, Token, UI)
-   ============================================================ */
-const $ = (sel, root=document)=>root.querySelector(sel);
-const rowsEl = $("#rows");
-const toastEl = $("#toast");
-let currentTab = 'pending'; // 'pending' | 'approved'
+/* =========================
+   Endpunkte (Functions-Pfad)
+   ========================= */
+const API_LIST   = (status) => `/.netlify/functions/entries-list?status=${encodeURIComponent(status)}&t=${Date.now()}`;
+const API_UPDATE = (id)     => `/.netlify/functions/entries-update?id=${encodeURIComponent(id)}&t=${Date.now()}`;
 
-function toast(msg, color){
-  toastEl.textContent = msg;
-  toastEl.style.background = color || '#2d7a3e';
-  toastEl.classList.add('show');
-  setTimeout(()=>toastEl.classList.remove('show'), 3000);
+/* =============
+   UI-Helferlein
+   ============= */
+function toast(msg, color = '#2d7a3e') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.background = color;
+  el.style.opacity = '1';
+  el.style.transform = 'translateY(0)';
+  clearTimeout(el._t);
+  el._t = setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translateY(8px)'; }, 3500);
+}
+function $(s, r=document){ return r.querySelector(s); }
+
+/* =========================
+   Netlify Identity / Token
+   ========================= */
+async function getAuthHeader() {
+  const id = window.netlifyIdentity;
+  if (!id) return null;
+  const user = id.currentUser();
+  if (!user) return null;
+  try { return { 'Authorization': `Bearer ${await user.jwt()}` }; }
+  catch { return null; }
+}
+function setEmailUI() {
+  const email = window.netlifyIdentity?.currentUser()?.email || '';
+  $('[data-admin-email]').textContent = email;
 }
 
-// Identity-Status in UI spiegeln
-async function refreshIdentityUI(){
-  const user = netlifyIdentity.currentUser();
-  $("#userEmail").textContent = user ? (user.email || user.user_metadata?.full_name || '') : '';
-  $("#btnLogin").style.display  = user ? 'none' : '';
-  $("#btnLogout").style.display = user ? '' : 'none';
+/* =======================================
+   Rendering der Tabellenzeilen
+   ======================================= */
+function renderRows(items) {
+  const body = $('#adminTableBody');
+  body.innerHTML = '';
+  if (!items?.length) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td colspan="6" style="padding:12px;color:#a33">${window._lastErrorMsg || 'Keine Einträge.'}</td>`;
+    window._lastErrorMsg = '';
+    body.appendChild(tr);
+    return;
+  }
+  for (const it of items) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${it.thumbUrl ? `<img src="${it.thumbUrl}" alt="" style="width:64px;height:40px;object-fit:cover;border-radius:6px">` : ''}</td>
+      <td><strong>${it.name || ''}</strong><br><span class="muted">${it.address || ''}</span></td>
+      <td>${it.city || ''}</td>
+      <td>${it.category || ''}</td>
+      <td>${it.createdAt ? new Date(it.createdAt).toLocaleString('de-DE') : ''}</td>
+      <td style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn" data-act="approve" data-id="${it.id}">Freigeben</button>
+        <button class="btn" data-act="reject"  data-id="${it.id}">Ablehnen</button>
+      </td>`;
+    body.appendChild(tr);
+  }
+  body.onclick = (e) => {
+    const btn = e.target.closest('button[data-act]');
+    if (!btn) return;
+    updateEntry(btn.dataset.id, btn.dataset.act);
+  };
 }
 
-// JWT holen (Authorization Header)
-async function authHeaders(){
-  const user = netlifyIdentity.currentUser();
-  if (!user) return {};
-  try{
-    const token = await user.jwt(); // Identity-JWT
-    return { 'Authorization': `Bearer ${token}` };
-  }catch{ return {}; }
-}
-
-/* ============================================================
-   2) Endpunkte – **immer absolut** (führen mit /)
-   ============================================================ */
-// A: „schöne“ Routen (wenn du die Redirects in netlify.toml aktiv hast)
-const API_LIST   = (status) => `/.netlify/functions/entries-list?status=${encodeURIComponent(status)}`;
-const API_UPDATE = (id)     => `/.netlify/functions/entries-update?id=${encodeURIComponent(id)}`;
-
-/*  // B: immer direkt Functions-Pfad (falls du keine Redirects nutzt)
-const API_LIST   = (status) => `/.netlify/functions/entries-list?status=${encodeURIComponent(status)}`;
-const API_UPDATE = (id)     => `/.netlify/functions/entries-update?id=${encodeURIComponent(id)}`;
-*/
-
-/* ============================================================
-   3) Laden & Rendern
-   ============================================================ */
-async function load(status = 'pending'){
+/* =========================
+   Laden (Pending/Approved)
+   ========================= */
+let currentTab = 'pending';
+async function load(status = 'pending') {
   currentTab = status;
-  rowsEl.innerHTML = `<tr><td colspan="6" class="muted">Lade…</td></tr>`;
   try {
-    const headers = (status === 'pending') ? await authHeaders() : {};
+    const headers = { 'Accept': 'application/json' };
+    // nur approved ist öffentlich – pending braucht Token
+    if (status !== 'approved') {
+      const auth = await getAuthHeader();
+      if (auth) Object.assign(headers, auth);
+    }
     const res = await fetch(API_LIST(status), { headers });
     if (!res.ok) {
       if (res.status === 401) {
-        rowsEl.innerHTML = `<tr><td colspan="6" class="muted">401: Nicht eingeloggt. Bitte „Login“ klicken.</td></tr>`;
-        toast('401: Nicht eingeloggt oder Session abgelaufen. Bitte „Login“ klicken.', '#c0392b');
+        window._lastErrorMsg = '401: Nicht eingeloggt. Bitte „Login“ klicken.';
+        toast(window._lastErrorMsg, '#c0392b');
       } else {
-        rowsEl.innerHTML = `<tr><td colspan="6" class="muted">Fehler: HTTP ${res.status}</td></tr>`;
-        toast(`Laden fehlgeschlagen: HTTP ${res.status}`, '#c0392b');
+        window._lastErrorMsg = `Fehler: HTTP ${res.status}`;
+        toast(window._lastErrorMsg, '#c0392b');
       }
+      renderRows([]);
       return;
     }
-    const data = await res.json();
-    renderRows(Array.isArray(data) ? data : []);
-  } catch (e) {
-    console.error(e);
-    rowsEl.innerHTML = `<tr><td colspan="6" class="muted">Netzwerkfehler.</td></tr>`;
-    toast('Netzwerkfehler beim Laden.', '#c0392b');
+    renderRows(await res.json());
+  } catch (err) {
+    console.error(err);
+    window._lastErrorMsg = 'Netzwerkfehler beim Laden.';
+    toast(window._lastErrorMsg, '#c0392b');
+    renderRows([]);
   }
 }
 
-function renderRows(items){
-  if (!items.length) {
-    rowsEl.innerHTML = `<tr><td colspan="6" class="muted">Keine Einträge.</td></tr>`;
-    return;
-  }
-  const frag = document.createDocumentFragment();
-  items.forEach(it=>{
-    const tr = document.createElement('tr');
-
-    // Bild (Thumb)
-    const tdImg = document.createElement('td');
-    const img = document.createElement('img');
-    img.alt = '';
-    img.loading = 'lazy';
-    img.decoding = 'async';
-    img.style.width = '80px';
-    img.style.height = '60px';
-    img.style.objectFit = 'cover';
-    img.src = (it.thumbUrl || (it.images && it.images[0])) || '';
-    tdImg.appendChild(img);
-
-    // Name + Adresse
-    const tdName = document.createElement('td');
-    tdName.innerHTML = `<strong>${it.name || '-'}</strong><br><span class="muted">${it.address || ''}</span>`;
-
-    // Ort
-    const tdCity = document.createElement('td');
-    tdCity.textContent = it.city || '';
-
-    // Kategorie
-    const tdCat = document.createElement('td');
-    tdCat.textContent = it.category || '';
-
-    // Eingereicht
-    const tdDate = document.createElement('td');
-    tdDate.textContent = (it.createdAt ? new Date(it.createdAt).toLocaleString() : '');
-
-    // Aktion
-    const tdAct = document.createElement('td');
-    if (currentTab === 'pending') {
-      const okBtn = document.createElement('button');
-      okBtn.className = 'btn primary';
-      okBtn.textContent = 'Freigeben';
-      okBtn.onclick = ()=> updateEntry(it.id, 'approve');
-
-      const rejBtn = document.createElement('button');
-      rejBtn.className = 'btn';
-      rejBtn.textContent = 'Ablehnen';
-      rejBtn.onclick = ()=> updateEntry(it.id, 'reject');
-
-      const wrap = document.createElement('div');
-      wrap.className = 'actions-row';
-      wrap.append(okBtn, rejBtn);
-      tdAct.appendChild(wrap);
-    } else {
-      tdAct.innerHTML = '<span class="muted">–</span>';
+/* =========================
+   Approve / Reject
+   ========================= */
+async function updateEntry(id, action) {
+  try {
+    const auth = await getAuthHeader();
+    if (!auth) {
+      toast('Nicht eingeloggt. Bitte „Login“ klicken.', '#c0392b');
+      return;
     }
-
-    tr.append(tdImg, tdName, tdCity, tdCat, tdDate, tdAct);
-    frag.appendChild(tr);
-  });
-  rowsEl.innerHTML = '';
-  rowsEl.appendChild(frag);
-}
-
-/* ============================================================
-   4) Approve / Reject
-   ============================================================ */
-async function updateEntry(id, action){
-  try{
-    const headers = await authHeaders();
-    headers['content-type'] = 'application/json';
     const res = await fetch(API_UPDATE(id), {
       method: 'PATCH',
-      headers,
+      headers: { 'Content-Type': 'application/json', ...auth },
       body: JSON.stringify({ action })
     });
     if (!res.ok) {
-      if (res.status === 401) {
-        toast('401: Nicht eingeloggt oder Session abgelaufen. Bitte „Login“ klicken.', '#c0392b');
-      } else {
-        const msg = await res.text().catch(()=> '');
-        toast(`Update fehlgeschlagen: ${res.status} ${msg}`, '#c0392b');
-      }
+      if (res.status === 401) toast('Session abgelaufen. Bitte erneut einloggen.', '#c0392b');
+      else toast(`Update fehlgeschlagen: ${res.status}`, '#c0392b');
       return;
     }
-    toast(action === 'approve' ? 'Freigegeben ✅' : 'Abgelehnt ❌', '#2d7a3e');
+    toast(action === 'approve' ? 'Freigegeben ✅' : 'Abgelehnt ❌');
     load(currentTab);
-  }catch(e){
-    console.error(e);
+  } catch (err) {
+    console.error(err);
     toast('Netzwerkfehler beim Aktualisieren.', '#c0392b');
   }
 }
 
-/* ============================================================
-   5) Events (Tabs, Buttons, Identity)
-   ============================================================ */
-$("#btnPending").addEventListener('click',  ()=> load('pending'));
-$("#btnApproved").addEventListener('click', ()=> load('approved'));
-$("#btnReload").addEventListener('click',   ()=> load(currentTab));
+/* =========================
+   UI – Tabs, Login/Logout
+   ========================= */
+function wireUI(){
+  $('#tabPending').onclick  = () => { setActiveTab('pending');  load('pending');  };
+  $('#tabApproved').onclick = () => { setActiveTab('approved'); load('approved'); };
+  $('#refreshBtn').onclick  = () => load(currentTab);
 
-$("#btnLogin").addEventListener('click', ()=>{
-  netlifyIdentity.open('login');
+  $('#loginBtn').onclick  = () => { if (window.netlifyIdentity) netlifyIdentity.open('login'); };
+  $('#logoutBtn').onclick = async () => { if (window.netlifyIdentity){ await netlifyIdentity.logout(); setEmailUI(); load(currentTab); } };
+
+  if (window.netlifyIdentity) {
+    netlifyIdentity.on('login',  () => { setEmailUI(); load(currentTab); netlifyIdentity.close(); });
+    netlifyIdentity.on('logout', () => { setEmailUI(); load(currentTab); });
+    netlifyIdentity.on('init',   () => { setEmailUI(); });
+  }
+  setActiveTab('pending');
+}
+function setActiveTab(tab){
+  currentTab = tab;
+  $('#tabPending').classList.toggle('active', tab==='pending');
+  $('#tabApproved').classList.toggle('active', tab==='approved');
+}
+
+/* Start */
+document.addEventListener('DOMContentLoaded', () => {
+  wireUI();
+  setEmailUI();
+  load('pending');
 });
-$("#btnLogout").addEventListener('click', async ()=>{
-  try { await netlifyIdentity.logout(); } catch{}
-  await refreshIdentityUI();
-  if (currentTab === 'pending') load('pending'); // nach Logout ggf. 401-Hinweis
-});
-
-// Identity Widget: Login/Logout Hooks
-netlifyIdentity.on('init', refreshIdentityUI);
-netlifyIdentity.on('login', async () => { await refreshIdentityUI(); load(currentTab); netlifyIdentity.close(); });
-netlifyIdentity.on('logout', async () => { await refreshIdentityUI(); load(currentTab); });
-
-/* ============================================================
-   6) Start
-   ============================================================ */
-netlifyIdentity.init();   // Identity initialisieren
-load('pending');          // Standard-Tab laden
 </script>
 </body>
 </html>
