@@ -1,4 +1,4 @@
-# netlify.toml  (komplette, korrigierte Version)
+# netlify.toml (bereinigt)
 
 [build]
   publish   = "."
@@ -6,13 +6,6 @@
 
 [functions]
   node_bundler = "esbuild"
-
-# Netlify Identity (Client-Routen) — OHNE ./ Präfix
-[[redirects]]
-  from  = "/.netlify/identity/*"
-  to    = "/.netlify/identity"
-  status = 200
-  force  = true
 
 # CORS für alle Functions
 [[headers]]
@@ -22,7 +15,7 @@
     Access-Control-Allow-Methods = "GET,POST,PATCH,OPTIONS"
     Access-Control-Allow-Headers = "Content-Type, Authorization"
 
-# Blobs Stores
+# Blob Stores
 [[blobs]]
   name = "entries"
   retention = "manual"
