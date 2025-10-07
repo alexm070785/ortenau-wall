@@ -1,6 +1,6 @@
 import { getStore } from '@netlify/blobs';
 
-export const config = { path: '/entries-update' }; // Plus Redirect
+export const config = { path: '/.netlify/functions/entries-update' }; // Plus Redirect
 
 const json = (b, init = {}) =>
   new Response(JSON.stringify(b), {
@@ -63,3 +63,4 @@ export default async (req, context) => {
     return json({ error: 'update_failed' }, { status: 500 });
   }
 };
+
