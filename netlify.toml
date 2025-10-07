@@ -16,21 +16,21 @@
 # ---------- WICHTIG: Explizite Redirects auf die Functions ----------
 # List (GET)
 [[redirects]]
-  from   = "/.netlify/functions/entries-list"
+  from   = "/entries-list"
   to     = "/.netlify/functions/entries-list"
   status = 200
   force  = true
 
 # Update (PATCH/POST/GET) – Querystrings (z.B. id=...) werden automatisch übernommen
 [[redirects]]
-  from   = "/.netlify/functions/entries-update"
+  from   = "/entries-list"
   to     = "/.netlify/functions/entries-update"
   status = 200
   force  = true
 
 # Create (POST) – nur der Vollständigkeit halber (deine Function geht schon)
 [[redirects]]
-  from   = "/.netlify/functions/entries-create"
+  from   = "/entries-list"
   to     = "/.netlify/functions/entries-create"
   status = 200
   force  = true
@@ -43,4 +43,5 @@
 [[blobs]]
   name = "images"
   retention = "manual"
+
 
