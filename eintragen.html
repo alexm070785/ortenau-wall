@@ -14,14 +14,12 @@
   body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;background:var(--bg);color:var(--text);padding-bottom:40px;}
   .visually-hidden{position:absolute!important;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 
-  /* Header + Hamburger */
   header.site{position:sticky;top:0;z-index:100;background:var(--accent);border-bottom:1px solid #b0b0b0;}
   .head{max-width:1360px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:14px 16px;}
   .hamburger{display:inline-flex;align-items:center;justify-content:center;width:46px;height:40px;border-radius:8px;background:var(--accent);border:0;cursor:pointer}
   .hamburger:hover{background:#FFB2B3}
   .hamburger svg{width:28px;height:28px;display:block}
 
-  /* Backdrop + Drawer (Menü) */
   .backdrop{position:fixed;inset:0;background:rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:opacity .2s;z-index:99}
   .backdrop.show{opacity:1;pointer-events:auto}
   .drawer{position:fixed;top:0;right:-280px;width:280px;height:100%;background:#f6f6f6;border-left:1px solid #d9d9d9;box-shadow:-12px 0 24px rgba(0,0,0,.18);transition:right .25s;z-index:100;display:flex;flex-direction:column}
@@ -32,7 +30,6 @@
   .menu a:hover{background:#FFB2B3}
   .menu a.active{background:#f6f6f6}
 
-  /* Toolbar (Suche + CTA) */
   .toolbar{
     max-width:1360px;margin:8px auto 0;
     display:flex;align-items:center;gap:12px;
@@ -47,7 +44,6 @@
   #clearBtn{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:28px;height:28px;border:0;border-radius:50%;cursor:pointer;background:#f6f6f6;}
   #clearBtn:hover{background:#eaeaea}
 
-  /* CTA rechts neben der Suche */
   .cta{
     flex:0 0 auto;
     display:inline-flex;align-items:center;gap:10px;
@@ -61,16 +57,10 @@
     -webkit-mask:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"/></svg>') no-repeat center / contain;
             mask:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"/></svg>') no-repeat center / contain;
   }
-  @media (max-width:480px){
-    .cta .txt{display:none;} /* sehr klein: nur das Plus zeigen */
-  }
+  @media (max-width:480px){ .cta .txt{display:none;} }
 
-  /* Formular-Card */
   .form-wrap{max-width:960px;margin:16px auto 24px;padding:0 16px;}
-  .form-card{
-    background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow);
-    padding:18px;
-  }
+  .form-card{background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow);padding:18px;}
   .form-card h2{margin:0 0 10px 0; font-size:1.25rem;}
   .sub{color:var(--muted); margin-bottom:14px;}
 
@@ -91,7 +81,6 @@
   .badge{display:inline-flex; align-items:center; gap:8px; padding:8px 10px; border:1px solid #e1e1e1; border-radius:999px; background:#fff;}
   .dot{width:12px; height:12px; border-radius:50%; display:inline-block;}
 
-  /* Uploads */
   .drop{border:2px dashed #d0d0d0; border-radius:12px; padding:14px; text-align:center; background:#fafafa;}
   .drop.dragover{background:#f0f7ff; border-color:#7aa7ff;}
   .preview{display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:10px; margin-top:10px;}
@@ -100,28 +89,21 @@
   .thumb button{position:absolute; top:6px; right:6px; border:0; border-radius:8px; background:#fff; padding:4px 7px; cursor:pointer; box-shadow:var(--shadow);}
   .thumb button:hover{box-shadow:var(--shadowHover);}
 
-  /* Zeiten-Tabelle */
   .hours{border:1px solid #e1e1e1; border-radius:10px; overflow:hidden;}
   .hours table{width:100%; border-collapse:collapse;}
   .hours th, .hours td{border-bottom:1px solid #eee; padding:8px 10px; text-align:left; font-size:.95rem;}
   .hours tr:last-child td{border-bottom:none;}
   .hours .time{max-width:140px;}
 
-  /* Buttons */
   .actions{display:flex; gap:10px; justify-content:flex-end; margin-top:14px;}
-  .btn{
-    padding:10px 14px; border-radius:10px; border:1px solid #d0d0d0; background:#fff; cursor:pointer;
-    box-shadow:var(--shadow);
-  }
+  .btn{padding:10px 14px; border-radius:10px; border:1px solid #d0d0d0; background:#fff; cursor:pointer; box-shadow:var(--shadow);}
   .btn.primary{background:#4f4f4f; color:#fff; border-color:#4f4f4f;}
   .btn.primary:hover{filter:brightness(1.05);}
   .btn:hover{box-shadow:var(--shadowHover);}
 
-  /* Toast */
   .toast{position:fixed; right:16px; bottom:56px; background:#2d7a3e; color:#fff; padding:12px 14px; border-radius:10px; box-shadow:var(--shadow); opacity:0; transform:translateY(8px); transition:all .25s;}
   .toast.show{opacity:1; transform:translateY(0);}
 
-  /* Footer */
   footer{position:fixed;bottom:0;left:0;width:100%;height:40px;background:var(--accent);color:#595959;border-top:1px solid #b0b0b0;font-size:.9rem}
   .footer-inner{max-width:1360px;margin:0 auto;height:100%;display:flex;justify-content:center;align-items:center;padding:0 12px}
 </style>
@@ -129,7 +111,6 @@
 <body>
 <header class="site">
   <div class="head">
-    <!-- Logo als Link zur Startseite -->
     <a href="index.html" aria-label="Zur Startseite von Ortenau liefert">
       <img src="header.png" alt="Ortenau liefert Logo" height="68">
     </a>
@@ -140,7 +121,6 @@
   </div>
 </header>
 
-<!-- Backdrop + Drawer -->
 <div class="backdrop" id="backdrop" hidden></div>
 <aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-hidden="true">
   <header>
@@ -164,7 +144,6 @@
   </nav>
 </aside>
 
-<!-- Toolbar: Suche + CTA -->
 <div class="toolbar">
   <div class="search-wrap" role="search">
     <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="#9a9a9a" d="M15.5 14h-.79l-.28-.27a6.471 6.471 0 0 0 1.57-4.23C16 6.01 13.99 4 11.5 4S7 6.01 7 9.5 9.01 15 11.5 15c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l4.25 4.25c.41.41 1.08.41 1.49 0 .41-.41.41-1.08 0-1.49L15.5 14zm-4 0C9.01 14 7 11.99 7 9.5S9.01 5 11.5 5 16 7.01 16 9.5 13.99 14 11.5 14z"/></svg>
@@ -184,9 +163,7 @@
       <h2>Speisekarte eintragen</h2>
       <div class="sub">Bitte fülle die folgenden Felder aus. <span class="req"></span> kennzeichnet Pflichtfelder.</div>
 
-      <!-- enctype ist optional beim fetch(), schadet aber nicht -->
       <form id="entryForm" enctype="multipart/form-data" novalidate>
-        <!-- Name / Kategorie -->
         <div class="row row2">
           <div>
             <label for="name" class="req">Name des Lokals (Restaurant, Döner, Pizzeria)</label>
@@ -207,7 +184,6 @@
           </div>
         </div>
 
-        <!-- Standort -->
         <div class="row row4">
           <div>
             <label for="plz" class="req">PLZ</label>
@@ -228,7 +204,6 @@
           </div>
         </div>
 
-        <!-- Kontakt optional -->
         <div class="row row2">
           <div>
             <label for="tel">Telefon (optional)</label>
@@ -240,25 +215,19 @@
           </div>
         </div>
 
-        <!-- Öffnungszeiten mit Ruhetag -->
         <div class="row">
           <div>
             <label>Öffnungszeiten (optional)</label>
             <div class="hours" aria-label="Öffnungszeiten pro Wochentag">
               <table>
-                <thead>
-                  <tr><th>Tag</th><th>von</th><th>bis</th><th>Ruhetag</th></tr>
-                </thead>
-                <tbody id="hoursBody">
-                  <!-- per JS -->
-                </tbody>
+                <thead><tr><th>Tag</th><th>von</th><th>bis</th><th>Ruhetag</th></tr></thead>
+                <tbody id="hoursBody"></tbody>
               </table>
             </div>
             <div class="hint">Lass Zeiten leer oder wähle „Ruhetag“, wenn geschlossen.</div>
           </div>
         </div>
 
-        <!-- Uploads (nur Bilder, Pflicht) -->
         <div class="row">
           <div>
             <label for="menuImages" class="req">Bilder der Speisekarte</label>
@@ -271,14 +240,12 @@
           </div>
         </div>
 
-        <!-- Hinweise & Zustimmung -->
         <div class="row">
           <div class="hint">
             Mit dem Absenden bestätigst du, dass du die Rechte an den hochgeladenen Bildern besitzt und unsere Datenschutzbestimmungen akzeptierst.
           </div>
         </div>
 
-        <!-- Actions -->
         <div class="actions">
           <button type="reset" class="btn">Zurücksetzen</button>
           <button type="submit" class="btn primary">Eintrag senden</button>
@@ -289,14 +256,11 @@
 </main>
 
 <footer><div class="footer-inner">© <span id="jahr"> </span> Ortenau-Liefert</div></footer>
-
 <div class="toast" id="toast" role="status" aria-live="polite">Danke! Dein Eintrag wurde übermittelt.</div>
 
 <script>
-  // Jahr
   document.getElementById("jahr").textContent = new Date().getFullYear();
 
-  // aktiver Link markieren
   (function(){
     const cur = 'eintragen.html';
     document.querySelectorAll('.menu a').forEach(a=>{
@@ -305,7 +269,6 @@
     });
   })();
 
-  // Drawer (Menü)
   (function(){
     const menuBtn = document.getElementById('menuBtn');
     const closeBtn = document.getElementById('closeBtn');
@@ -320,8 +283,7 @@
       document.body.style.overflow='hidden';
       menuBtn.setAttribute('aria-expanded','true');
       lastFocused = document.activeElement;
-      const first = drawer.querySelector('a,button');
-      if(first) first.focus();
+      const first = drawer.querySelector('a,button'); if(first) first.focus();
     }
     function closeDrawer(){
       drawer.classList.remove('show');
@@ -338,10 +300,8 @@
     window.addEventListener('keydown', e=>{ if(e.key==='Escape') closeDrawer(); });
   })();
 
-  // Kategorien & Farben
   const CAT_COLORS = { doener:"#CC5F34", restaurant:"#6A865F", pizza:"#FDF1DF", pizzeria:"#FDF1DF" };
 
-  // Kategorie-Badge
   (function(){
     const select = document.getElementById('category');
     const dot = document.getElementById('dot');
@@ -357,7 +317,6 @@
     update();
   })();
 
-  // Öffnungszeiten-Raster
   (function(){
     const days = ["Mo","Di","Mi","Do","Fr","Sa","So"];
     const body = document.getElementById('hoursBody');
@@ -372,12 +331,10 @@
             <input type="checkbox" class="closed" name="closed_${i}">
             Ruhetag
           </label>
-        </td>
-      `;
+        </td>`;
       body.appendChild(tr);
     });
 
-    // Ruhetag toggeln
     body.querySelectorAll('.closed').forEach((cb, idx)=>{
       const row = cb.closest('tr');
       const open = row.querySelector(`input[name="open_${idx}"]`);
@@ -391,7 +348,6 @@
     });
   })();
 
-  // Drag&Drop / Preview
   (function(){
     const imgInput = document.getElementById('menuImages');
     const imgDrop = document.getElementById('dropImgs');
@@ -433,7 +389,7 @@
     }
   })();
 
-  // ===== Formular-Submit -> Netlify Function =====
+  /* ===== Formular-Submit -> /entries-create (direkter Endpoint) ===== */
   (function(){
     const form  = document.getElementById('entryForm');
     const toast = document.getElementById('toast');
@@ -462,44 +418,41 @@
       e.preventDefault();
       if (!form.checkValidity()) return form.reportValidity();
 
-      // Pflicht (mind. 1 Bild)
       const menuImages = document.getElementById('menuImages');
       if(!menuImages.files || menuImages.files.length === 0){
         return showToast("Bitte mindestens ein Bild der Speisekarte auswählen.", "#c0392b");
       }
 
-      // FormData -> auf Keys mappen, die die Function erwartet
+      // FormData mit GENAU den Keys, die die Function erwartet
       const fd = new FormData();
-
-      // Direkt aus deinen Feldern:
       fd.set('name',     document.getElementById('name').value.trim());
       fd.set('category', document.getElementById('category').value);
-      fd.set('city',     document.getElementById('ort').value.trim()); // ort -> city
-      // Adresse zusammenbauen
-      const str = document.getElementById('strasse').value.trim();
-      const nr  = document.getElementById('hausnr').value.trim();
-      const plz = document.getElementById('plz').value.trim();
-      const ort = document.getElementById('ort').value.trim();
-      const address = [str, nr].filter(Boolean).join(' ') + (plz||ort ? ', ' + [plz, ort].filter(Boolean).join(' ') : '');
-      fd.set('address', address);
+      fd.set('ort',      document.getElementById('ort').value.trim());
+      fd.set('strasse',  document.getElementById('strasse').value.trim());
+      fd.set('hausnr',   document.getElementById('hausnr').value.trim());
+      fd.set('plz',      document.getElementById('plz').value.trim());
+
+      // optional: kurzer Text (wenn du willst; die Function liest menuText bereits)
+      // fd.set('menuText', ''); // leer lassen oder eigenes Feld ergänzen
+
+      // alle Bilder als "menuImages" anhängen
+      [...menuImages.files].forEach(f => fd.append('menuImages', f, f.name));
+
+      // optionale Felder (werden von der Function derzeit ignoriert – schaden aber nicht)
       fd.set('website', document.getElementById('website').value.trim());
       fd.set('phone',   document.getElementById('tel').value.trim());
       fd.set('hours_json', collectHoursJSON());
 
-      // Bild: wir nehmen das erste Bild als "image"
-      const firstImage = menuImages.files[0];
-      if(firstImage) fd.set('image', firstImage, firstImage.name);
-
       try{
         showToast("Wird gesendet…", "#666");
-        const res = await fetch('/.netlify/functions/entries-create', { method:'POST', body: fd });
+        // WICHTIG: direkter Endpoint (ohne /.netlify/functions)
+        const res = await fetch('/entries-create', { method:'POST', body: fd });
         const data = await res.json().catch(()=> ({}));
         if(!res.ok) throw new Error(data?.error || ('HTTP '+res.status));
 
         showToast("Danke! Dein Eintrag wurde gespeichert (ID: " + data.id + ")", "#2d7a3e");
         form.reset();
         document.getElementById('imgPreview').innerHTML='';
-        // Farben/Times neu initialisieren
         document.getElementById('category').dispatchEvent(new Event('change'));
         document.querySelectorAll('#hoursBody .closed').forEach(cb=>cb.dispatchEvent(new Event('change')));
       }catch(err){
