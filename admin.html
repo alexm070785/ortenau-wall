@@ -84,52 +84,61 @@
   <div class="toast" id="toast">OK</div>
 
   <!-- Netlify Identity Widget -->
-  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   <script>
-    // ---------- Helpers ----------
-    const $ = (s,r=document)=>r.querySelector(s);
-    const esc = s => String(s??'').replace(/[&<>"']/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
-    const fmt = iso => iso ? new Date(iso).toLocaleString('de-DE') : '';
-    const toast = m => { const t=$('#toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1600); };
+  // ---------- Mini-Helfer ----------
+  const $  = (s,r=document)=>r.querySelector(s);
+  const on = (sel, evt, fn) => { const el = $(sel); if (el) el.addEventListener(evt, fn); };
+  const esc = s => String(s??'').replace(/[&<>"']/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+  const fmt = iso => iso ? new Date(iso).toLocaleString('de-DE') : '';
+  const toast = m => { const t=$('#toast'); if(!t) return; t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1600); };
 
-    // authedFetch: jedes Mal ein frisches Token (verhindert 401)
-    async function authedFetch(url,opt={}){
-      const u = netlifyIdentity.currentUser();
-      const tok = u && await u.jwt(true); // true => refresh
-      return fetch(url,{...opt,headers:{...(opt.headers||{}),Authorization: tok?`Bearer ${tok}`:''}});
-    }
+  // Immer frisches Token (verhindert 401 nach einiger Zeit)
+  async function authedFetch(url,opt={}){
+    const u = (typeof netlifyIdentity!=='undefined') ? netlifyIdentity.currentUser() : null;
+    const tok = u && await u.jwt(true);
+    return fetch(url,{...opt,headers:{...(opt.headers||{}),Authorization: tok?`Bearer ${tok}`:''}});
+  }
 
-    // ---------- Identity ----------
-    (function(){
-      const who = $('#who');
-      const setUser = (u)=> who.textContent = u ? (u.user_metadata?.full_name || u.email) : 'nicht eingeloggt';
-
-      $('#btnLogin').onclick = ()=> netlifyIdentity.open('login');
-      $('#btnLogout').onclick = ()=> netlifyIdentity.logout();
-      $('#btnRefresh').onclick = ()=> load(currentView);
-
-      netlifyIdentity.on('init',  u=>{ setUser(u); load('pending'); });
-      netlifyIdentity.on('login', u=>{ setUser(u); netlifyIdentity.close(); load(currentView); });
-      netlifyIdentity.on('logout',   ()=>{ setUser(null); load('approved'); });
-      netlifyIdentity.init();
-    })();
-
-    // ---------- State & UI ----------
+  // Alles erst starten, wenn DOM fertig ist
+  document.addEventListener('DOMContentLoaded', () => {
+    const who = $('#who');
     let currentView = 'pending';
     const cache = new Map();
 
-    $('#btnPending').onclick  = ()=> load('pending');
-    $('#btnApproved').onclick = ()=> load('approved');
+    function setUser(u){
+      if (!who) return;
+      who.textContent = u ? (u.user_metadata?.full_name || u.email) : 'nicht eingeloggt';
+    }
 
-    $('#rows').addEventListener('click', async (e)=>{
+    // --- Identity sicher initialisieren ---
+    if (typeof netlifyIdentity !== 'undefined') {
+      netlifyIdentity.on('init',  u => { setUser(u); load('pending'); });
+      netlifyIdentity.on('login', u => { setUser(u); netlifyIdentity.close(); load(currentView); });
+      netlifyIdentity.on('logout',   () => { setUser(null); load('approved'); });
+      netlifyIdentity.init();
+    } else {
+      console.warn('Netlify Identity nicht geladen.');
+      load('approved'); // öffentlich
+    }
+
+    // --- Button-Events robust binden ---
+    on('#btnLogin','click',  ()=> netlifyIdentity && netlifyIdentity.open('login'));
+    on('#btnLogout','click', ()=> netlifyIdentity && netlifyIdentity.logout());
+    on('#btnRefresh','click',()=> load(currentView));
+    on('#btnPending','click',()=> load('pending'));
+    on('#btnApproved','click',()=> load('approved'));
+
+    // --- Tabellenklicks (Edit/Freigeben/Ablehnen/Speichern) ---
+    on('#rows','click', async (e)=>{
       const btn = e.target.closest('button[data-action]');
       if(!btn) return;
-      const id = btn.dataset.id, action = btn.dataset.action;
+      const id  = btn.dataset.id;
+      const act = btn.dataset.action;
 
-      if(action==='edit'){ toggleEditor(id,true); return; }
-      if(action==='cancel'){ toggleEditor(id,false); return; }
+      if(act==='edit'){ toggleEditor(id,true); return; }
+      if(act==='cancel'){ toggleEditor(id,false); return; }
 
-      if(action==='save'){
+      if(act==='save'){
         const menuText = $(`#m_${CSS.escape(id)}`)?.value || '';
         const featured = ($(`#f_${CSS.escape(id)}`)?.value === 'true');
         const res = await authedFetch(`/.netlify/functions/entries-update?id=${encodeURIComponent(id)}`,{
@@ -142,37 +151,46 @@
         return;
       }
 
-      if(action==='approve' || action==='reject'){
+      if(act==='approve' || act==='reject'){
         const res = await authedFetch(`/.netlify/functions/entries-update?id=${encodeURIComponent(id)}`,{
           method:'PATCH', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ action })
+          body: JSON.stringify({ action: act })
         });
-        toast(res.ok ? (action==='approve'?'Freigegeben':'Abgelehnt') : 'Aktion fehlgeschlagen');
+        toast(res.ok ? (act==='approve'?'Freigegeben':'Abgelehnt') : 'Aktion fehlgeschlagen');
         load(currentView);
       }
     });
 
-    function toggleEditor(id,show){
+    function toggleEditor(id, show){
       const box = $(`#edit_${CSS.escape(id)}`);
       if(box) box.style.display = show ? 'grid' : 'none';
     }
 
+    // --- Laden & Rendern ---
     async function load(view='pending'){
-      currentView=view;
+      currentView = view;
       const tbody = $('#rows');
+      if (!tbody) return;
       tbody.innerHTML = `<tr><td colspan="6" class="empty">Lade ${view}…</td></tr>`;
       try{
         const url = `/.netlify/functions/entries-list?status=${encodeURIComponent(view)}`;
-        const res = (view==='approved') ? await fetch(url) : await authedFetch(url);
-        if(!res.ok){ tbody.innerHTML=`<tr><td colspan="6" class="empty">Fehler (${res.status}).</td></tr>`; return; }
+        const res = (view==='approved') ? await fetch(url, {cache:'no-store'}) : await authedFetch(url);
+        if(!res.ok){
+          tbody.innerHTML = `<tr><td colspan="6" class="empty">Fehler (${res.status}).</td></tr>`;
+          return;
+        }
         const items = await res.json();
         cache.clear();
-        if(!items.length){ tbody.innerHTML=`<tr><td colspan="6" class="empty">Keine Einträge gefunden.</td></tr>`; return; }
-        tbody.innerHTML='';
-        items.forEach(it=>{ cache.set(it.id,it); tbody.appendChild(row(it,view==='pending')); });
-      }catch(e){
-        tbody.innerHTML = `<tr><td colspan="6" class="empty">Ladefehler.</td></tr>`;
-        console.error(e);
+        if(!items.length){
+          tbody.innerHTML = `<tr><td colspan="6" class="empty">Keine Einträge gefunden.</td></tr>`;
+          return;
+        }
+        tbody.innerHTML = '';
+        items.forEach(it => { cache.set(it.id, it); tbody.appendChild(row(it, view==='pending')); });
+      }catch(err){
+        console.error(err);
+        const tbody = $('#rows');
+        if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="empty">Ladefehler.</td></tr>`;
       }
     }
 
@@ -209,10 +227,11 @@
               <button class="btn" data-action="cancel" data-id="${item.id}">Abbrechen</button>
             </div>
           </div>
-        </td>
-      `;
+        </td>`;
       return tr;
     }
-  </script>
+  });
+</script>
+
 </body>
 </html>
