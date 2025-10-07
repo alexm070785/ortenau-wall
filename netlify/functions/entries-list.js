@@ -1,6 +1,6 @@
 import { getStore } from '@netlify/blobs';
 
-export const config = { path: '/entries-list' }; // Plus Redirect – doppelt hält besser
+export const config = { path: '/.netlify/functions/entries-list' }; // Plus Redirect – doppelt hält besser
 
 const json = (b, init = {}) =>
   new Response(JSON.stringify(b), {
@@ -39,3 +39,4 @@ export default async (req, context) => {
     return json({ error: 'list_failed' }, { status: 500 });
   }
 };
+
