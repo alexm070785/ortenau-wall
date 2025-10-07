@@ -1,6 +1,6 @@
 import { getStore } from '@netlify/blobs';
 
-export const config = { path: '/entries-create' };
+export const config = { path: '.netlify/functions/entries-create' };
 
 const json = (b, init={}) => new Response(JSON.stringify(b), {
   ...init, headers: { 'content-type': 'application/json', ...(init.headers||{}) }
@@ -63,3 +63,4 @@ export default async (req) => {
     return json({ error: 'create_failed' }, { status: 500 });
   }
 };
+
