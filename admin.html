@@ -5,10 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Ortenau-Wall · Admin</title>
 <style>
-  :root{
-    --accent:#f4f4f4; --text:#333; --muted:#7a7a7a;
-    --card:#fff; --radius:12px; --shadow:0 4px 12px rgba(0,0,0,.08);
-  }
+  :root{ --accent:#f4f4f4; --text:#333; --muted:#7a7a7a; --card:#fff; --radius:12px; --shadow:0 4px 12px rgba(0,0,0,.08); }
   *{box-sizing:border-box}
   body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,sans-serif;background:#fafafa;color:var(--text)}
   header{background:var(--accent);border-bottom:1px solid #ddd;position:sticky;top:0;z-index:10}
@@ -27,6 +24,9 @@
   .muted{color:var(--muted)}
   .right{display:flex;align-items:center;gap:8px}
   .email{font-size:.9rem;color:var(--muted)}
+  .status{font-size:.85rem;padding:2px 8px;border-radius:999px;border:1px solid #ddd;background:#fff}
+  .ok{color:#226122;border-color:#a7d3a7;background:#eef9ee}
+  .warn{color:#944;border-color:#e0bcbc;background:#fff4f4}
   .toast{position:fixed;right:16px;bottom:16px;background:#2d7a3e;color:#fff;padding:10px 12px;border-radius:10px;box-shadow:var(--shadow);opacity:0;transform:translateY(6px);transition:all .2s}
   .toast.show{opacity:1;transform:translateY(0)}
 </style>
@@ -38,6 +38,7 @@
   <div class="wrap">
     <strong>Ortenau-Wall · Admin</strong>
     <div class="right">
+      <span id="status" class="status warn">abgemeldet</span>
       <span id="email" class="email">—</span>
       <button id="btnLogin" class="btn">🔐 Login</button>
       <button id="btnRefresh" class="btn">🔄 Aktualisieren</button>
@@ -67,9 +68,7 @@
             <th>Aktion</th>
           </tr>
         </thead>
-        <tbody id="tbody">
-          <!-- rows per JS -->
-        </tbody>
+        <tbody id="tbody"></tbody>
       </table>
     </div>
   </div>
@@ -78,19 +77,14 @@
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
 <script>
-  // ===== Helpers =====
+  // ========= Kurz-Helper =========
   const $ = s => document.querySelector(s);
-  const tbody = $('#tbody');
-  const toast = $('#toast');
-  const tabPending  = $('#tabPending');
-  const tabApproved = $('#tabApproved');
-  const emailEl = $('#email');
-  const btnLogin = $('#btnLogin');
-  const btnLogout = $('#btnLogout');
-  const btnRefresh = $('#btnRefresh');
-
-  let currentTab = 'approved';  // default-Ansicht
-  let idUser = null;
+  const tbody = $('#tbody'), toast = $('#toast');
+  const tabPending = $('#tabPending'), tabApproved = $('#tabApproved');
+  const emailEl = $('#email'), statusEl = $('#status');
+  const btnLogin = $('#btnLogin'), btnLogout = $('#btnLogout'), btnRefresh = $('#btnRefresh');
+  let currentTab = 'approved';
+  let identityReady = false;
 
   function showToast(msg, ok=true){
     toast.textContent = msg;
@@ -98,89 +92,98 @@
     toast.classList.add('show');
     setTimeout(()=>toast.classList.remove('show'), 3000);
   }
-
-  async function getToken() {
-    try {
-      if (!window.netlifyIdentity) return null;
-      const u = window.netlifyIdentity.currentUser();
-      if (!u) return null;
-      const t = await u.jwt();
-      return t;
-    } catch { return null; }
-  }
-
-  function setTabsUI(){
-    tabPending.classList.toggle('active',  currentTab==='pending');
+  function setTabs(){
+    tabPending.classList.toggle('active', currentTab==='pending');
     tabApproved.classList.toggle('active', currentTab==='approved');
   }
+  function setStatus(user){
+    if (user){
+      statusEl.textContent = 'angemeldet';
+      statusEl.classList.remove('warn'); statusEl.classList.add('ok');
+      emailEl.textContent = user.email || '—';
+    }else{
+      statusEl.textContent = 'abgemeldet';
+      statusEl.classList.remove('ok'); statusEl.classList.add('warn');
+      emailEl.textContent = '—';
+    }
+  }
 
-  function renderRows(items){
+  // ========= Identity warten / Token =========
+  function waitForIdentity(){
+    return new Promise(res=>{
+      if (!window.netlifyIdentity){ return res(false); }
+      if (identityReady) return res(true);
+      window.netlifyIdentity.on('init', () => { identityReady = true; res(true); });
+      window.netlifyIdentity.init();
+    });
+  }
+  async function ensureLoggedIn(){
+    await waitForIdentity();
+    const u = window.netlifyIdentity?.currentUser();
+    if (u) return u;
+    window.netlifyIdentity?.open();
+    return new Promise(resolve=>{
+      window.netlifyIdentity?.on('login', user => resolve(user));
+    });
+  }
+  async function getJWT(){
+    try{
+      await waitForIdentity();
+      const u = window.netlifyIdentity?.currentUser();
+      if (!u) return null;
+      // true => erzwingt frisches Token
+      return await u.jwt(true);
+    }catch{ return null; }
+  }
+
+  // ========= Render =========
+  function render(items){
     tbody.innerHTML = '';
     if (!items.length){
       const tr = document.createElement('tr');
-      const td = document.createElement('td');
-      td.colSpan = 6;
-      td.className = 'muted';
-      td.textContent = 'Keine Einträge.';
-      tr.appendChild(td);
-      tbody.appendChild(tr);
-      return;
+      const td = document.createElement('td'); td.colSpan=6; td.className='muted'; td.textContent='Keine Einträge.';
+      tr.appendChild(td); tbody.appendChild(tr); return;
     }
     for (const it of items){
       const tr = document.createElement('tr');
-
       const imgTd = document.createElement('td');
       const img = document.createElement('img');
       img.src = (it.thumbUrl || it.images?.[0] || '').replace(/^\/+/, '/');
-      img.alt = '';
-      img.style.width='72px'; img.style.height='48px'; img.style.objectFit='cover'; img.loading='lazy';
+      img.alt=''; img.style.width='72px'; img.style.height='48px'; img.style.objectFit='cover'; img.loading='lazy';
       imgTd.appendChild(img);
 
-      const nameTd = document.createElement('td');
+      const nameTd=document.createElement('td');
       nameTd.innerHTML = `<strong>${it.name||''}</strong><br><span class="muted">${it.address||''}</span>`;
+      const cityTd=document.createElement('td'); cityTd.textContent = it.city||'';
+      const catTd=document.createElement('td');  catTd.textContent = (it.category||it.cat||'').toUpperCase();
+      const createdTd=document.createElement('td'); createdTd.textContent = it.createdAt ? new Date(it.createdAt).toLocaleString() : '—';
 
-      const cityTd = document.createElement('td');
-      cityTd.textContent = it.city || '';
-
-      const catTd = document.createElement('td');
-      catTd.textContent = (it.category || it.cat || '').toUpperCase();
-
-      const createdTd = document.createElement('td');
-      const d = it.createdAt ? new Date(it.createdAt) : null;
-      createdTd.textContent = d ? d.toLocaleString() : '—';
-
-      const actTd = document.createElement('td');
-      actTd.className='row-actions';
-
-      if (currentTab === 'pending'){
-        const bOk = document.createElement('button');
-        bOk.className='btn'; bOk.textContent='Freigeben';
-        bOk.addEventListener('click',()=>updateEntry(it.id,'approve'));
-        const bNo = document.createElement('button');
-        bNo.className='btn'; bNo.textContent='Ablehnen';
-        bNo.addEventListener('click',()=>updateEntry(it.id,'reject'));
-        actTd.appendChild(bOk); actTd.appendChild(bNo);
-      } else {
-        actTd.innerHTML = '<span class="muted">—</span>';
+      const actTd=document.createElement('td'); actTd.className='row-actions';
+      if (currentTab==='pending'){
+        const ok=document.createElement('button'); ok.className='btn'; ok.textContent='Freigeben';
+        ok.onclick=()=>updateEntry(it.id,'approve');
+        const no=document.createElement('button'); no.className='btn'; no.textContent='Ablehnen';
+        no.onclick=()=>updateEntry(it.id,'reject');
+        actTd.append(ok,no);
+      }else{
+        actTd.innerHTML='<span class="muted">—</span>';
       }
-
       tr.append(imgTd,nameTd,cityTd,catTd,createdTd,actTd);
       tbody.appendChild(tr);
     }
   }
 
-  // ===== API Calls =====
+  // ========= API Calls =========
   async function loadList(status){
     try{
       let headers = {};
       if (status !== 'approved'){
-        const token = await getToken();
+        const token = await getJWT();
         if (!token){
-          window.netlifyIdentity.open(); // Dialog auf
-          showToast('Bitte einloggen, um Pending zu sehen.', false);
+          showToast('Bitte zuerst einloggen (oben „Login“).', false);
           return;
         }
-        headers.Authorization = 'Bearer ' + token;
+        headers.Authorization = 'Bearer '+token;
       }
       const res = await fetch(`/entries-list?status=${encodeURIComponent(status)}`, { headers });
       if (!res.ok){
@@ -188,7 +191,7 @@
         throw new Error('HTTP '+res.status+' '+t);
       }
       const data = await res.json();
-      renderRows(data);
+      render(data);
     }catch(e){
       console.error(e);
       showToast('Laden fehlgeschlagen: '+e.message, false);
@@ -197,21 +200,16 @@
 
   async function updateEntry(id, action){
     try{
-      const token = await getToken();
-      if (!token){ window.netlifyIdentity.open(); return; }
+      const token = await getJWT();
+      if (!token){ window.netlifyIdentity?.open(); return; }
       const res = await fetch(`/entries-update?id=${encodeURIComponent(id)}`, {
         method:'PATCH',
-        headers:{
-          'content-type':'application/json',
-          'Authorization':'Bearer '+token
-        },
+        headers:{ 'content-type':'application/json', 'Authorization':'Bearer '+token },
         body: JSON.stringify({ action })
       });
       const data = await res.json().catch(()=> ({}));
       if (!res.ok) throw new Error(data?.error || ('HTTP '+res.status));
-
       showToast(action==='approve'?'Freigegeben.':'Abgelehnt.');
-      // Liste neu laden
       loadList(currentTab);
     }catch(e){
       console.error(e);
@@ -219,34 +217,32 @@
     }
   }
 
-  // ===== Identity & UI Wiring =====
-  function applyIdentityUI(u){
-    idUser = u || null;
-    emailEl.textContent = u ? (u.email || 'angemeldet') : '—';
-  }
-
-  document.addEventListener('DOMContentLoaded',()=>{
-    // Identity Events
+  // ========= UI / Events =========
+  document.addEventListener('DOMContentLoaded', async ()=>{
+    // Identity verkabeln
     if (window.netlifyIdentity){
-      window.netlifyIdentity.on('init',    user => applyIdentityUI(user));
-      window.netlifyIdentity.on('login',   user => { applyIdentityUI(user); loadList(currentTab); });
-      window.netlifyIdentity.on('logout',  ()   => { applyIdentityUI(null); if (currentTab==='pending'){ currentTab='approved'; setTabsUI(); } loadList(currentTab); });
-      window.netlifyIdentity.on('error',   err  => console.error('Identity error', err));
-      window.netlifyIdentity.init(); // wichtig
+      window.netlifyIdentity.on('init',  user => setStatus(user));
+      window.netlifyIdentity.on('login', user => { setStatus(user); if (currentTab==='pending') loadList('pending'); });
+      window.netlifyIdentity.on('logout',()=> { setStatus(null); if (currentTab==='pending'){ currentTab='approved'; setTabs(); } loadList(currentTab); });
+      window.netlifyIdentity.init();
     }
 
-    // Tabs
-    tabApproved.addEventListener('click',()=>{ currentTab='approved'; setTabsUI(); loadList('approved'); });
-    tabPending.addEventListener('click', ()=>{ currentTab='pending';  setTabsUI(); loadList('pending');  });
+    tabApproved.onclick = ()=>{ currentTab='approved'; setTabs(); loadList('approved'); };
+    tabPending.onclick  = async ()=>{
+      currentTab='pending'; setTabs();
+      const u = await ensureLoggedIn();
+      setStatus(u);
+      loadList('pending');
+    };
+    btnLogin.onclick   = async ()=>{ const u = await ensureLoggedIn(); setStatus(u); if (currentTab==='pending') loadList('pending'); };
+    btnLogout.onclick  = ()=> window.netlifyIdentity?.logout();
+    btnRefresh.onclick = ()=> loadList(currentTab);
 
-    // Buttons
-    btnLogin.addEventListener('click', ()=> window.netlifyIdentity && window.netlifyIdentity.open());
-    btnLogout.addEventListener('click',()=> window.netlifyIdentity && window.netlifyIdentity.logout());
-    btnRefresh.addEventListener('click',()=> loadList(currentTab));
-
-    // Startansicht
-    setTabsUI();
-    loadList(currentTab);
+    setTabs();
+    await waitForIdentity();
+    setStatus(window.netlifyIdentity?.currentUser() || null);
+    // Start: approved
+    loadList('approved');
   });
 </script>
 </body>
