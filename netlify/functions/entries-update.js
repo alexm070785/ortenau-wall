@@ -1,16 +1,13 @@
 import { getStore } from '@netlify/blobs';
 
-export const config = { path: '/.netlify/functions/entries-update' }; // Plus Redirect
+export const config = { path: '/entries-update' };
 
-const json = (b, init = {}) =>
-  new Response(JSON.stringify(b), {
-    ...init,
-    headers: { 'content-type': 'application/json', ...(init.headers || {}) },
-  });
+const json = (b, init={}) => new Response(JSON.stringify(b), {
+  ...init, headers: { 'content-type': 'application/json', ...(init.headers||{}) }
+});
 
-// Bildpfade vereinheitlichen
-function norm(u) {
-  if (!u) return u;
+function norm(u){
+  if(!u) return u;
   if (u.startsWith('http') || u.startsWith('/_blob/')) return u;
   return '/_blob/images/' + u.replace(/^\/+/, '');
 }
@@ -24,18 +21,19 @@ export default async (req, context) => {
   }
 
   try {
-    if (req.method !== 'PATCH') {
-      return json({ error: 'Method not allowed' }, { status: 405 });
-    }
+    if (req.method !== 'PATCH') return json({ error: 'Method not allowed' }, { status: 405 });
 
     const url = new URL(req.url);
-    let id = url.pathname.split('/').pop();
-    if (!id || id === 'entries-update') id = url.searchParams.get('id');
+    let id = url.searchParams.get('id');
+    if (!id) {
+      const parts = url.pathname.split('/');
+      id = parts[parts.length - 1];
+      if (id === 'entries-update') id = null;
+    }
     if (!id) return json({ error: 'missing_id' }, { status: 400 });
 
     const body = await req.json();
     const store = getStore('entries');
-
     const raw = await store.get(id);
     if (!raw) return json({ error: 'not_found' }, { status: 404 });
 
@@ -58,9 +56,9 @@ export default async (req, context) => {
 
     await store.set(id, JSON.stringify(item));
     return json({ ok: true, id, item }, { status: 200 });
+
   } catch (e) {
     console.error('entries-update error', e);
     return json({ error: 'update_failed' }, { status: 500 });
   }
 };
-
