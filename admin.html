@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Ortenau-Wall · Admin</title>
   <style>
-    :root {
+    :root{
       --bg:#f6f7f9;--fg:#222;--muted:#6b7280;--card:#fff;--line:#e5e7eb;
       --primary:#0ea5e9;--primary-600:#0284c7;--danger:#ef4444;
     }
@@ -86,6 +86,7 @@
 
   <div class="toast" id="toast">Gespeichert</div>
 
+  <!-- Netlify Identity -->
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   <script>
     const $ = (s,r=document)=>r.querySelector(s);
@@ -93,21 +94,7 @@
     const toast = (m)=>{ const t=$('#toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2000); };
     const esc = s => (s||'').replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
 
-    function blobImageUrl(item) {
-      if (item?.thumbUrl && /^https?:\/\//.test(item.thumbUrl)) return item.thumbUrl;
-      if (item?.imageUrl && /^https?:\/\//.test(item.imageUrl)) return item.imageUrl;
-      if (Array.isArray(item?.imageUrls) && item.imageUrls.length && /^https?:\/\//.test(item.imageUrls[0])) {
-        return item.imageUrls[0];
-      }
-      if (item?.thumbKey) return `/.netlify/blobs/images/${item.thumbKey}`;
-      if (item?.imageKey) return `/.netlify/blobs/images/${item.imageKey}`;
-      if (Array.isArray(item?.imageKeys) && item.imageKeys.length) {
-        return `/.netlify/blobs/images/${item.imageKeys[0]}`;
-      }
-      return "";
-    }
-
-    async function authedFetch(url,opt={}) {
+    async function authedFetch(url,opt={}){
       const u = netlifyIdentity.currentUser();
       const tok = u && await u.jwt();
       return fetch(url,{...opt,headers:{...(opt.headers||{}),Authorization: tok?`Bearer ${tok}`:''}});
@@ -116,28 +103,26 @@
     const cache = new Map();
     let currentView = 'pending';
 
+    // Identity
     (function(){
       const who = $('#who'), btnLogin=$('#btnLogin'), btnLogout=$('#btnLogout');
       function setUser(u){ who.textContent = u ? (u.user_metadata?.full_name || u.email) : 'nicht eingeloggt'; }
       btnLogin.addEventListener('click', ()=> netlifyIdentity.open('login'));
       btnLogout.addEventListener('click', ()=> netlifyIdentity.logout());
+
       netlifyIdentity.on('init', user=>{
         setUser(user);
         if(!user && location.hash.includes('recovery_token')) netlifyIdentity.open();
         if(user) load('pending');
       });
       netlifyIdentity.on('login', user=>{
-        setUser(user);
-        netlifyIdentity.close();
-        load(currentView);
+        setUser(user); netlifyIdentity.close(); load('pending');
       });
-      netlifyIdentity.on('logout', ()=>{
-        setUser(null);
-        load('approved');
-      });
+      netlifyIdentity.on('logout', ()=>{ setUser(null); load('approved'); });
       netlifyIdentity.init();
     })();
 
+    // UI Events
     $('#btnRefresh').addEventListener('click', ()=> load(currentView));
     $('#btnShowPending').addEventListener('click', ()=> load('pending'));
     $('#btnShowApproved').addEventListener('click', ()=> load('approved'));
@@ -152,6 +137,7 @@
       if(act==='cancel') toggleEditor(id, false);
     });
 
+    // Load & render
     async function load(view='pending'){
       currentView = view;
       const tbody = $('#rows');
@@ -165,6 +151,7 @@
         tbody.innerHTML = items.length? '' : `<tr><td colspan="6" class="empty">Keine Einträge gefunden.</td></tr>`;
         items.forEach(it=>{ cache.set(it.id, it); tbody.appendChild(row(it, view==='pending')); });
       }catch(err){
+        console.error(err);
         tbody.innerHTML = `<tr><td colspan="6" class="empty">Fehler beim Laden (${esc(err.message)}).</td></tr>`;
       }
     }
@@ -172,11 +159,9 @@
     function row(item, showApprove){
       const tr = document.createElement('tr');
       tr.id = `row_${item.id}`;
-      const imgSrc = blobImageUrl(item);
-      const adr = [item.street, item.zip && item.city ? `${item.zip}, ${item.city}` : item.city].filter(Boolean).join(', ');
       tr.innerHTML = `
-        <td><img class="thumb" src="${esc(imgSrc)}" alt=""></td>
-        <td><b>${esc(item.name||'')}</b><div class="muted">${esc(adr||'')}</div></td>
+        <td><img class="thumb" src="${esc(item.thumbUrl||item.imageUrl||'')}" alt=""></td>
+        <td><b>${esc(item.name)}</b><div class="muted">${esc(item.address||'')}</div></td>
         <td>${esc(item.city||'')}</td>
         <td><span class="tag">${esc(item.category||'-')}</span></td>
         <td>${fmt(item.createdAt)}</td>
@@ -216,7 +201,7 @@
       const menuText = document.querySelector(`#m_${CSS.escape(id)}`)?.value || '';
       const featured = (document.querySelector(`#f_${CSS.escape(id)}`)?.value === 'true');
       try{
-        const res = await authedFetch(`/.netlify/functions/entries-update?id=${encodeURIComponent(id)}`, {
+        const res = await authedFetch(`/.netlify/functions/entries-update/${encodeURIComponent(id)}`, {
           method:'PATCH',
           headers:{'Content-Type':'application/json'},
           body: JSON.stringify({ menuText, featured })
@@ -225,26 +210,26 @@
         toast('Gespeichert');
         toggleEditor(id, false);
         load(currentView);
-      }catch(e){ toast('Speichern fehlgeschlagen'); }
+      }catch(e){ toast('Speichern fehlgeschlagen'); console.error(e); }
     }
 
     async function approve(id){
       try{
-        const res = await authedFetch(`/.netlify/functions/entries-update?id=${encodeURIComponent(id)}`,{
+        const res = await authedFetch(`/.netlify/functions/entries-update/${encodeURIComponent(id)}`,{
           method:'PATCH',
           headers:{'Content-Type':'application/json'},
           body: JSON.stringify({ action:'approve' })
         });
         if(!res.ok) throw new Error(`HTTP ${res.status}`);
-        toast('Freigeben OK');
+        toast('Freigegeben');
         load('pending');
-      }catch(e){ toast('Freigabe fehlgeschlagen'); }
+      }catch(e){ toast('Freigabe fehlgeschlagen'); console.error(e); }
     }
 
     async function rejectEntry(id){
       if(!confirm('Diesen Eintrag wirklich ablehnen?')) return;
       try{
-        const res = await authedFetch(`/.netlify/functions/entries-update?id=${encodeURIComponent(id)}`,{
+        const res = await authedFetch(`/.netlify/functions/entries-update/${encodeURIComponent(id)}`,{
           method:'PATCH',
           headers:{'Content-Type':'application/json'},
           body: JSON.stringify({ action:'reject' })
@@ -252,7 +237,7 @@
         if(!res.ok) throw new Error(`HTTP ${res.status}`);
         toast('Abgelehnt');
         load(currentView);
-      }catch(e){ toast('Ablehnen fehlgeschlagen'); }
+      }catch(e){ toast('Ablehnen fehlgeschlagen'); console.error(e); }
     }
 
     document.addEventListener('DOMContentLoaded', ()=> load('approved'));
