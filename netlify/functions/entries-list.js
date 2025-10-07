@@ -1,24 +1,29 @@
 import { getStore } from '@netlify/blobs';
 
-export const config = { path: '/entries-list' };
+const json = (b, init = {}) =>
+  new Response(JSON.stringify(b), {
+    ...init,
+    headers: { 'content-type': 'application/json', ...(init.headers || {}) },
+  });
 
-const json = (b, init={}) => new Response(JSON.stringify(b), {
-  ...init, headers: { 'content-type': 'application/json', ...(init.headers||{}) }
-});
+// Hilfsfunktion: User aus verschiedenen Context-Varianten lesen
+function getUserFromContext(ctx) {
+  return ctx?.user || ctx?.clientContext?.user || null;
+}
 
 export default async (req, context) => {
   try {
     const url = new URL(req.url);
     const status = url.searchParams.get('status') || 'approved';
 
-    // Admin-only für "pending" oder "rejected"
+    // Nur approved ist öffentlich – alles andere erfordert Identity-User
     if (status !== 'approved') {
-      const { user } = context;
+      const user = getUserFromContext(context);
       if (!user) return json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const store = getStore('entries');
-    const { blobs } = await store.list();
+    const { blobs } = await store.list(); // [{ key, ... }]
     const out = [];
 
     for (const b of blobs) {
@@ -30,9 +35,9 @@ export default async (req, context) => {
       }
     }
 
+    // neueste zuerst
     out.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
     return json(out, { status: 200 });
-
   } catch (e) {
     console.error('entries-list error', e);
     return json({ error: 'list_failed' }, { status: 500 });
