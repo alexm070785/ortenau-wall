@@ -1,4 +1,3 @@
-// netlify/functions/entries-create.js
 import { getStore } from '@netlify/blobs';
 
 const CORS = {
@@ -22,14 +21,12 @@ export default async (req) => {
     if (req.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: CORS });
     }
-
     if (req.method !== 'POST') {
       return json({ error: 'Method not allowed' }, { status: 405 });
     }
 
     const form = await req.formData();
 
-    // Basisdaten
     const entry = {
       status: 'pending',
       createdAt: new Date().toISOString(),
@@ -41,9 +38,7 @@ export default async (req) => {
         form.get('hausnr') || '',
         form.get('plz') || '',
         form.get('ort') || '',
-      ]
-        .filter(Boolean)
-        .join(' '),
+      ].filter(Boolean).join(' '),
       menuText: form.get('menuText') || '',
       featured: false,
       images: [],
@@ -54,13 +49,8 @@ export default async (req) => {
     const files = form.getAll('menuImages') || [];
     for (const file of files) {
       if (!(file instanceof Blob)) continue;
-      const ext =
-        typeof file.type === 'string' && file.type.includes('/')
-          ? file.type.split('/')[1]
-          : 'jpg';
-      const filename = `img_${Date.now()}_${Math.random()
-        .toString(36)
-        .slice(2)}.${ext}`;
+      const ext = (file.type && file.type.includes('/')) ? file.type.split('/')[1] : 'jpg';
+      const filename = `img_${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
       await imgStore.set(filename, file);
       entry.images.push(`/_blob/images/${filename}`);
     }
