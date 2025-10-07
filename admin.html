@@ -86,7 +86,7 @@
 
   <div class="toast" id="toast">OK</div>
 
-  <!-- Netlify Identity Widget MUSS VOR DEM SCRIPT LADEN -->
+  <!-- Netlify Identity Widget MUSS vor dem Script geladen werden -->
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 
   <script>
@@ -95,12 +95,6 @@
     const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
     const fmt = iso => iso ? new Date(iso).toLocaleString('de-DE') : '';
     const toast = m => { const t=$('#toast'); if(!t)return; t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1600); };
-
-    async function authedFetch(url,opt={}){
-      const u = window.netlifyIdentity?.currentUser();
-      const tok = u && await u.jwt(true);
-      return fetch(url,{...opt,headers:{...(opt.headers||{}),Authorization: tok?`Bearer ${tok}`:''}});
-    }
 
     // -------- Identity robust laden --------
     function waitForIdentity(cb){
@@ -115,18 +109,68 @@
     const whoEl = document.querySelector('#who');
     const setUser = (u)=>{ if(whoEl) whoEl.textContent = u ? (u.user_metadata?.full_name || u.email) : 'nicht eingeloggt'; };
 
-    let currentView = 'pending';
+    let currentView = 'approved';
     const cache = new Map();
 
-    // Buttons funktionieren auch, wenn Widget noch lädt
+    // -------- Authenticated Fetch (mit Token Refresh & Auto-Login) --------
+    async function authedFetch(url, opt = {}) {
+      const needsAuth =
+        url.includes('/entries-update') ||
+        url.includes('status=pending') ||
+        (opt.method && opt.method.toUpperCase() !== 'GET');
+
+      const id = window.netlifyIdentity;
+      let user = id?.currentUser();
+
+      if (needsAuth && !user) {
+        await new Promise((resolve) => {
+          if (!id) return resolve();
+          const onLogin = (u) => { id.off('login', onLogin); user = u; resolve(); };
+          id.on('login', onLogin);
+          id.open('login');
+        });
+      }
+
+      let token = user ? await user.jwt() : null;
+      let res = await fetch(url, {
+        ...opt,
+        headers: { ...(opt.headers || {}), Authorization: token ? `Bearer ${token}` : '' },
+      });
+
+      if (res.status === 401 && user) {
+        try {
+          token = await user.jwt(true);
+          res = await fetch(url, {
+            ...opt,
+            headers: { ...(opt.headers || {}), Authorization: token ? `Bearer ${token}` : '' },
+          });
+        } catch (e) {}
+      }
+
+      return res;
+    }
+
+    // -------- Buttons --------
     document.querySelector('#btnLogin')?.addEventListener('click', ()=> waitForIdentity(()=> netlifyIdentity.open('login')));
     document.querySelector('#btnLogout')?.addEventListener('click',()=> waitForIdentity(()=> netlifyIdentity.logout()));
     document.querySelector('#btnRefresh')?.addEventListener('click',()=> load(currentView));
-    document.querySelector('#btnPending')?.addEventListener('click',()=> load('pending'));
+
+    document.querySelector('#btnPending')?.addEventListener('click', async () => {
+      const id = window.netlifyIdentity;
+      if (id && !id.currentUser()) {
+        await new Promise((resolve) => {
+          const onLogin = () => { id.off('login', onLogin); resolve(); };
+          id.on('login', onLogin);
+          id.open('login');
+        });
+      }
+      load('pending');
+    });
+
     document.querySelector('#btnApproved')?.addEventListener('click',()=> load('approved'));
 
     waitForIdentity(()=>{
-      netlifyIdentity.on('init',  (user)=>{ setUser(user); load('pending'); });
+      netlifyIdentity.on('init',  (user)=>{ setUser(user); load(user ? 'pending' : 'approved'); });
       netlifyIdentity.on('login', (user)=>{ setUser(user); netlifyIdentity.close(); load('pending'); });
       netlifyIdentity.on('logout', ()=>{ setUser(null); load('approved'); });
       netlifyIdentity.init();
@@ -169,7 +213,7 @@
     }
 
     // -------- Laden und Rendern --------
-    async function load(view='pending'){
+    async function load(view='approved'){
       currentView=view;
       const tbody=$('#rows');
       tbody.innerHTML=`<tr><td colspan="6" class="empty">Lade ${view}…</td></tr>`;
