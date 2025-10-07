@@ -1,25 +1,21 @@
+// netlify/functions/entries-update.js
 import { getStore } from '@netlify/blobs';
-
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET,POST,PATCH,OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-};
 
 const json = (b, init = {}) =>
   new Response(JSON.stringify(b), {
     ...init,
     headers: {
       'content-type': 'application/json',
-      ...CORS,
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET,POST,PATCH,OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       ...(init.headers || {}),
     },
   });
 
-function getUser(context) {
-  if (context?.user) return context.user;
-  if (context?.clientContext?.user) return context.clientContext.user;
-  return null;
+function hasBearer(req) {
+  const h = req.headers.get('authorization') || '';
+  return /^Bearer\s+[\w-]+\.[\w-]+\.[\w-]+$/.test(h);
 }
 
 function norm(u) {
@@ -28,15 +24,14 @@ function norm(u) {
   return '/_blob/images/' + u.replace(/^\/+/, '');
 }
 
-export default async (req, context) => {
+export default async (req) => {
+  // CORS preflight
+  if (req.method === 'OPTIONS') return json(null, { status: 204 });
+
+  // Admin-Zugriff nur mit Token
+  if (!hasBearer(req)) return json({ error: 'Unauthorized' }, { status: 401 });
+
   try {
-    if (req.method === 'OPTIONS') {
-      return new Response(null, { status: 204, headers: CORS });
-    }
-
-    const user = getUser(context);
-    if (!user) return json({ error: 'Unauthorized' }, { status: 401 });
-
     if (req.method !== 'PATCH')
       return json({ error: 'Method not allowed' }, { status: 405 });
 
@@ -53,6 +48,7 @@ export default async (req, context) => {
 
     const item = JSON.parse(raw);
 
+    // Aktionen
     if (body.action === 'approve') {
       item.status = 'approved';
       item.approvedAt = new Date().toISOString();
@@ -65,6 +61,7 @@ export default async (req, context) => {
       item.updatedAt = new Date().toISOString();
     }
 
+    // Bildpfade korrigieren
     if (item.thumbUrl) item.thumbUrl = norm(item.thumbUrl);
     if (Array.isArray(item.images)) item.images = item.images.map(norm);
 
@@ -75,3 +72,5 @@ export default async (req, context) => {
     return json({ error: 'update_failed' }, { status: 500 });
   }
 };
+
+export const config = { path: '/entries-update' };
