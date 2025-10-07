@@ -1,49 +1,41 @@
 [build]
-  publish = "."
+  publish   = "."
   functions = "netlify/functions"
 
 [functions]
   node_bundler = "esbuild"
 
-# --- Pretty URLs -> Functions --------------------------------------------
-# /entries-create  -> /.netlify/functions/entries-create
-[[redirects]]
-  from = "/entries-create"
-  to = "/.netlify/functions/entries-create"
-  status = 200
-  force = true
-
-# /entries-list    -> /.netlify/functions/entries-list
-[[redirects]]
-  from = "/entries-list"
-  to = "/.netlify/functions/entries-list"
-  status = 200
-  force = true
-
-# /entries-update  -> /.netlify/functions/entries-update
-[[redirects]]
-  from = "/entries-update"
-  to = "/.netlify/functions/entries-update"
-  status = 200
-  force = true
-
-# /entries-update/* -> /.netlify/functions/entries-update/:splat
-# (falls du einmal Pfad-IDs anhängen willst)
-[[redirects]]
-  from = "/entries-update/*"
-  to = "/.netlify/functions/entries-update/:splat"
-  status = 200
-  force = true
-
-# --- CORS für alle Functions ---------------------------------------------
+# CORS für Functions (hilft beim lokalen Testen & aus dem Admin)
 [[headers]]
   for = "/.netlify/functions/*"
   [headers.values]
-    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Origin  = "*"
     Access-Control-Allow-Methods = "GET,POST,PATCH,OPTIONS"
     Access-Control-Allow-Headers = "Content-Type, Authorization"
 
-# --- Blobs Stores ---------------------------------------------------------
+# ---------- WICHTIG: Explizite Redirects auf die Functions ----------
+# List (GET)
+[[redirects]]
+  from   = "/entries-list"
+  to     = "/.netlify/functions/entries-list"
+  status = 200
+  force  = true
+
+# Update (PATCH/POST/GET) – Querystrings (z.B. id=...) werden automatisch übernommen
+[[redirects]]
+  from   = "/entries-update"
+  to     = "/.netlify/functions/entries-update"
+  status = 200
+  force  = true
+
+# Create (POST) – nur der Vollständigkeit halber (deine Function geht schon)
+[[redirects]]
+  from   = "/entries-create"
+  to     = "/.netlify/functions/entries-create"
+  status = 200
+  force  = true
+
+# ---------- Netlify Blobs Stores ----------
 [[blobs]]
   name = "entries"
   retention = "manual"
