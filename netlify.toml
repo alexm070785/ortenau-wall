@@ -13,7 +13,7 @@
     Access-Control-Allow-Methods = "GET,POST,PATCH,OPTIONS"
     Access-Control-Allow-Headers = "Content-Type, Authorization"
 
-# Blob Stores automatisch anlegen
+# Blob Stores
 [[blobs]]
   name = "entries"
   retention = "manual"
@@ -21,3 +21,4 @@
 [[blobs]]
   name = "images"
   retention = "manual"
+  visibility = "public"   # <-- wichtig für öffentliche Bild-URLs
