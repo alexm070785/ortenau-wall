@@ -1,245 +1,61 @@
-<!doctype html>
-<html lang="de">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Ortenau-Wall · Admin</title>
-  <style>
-    :root { --bg:#f6f7f9;--fg:#222;--muted:#6b7280;--card:#fff;--line:#e5e7eb;
-            --primary:#0ea5e9;--primary-600:#0284c7;--danger:#ef4444; }
-    *{box-sizing:border-box}
-    body{margin:0;font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial;color:var(--fg);background:var(--bg)}
-    .topbar{position:sticky;top:0;z-index:10;background:#fff;border-bottom:1px solid var(--line)}
-    .wrap{max-width:1200px;margin:0 auto;padding:12px 16px}
-    .row{display:flex;gap:12px;align-items:center;justify-content:space-between}
-    h1{margin:0;font-size:20px}
-    .pill{font-size:12px;padding:4px 8px;border-radius:999px;background:#eef2ff;color:#3730a3;border:1px solid #c7d2fe}
-    .btn{appearance:none;border:1px solid var(--line);background:#fff;padding:8px 12px;border-radius:10px;cursor:pointer}
-    .btn:hover{box-shadow:0 2px 8px rgba(0,0,0,.06)}
-    .btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}
-    .btn.primary:hover{background:var(--primary-600)}
-    .btn.danger{background:#fff;color:var(--danger);border-color:#fecaca}
-    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 6px 20px rgba(0,0,0,.08)}
-    table{width:100%;border-collapse:collapse}
-    th,td{padding:12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
-    thead th{position:sticky;top:58px;background:#fff;z-index:1;font-size:12px;color:#374151;text-transform:uppercase;letter-spacing:.04em}
-    .thumb{width:72px;height:72px;object-fit:cover;border-radius:10px;border:1px solid var(--line)}
-    .muted{color:var(--muted);font-size:12px}
-    .tag{display:inline-block;padding:2px 8px;border-radius:999px;border:1px solid var(--line);background:#fafafa;font-size:12px}
-    .empty{padding:30px;text-align:center;color:var(--muted)}
-    .toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#111827;color:#fff;padding:10px 12px;border-radius:10px;opacity:0;transition:.2s;z-index:50}
-    .toast.show{opacity:1}
-    .edit{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:12px;border-top:1px dashed var(--line);background:#fafafa}
-    .field{display:grid;gap:6px}
-    .field input,.field select,.field textarea{padding:10px 12px;border:1px solid var(--line);border-radius:10px;font:inherit;width:100%}
-    .field textarea{min-height:120px;resize:vertical}
-  </style>
-</head>
-<body>
-  <div class="topbar">
-    <div class="wrap row">
-      <div class="row" style="gap:10px">
-        <h1>Ortenau-Wall · Admin</h1>
-        <span class="pill" id="who">nicht eingeloggt</span>
-      </div>
-      <div class="row" style="gap:8px">
-        <button class="btn" id="btnLogin">🔐 Login</button>
-        <button class="btn" id="btnRefresh">🔄 Aktualisieren</button>
-        <button class="btn" id="btnLogout">🚪 Logout</button>
-      </div>
-    </div>
-  </div>
+// ---- Netlify Identity Login prüfen ----
+if (typeof netlifyIdentity !== 'undefined') {
+  netlifyIdentity.on('init', (user) => {
+    console.log('Identity init:', user ? user.email : 'not logged in');
+  });
 
-  <div class="wrap">
-    <div class="card">
-      <div style="padding:14px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center">
-        <div>
-          <div style="font-weight:600">Warteschlange</div>
-          <div class="muted">Neue Einträge, die auf Freigabe warten</div>
-        </div>
-        <div class="row" style="gap:8px">
-          <button class="btn" id="btnShowPending">Pending</button>
-          <button class="btn" id="btnShowApproved">Approved</button>
-        </div>
-      </div>
-      <div style="overflow:auto">
-        <table>
-          <thead>
-            <tr>
-              <th style="width:96px">Bild</th>
-              <th>Name & Adresse</th>
-              <th>Ort</th>
-              <th>Kat.</th>
-              <th>Eingereicht</th>
-              <th style="width:260px">Aktion</th>
-            </tr>
-          </thead>
-          <tbody id="rows">
-            <tr><td colspan="6" class="empty">Lade…</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
+  netlifyIdentity.on('login', (user) => {
+    console.log('Logged in as', user.email);
+  });
 
-  <div class="toast" id="toast">Gespeichert</div>
+  netlifyIdentity.on('logout', () => {
+    console.log('Logged out');
+  });
+}
 
-  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-  <script>
-    // ===== Utilities =====
-    const $ = (s,r=document)=>r.querySelector(s);
-    const fmt = iso => iso ? new Date(iso).toLocaleString('de-DE') : '';
-    const toast = (m)=>{ const t=$('#toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2000); };
-    const esc = s => (s||'').replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+// ---- Automatischer Fetch mit gültigem Token ----
+async function authedFetch(url, opt = {}) {
+  const u = netlifyIdentity.currentUser();
+  const tok = u && (await u.jwt(true)); // ⚡ wichtig: true = refresh token
+  return fetch(url, {
+    ...opt,
+    headers: {
+      ...(opt.headers || {}),
+      Authorization: tok ? `Bearer ${tok}` : '',
+    },
+  });
+}
 
-    // Bildpfade der alten Einträge korrigieren (Frontend-Schutz)
-    function normImg(u){
-      if(!u) return '';
-      if (u.startsWith('http') || u.startsWith('/_blob/')) return u;
-      return '/_blob/images/' + u.replace(/^\/+/, '');
-    }
+// ---- Beispiel: Pending-Einträge laden ----
+async function loadPending() {
+  const res = await authedFetch('/.netlify/functions/entries-list?status=pending');
+  if (!res.ok) {
+    console.error('Fehler beim Laden der Pending-Liste:', res.status);
+    return;
+  }
+  const data = await res.json();
+  console.log('Pending Entries:', data);
+  // hier kannst du die Liste in dein HTML einsetzen
+}
 
-    async function authedFetch(url,opt={}){
-      const u = netlifyIdentity.currentUser();
-      const tok = u && await u.jwt();
-      return fetch(url,{...opt,headers:{...(opt.headers||{}),Authorization: tok?`Bearer ${tok}`:''}});
-    }
+// ---- Beispiel: Eintrag genehmigen ----
+async function approveEntry(id) {
+  const res = await authedFetch(`/.netlify/functions/entries-update?id=${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'approve' }),
+  });
+  const data = await res.json();
+  console.log('Approved:', data);
+}
 
-    // ===== State =====
-    const cache = new Map();
-    let currentView = 'pending';
-
-    // ===== Identity =====
-    (function(){
-      const who = $('#who'), btnLogin=$('#btnLogin'), btnLogout=$('#btnLogout');
-      function setUser(u){ who.textContent = u ? (u.user_metadata?.full_name || u.email) : 'nicht eingeloggt'; }
-      btnLogin.addEventListener('click', ()=> netlifyIdentity.open('login'));
-      btnLogout.addEventListener('click', ()=> netlifyIdentity.logout());
-      netlifyIdentity.on('init', user=>{ setUser(user); if(user) load('pending'); });
-      netlifyIdentity.on('login', user=>{ setUser(user); netlifyIdentity.close(); load(currentView); });
-      netlifyIdentity.on('logout', ()=>{ setUser(null); load('approved'); });
-      netlifyIdentity.init();
-    })();
-
-    // ===== UI =====
-    $('#btnRefresh').addEventListener('click', ()=> load(currentView));
-    $('#btnShowPending').addEventListener('click', ()=> load('pending'));
-    $('#btnShowApproved').addEventListener('click', ()=> load('approved'));
-
-    $('#rows').addEventListener('click', (e)=>{
-      const btn = e.target.closest('button'); if(!btn) return;
-      const id = btn.dataset.id, act = btn.dataset.action;
-      if(act==='edit') toggleEditor(id, true);
-      if(act==='approve') approve(id);
-      if(act==='reject') rejectEntry(id);
-      if(act==='save') save(id);
-      if(act==='cancel') toggleEditor(id, false);
-    });
-
-    // ===== Load & Render =====
-    async function load(view='pending'){
-      currentView = view;
-      const tbody = $('#rows');
-      tbody.innerHTML = `<tr><td colspan="6" class="empty">Lade ${view}…</td></tr>`;
-      try{
-        const url = `/.netlify/functions/entries-list?status=${encodeURIComponent(view)}`;
-        const res = (view==='approved') ? await fetch(url) : await authedFetch(url);
-        if(!res.ok) throw new Error(`HTTP ${res.status}`);
-        const items = await res.json();
-        cache.clear();
-        tbody.innerHTML = items.length? '' : `<tr><td colspan="6" class="empty">Keine Einträge gefunden.</td></tr>`;
-        items.forEach(it=>{ cache.set(it.id, it); tbody.appendChild(row(it, view==='pending')); });
-      }catch(err){
-        tbody.innerHTML = `<tr><td colspan="6" class="empty">Fehler beim Laden (${esc(err.message)}).</td></tr>`;
-      }
-    }
-
-    function row(item, showApprove){
-      const tr = document.createElement('tr');
-      tr.id = `row_${item.id}`;
-      const imgSrc = normImg(item.thumbUrl || item.imageUrl || (item.images && item.images[0]) || '');
-      tr.innerHTML = `
-        <td><img class="thumb" src="${esc(imgSrc)}" alt=""></td>
-        <td><b>${esc(item.name)}</b><div class="muted">${esc(item.address||'')}</div></td>
-        <td>${esc(item.city||'')}</td>
-        <td><span class="tag">${esc(item.category||'-')}</span></td>
-        <td>${fmt(item.createdAt)}</td>
-        <td>
-          <div class="row" style="gap:8px;flex-wrap:wrap">
-            <button class="btn" data-action="edit" data-id="${item.id}">✏️ Bearbeiten</button>
-            ${showApprove? `<button class="btn primary" data-action="approve" data-id="${item.id}">✅ Freigeben</button>`:''}
-            <button class="btn danger" data-action="reject" data-id="${item.id}">🗑️ Ablehnen</button>
-          </div>
-          <div class="edit" id="edit_${item.id}" style="display:none">
-            <div class="field">
-              <label>Menü (optional)</label>
-              <textarea id="m_${item.id}">${esc(item.menuText||'')}</textarea>
-            </div>
-            <div class="field">
-              <label>Featured</label>
-              <select id="f_${item.id}">
-                <option value="false"${item.featured? '':' selected'}>Nein</option>
-                <option value="true"${item.featured? ' selected':''}>Ja</option>
-              </select>
-            </div>
-            <div style="grid-column:1/-1;display:flex;gap:8px">
-              <button class="btn" data-action="save" data-id="${item.id}">💾 Speichern</button>
-              <button class="btn" data-action="cancel" data-id="${item.id}">Abbrechen</button>
-            </div>
-          </div>
-        </td>`;
-      return tr;
-    }
-
-    function toggleEditor(id, show){
-      const box = document.querySelector(`#edit_${CSS.escape(id)}`);
-      if(box) box.style.display = show? 'grid' : 'none';
-    }
-
-    async function save(id){
-      const menuText = document.querySelector(`#m_${CSS.escape(id)}`)?.value || '';
-      const featured = (document.querySelector(`#f_${CSS.escape(id)}`)?.value === 'true');
-      try{
-        const res = await authedFetch(`/.netlify/functions/entries-update/${encodeURIComponent(id)}`, {
-          method:'PATCH',
-          headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ menuText, featured })
-        });
-        if(!res.ok) throw new Error(`HTTP ${res.status}`);
-        toast('Gespeichert');
-        toggleEditor(id, false);
-        load(currentView);
-      }catch(e){ toast('Speichern fehlgeschlagen'); }
-    }
-
-    async function approve(id){
-      try{
-        const res = await authedFetch(`/.netlify/functions/entries-update/${encodeURIComponent(id)}`,{
-          method:'PATCH',
-          headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ action:'approve' })
-        });
-        if(!res.ok) throw new Error(`HTTP ${res.status}`);
-        toast('Freigegeben');
-        load('pending');
-      }catch(e){ toast('Freigabe fehlgeschlagen'); }
-    }
-
-    async function rejectEntry(id){
-      if(!confirm('Diesen Eintrag wirklich ablehnen?')) return;
-      try{
-        const res = await authedFetch(`/.netlify/functions/entries-update/${encodeURIComponent(id)}`,{
-          method:'PATCH',
-          headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ action:'reject' })
-        });
-        if(!res.ok) throw new Error(`HTTP ${res.status}`);
-        toast('Abgelehnt');
-        load(currentView);
-      }catch(e){ toast('Ablehnen fehlgeschlagen'); }
-    }
-
-    document.addEventListener('DOMContentLoaded', ()=> load('approved'));
-  </script>
-</body>
-</html>
+// ---- Beispiel: Ablehnen ----
+async function rejectEntry(id) {
+  const res = await authedFetch(`/.netlify/functions/entries-update?id=${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'reject' }),
+  });
+  const data = await res.json();
+  console.log('Rejected:', data);
+}
