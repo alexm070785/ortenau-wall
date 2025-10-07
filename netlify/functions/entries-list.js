@@ -1,19 +1,17 @@
 import { getStore } from '@netlify/blobs';
 
-export const config = { path: '/.netlify/functions/entries-list' }; // Plus Redirect – doppelt hält besser
+export const config = { path: '/entries-list' };
 
-const json = (b, init = {}) =>
-  new Response(JSON.stringify(b), {
-    ...init,
-    headers: { 'content-type': 'application/json', ...(init.headers || {}) },
-  });
+const json = (b, init={}) => new Response(JSON.stringify(b), {
+  ...init, headers: { 'content-type': 'application/json', ...(init.headers||{}) }
+});
 
 export default async (req, context) => {
   try {
     const url = new URL(req.url);
     const status = url.searchParams.get('status') || 'approved';
 
-    // "pending" & "rejected" nur mit Identity-Token
+    // Admin-only für "pending" oder "rejected"
     if (status !== 'approved') {
       const { user } = context;
       if (!user) return json({ error: 'Unauthorized' }, { status: 401 });
@@ -34,9 +32,9 @@ export default async (req, context) => {
 
     out.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
     return json(out, { status: 200 });
+
   } catch (e) {
     console.error('entries-list error', e);
     return json({ error: 'list_failed' }, { status: 500 });
   }
 };
-
