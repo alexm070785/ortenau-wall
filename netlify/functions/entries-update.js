@@ -1,54 +1,66 @@
 // netlify/functions/entries-update.js
-// PATCH JSON-Body: { id, status? , menuText? , featured? }
-// erfordert Authorization: Bearer <jwt>
+import { getStore } from '@netlify/blobs';
 
-import { getStore } from "@netlify/blobs";
-
-export default async (req /*, context */) => {
-  try {
-    if (req.method === "OPTIONS") return ok();
-    if (req.method !== "PATCH") return j(405, { error: "Method not allowed" });
-
-    const auth = req.headers.get("authorization") || "";
-    if (!/^Bearer\s+.+/i.test(auth)) return j(401, { error: "Unauthorized" });
-
-    const body = await req.json().catch(() => ({}));
-    const id = (body.id || "").toString().trim();
-    if (!id) return j(400, { error: "id required" });
-
-    const store = getStore("entries");
-    const item = await store.getJSON(id);
-    if (!item) return j(404, { error: "not found" });
-
-    if (typeof body.status === "string") {
-      const next = body.status.toLowerCase();
-      if (!["pending", "approved", "rejected"].includes(next))
-        return j(400, { error: "invalid status" });
-      item.status = next;
-    }
-
-    if (typeof body.menuText === "string") item.menuText = body.menuText;
-    if (typeof body.featured !== "undefined")
-      item.featured = Boolean(body.featured === true || body.featured === "true");
-
-    item.updatedAt = new Date().toISOString();
-    await store.setJSON(id, item);
-
-    return j(200, { ok: true });
-  } catch (err) {
-    console.error("entries-update error:", err);
-    return j(500, { error: err?.message || "internal error" });
-  }
+/** Gemeinsame CORS-Header */
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET,POST,PATCH,OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
-const ok = () => new Response(null, { status: 204, headers: cors() });
-const j = (s, body) =>
-  new Response(JSON.stringify(body), {
-    status: s,
-    headers: { "content-type": "application/json", ...cors() },
+const json = (data, status = 200) =>
+  new Response(JSON.stringify(data), {
+    status,
+    headers: { 'content-type': 'application/json', ...CORS },
   });
-const cors = () => ({
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-  "Access-Control-Allow-Methods": "GET,POST,PATCH,OPTIONS",
-});
+
+const empty = (status = 204) =>
+  new Response(null, { status, headers: CORS });
+
+export default async (req, context) => {
+  // Preflight
+  if (req.method === 'OPTIONS') return empty(204);
+
+  // Auth: irgendein eingeloggter Identity-User reicht
+  const token = context.clientContext?.identity?.token;
+  if (!token) return json({ error: 'Unauthorized' }, 401);
+
+  // id kommt jetzt als ?id=... (nicht mehr /:id)
+  const { searchParams } = new URL(req.url);
+  const id = (searchParams.get('id') || '').trim();
+  if (!id) return json({ error: 'Missing id' }, 400);
+
+  const store = getStore('entries');
+
+  // Eintrag laden (neues API: get(..., { type: 'json' }))
+  let entry = await store.get(id, { type: 'json' });
+  if (!entry) return json({ error: 'Not found' }, 404);
+
+  // Body lesen (kann leer sein)
+  let body = {};
+  try {
+    body = await req.json();
+  } catch {
+    body = {};
+  }
+
+  // Aktionen: approve / reject ODER Felder (menuText, featured) patchen
+  const now = new Date().toISOString();
+
+  if (body.action === 'approve') {
+    entry.status = 'approved';
+    entry.approvedAt = now;
+  } else if (body.action === 'reject') {
+    entry.status = 'rejected';
+    entry.rejectedAt = now;
+  } else {
+    if (typeof body.menuText === 'string') entry.menuText = body.menuText;
+    if (typeof body.featured === 'boolean') entry.featured = body.featured;
+    entry.updatedAt = now;
+  }
+
+  // Speichern (neues API: setJSON)
+  await store.setJSON(id, entry);
+
+  return json({ ok: true, id, status: entry.status });
+};
