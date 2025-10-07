@@ -2,15 +2,25 @@
   publish   = "."
   functions = "netlify/functions"
 
-# CORS für alle Functions
+[functions]
+  node_bundler = "esbuild"
+
+# Identity-Routen (Client)
+[[redirects]]
+  from = "/.netlify/identity"
+  to   = "/.netlify/identity"
+  status = 200
+  force  = true
+
+# Functions-CORS
 [[headers]]
   for = "/.netlify/functions/*"
   [headers.values]
-    Access-Control-Allow-Origin  = "*"
+    Access-Control-Allow-Origin = "*"
     Access-Control-Allow-Methods = "GET,POST,PATCH,OPTIONS"
     Access-Control-Allow-Headers = "Content-Type, Authorization"
 
-# Blobs Stores
+# Blobs: Stores
 [[blobs]]
   name = "entries"
   retention = "manual"
