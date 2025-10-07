@@ -1,30 +1,52 @@
 // netlify/functions/entries-list.js
+// Liefert Einträge aus dem Blob-Store "entries" gefiltert nach status.
+// - approved: öffentlich
+// - pending / rejected: nur mit Identity-Token (Login)
+// Admin-Rolle ist optional – Token reicht (kannst du leicht verschärfen).
+
 import { getStore } from "@netlify/blobs";
 
 export default async (req, context) => {
-  const url = new URL(req.url);
-  const status = url.searchParams.get("status") || "approved";
+  try {
+    // CORS
+    if (req.method === "OPTIONS") return ok();
 
-  const isAdmin = Boolean(context.clientContext?.identity?.token);
-  if ((status === "pending" || status === "rejected") && !isAdmin) {
-    return json(401, { error: "Unauthorized" });
+    const url = new URL(req.url);
+    const status = (url.searchParams.get("status") || "approved").toLowerCase();
+
+    const needsAuth = status === "pending" || status === "rejected";
+    const hasToken = Boolean(context.clientContext?.identity?.token);
+
+    if (needsAuth && !hasToken) {
+      return j(401, { error: "Unauthorized" });
+    }
+
+    const store = getStore("entries");
+    const { blobs } = await store.list(); // [{ key, size, uploadedAt, ... }]
+
+    const out = [];
+    for (const b of blobs) {
+      const item = await store.getJSON(b.key);
+      if (item && item.status === status) out.push(item);
+    }
+
+    // Neueste zuerst
+    out.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+    return j(200, out);
+  } catch (err) {
+    console.error("entries-list error:", err);
+    return j(500, { error: err?.message || "internal error" });
   }
-
-  const store = getStore("entries");
-  const { blobs } = await store.list(); // <- WICHTIG: blobs, nicht keys!
-
-  const out = [];
-  for (const b of blobs) {
-    const item = await store.getJSON(b.key);
-    if (item && item.status === status) out.push(item);
-  }
-
-  out.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
-  return json(200, out);
 };
 
-const json = (s, b) =>
-  new Response(JSON.stringify(b), {
+const ok = () => new Response(null, { status: 204, headers: cors() });
+const j = (s, body) =>
+  new Response(JSON.stringify(body), {
     status: s,
-    headers: { "content-type": "application/json", "Access-Control-Allow-Origin": "*" },
+    headers: { "content-type": "application/json", ...cors() },
   });
+const cors = () => ({
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  "Access-Control-Allow-Methods": "GET,POST,PATCH,OPTIONS",
+});
