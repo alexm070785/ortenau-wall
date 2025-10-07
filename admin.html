@@ -111,8 +111,8 @@ async function authHeaders(){
    2) Endpunkte – **immer absolut** (führen mit /)
    ============================================================ */
 // A: „schöne“ Routen (wenn du die Redirects in netlify.toml aktiv hast)
-const API_LIST   = (status) => `/entries-list?status=${encodeURIComponent(status)}`;
-const API_UPDATE = (id)     => `/entries-update?id=${encodeURIComponent(id)}`;
+const API_LIST   = (status) => `/.netlify/functions/entries-list?status=${encodeURIComponent(status)}`;
+const API_UPDATE = (id)     => `/.netlify/functions/entries-update?id=${encodeURIComponent(id)}`;
 
 /*  // B: immer direkt Functions-Pfad (falls du keine Redirects nutzt)
 const API_LIST   = (status) => `/.netlify/functions/entries-list?status=${encodeURIComponent(status)}`;
