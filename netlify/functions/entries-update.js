@@ -5,10 +5,17 @@ const json = (b, init={}) => new Response(JSON.stringify(b), {
   ...init, headers: { 'content-type': 'application/json', ...(init.headers||{}) }
 });
 
+// Normalisierung: alte Dateinamen -> korrekter Blob-Pfad
+function norm(u){
+  if(!u) return u;
+  if (u.startsWith('http') || u.startsWith('/_blob/')) return u;
+  return '/_blob/images/' + u.replace(/^\/+/, '');
+}
+
 export default async (req, context) => {
-  // Identity erfordern
+  // Identity prüfen (Admin-Aktion)
   try {
-    const { user } = context;          // Netlify Identity (JWT) wird automatisch geparst
+    const { user } = context;
     if (!user) return json({ error: 'Unauthorized' }, { status: 401 });
   } catch {
     return json({ error: 'Unauthorized' }, { status: 401 });
@@ -18,19 +25,19 @@ export default async (req, context) => {
     if (req.method !== 'PATCH') return json({ error: 'Method not allowed' }, { status: 405 });
 
     const url = new URL(req.url);
-    // ID aus Pfad ODER Query holen
     let id = url.pathname.split('/').pop();
     if (!id || id === 'entries-update') id = url.searchParams.get('id');
     if (!id) return json({ error: 'missing_id' }, { status: 400 });
 
     const body = await req.json();
-
     const store = getStore('entries');
+
     const raw = await store.get(id);
     if (!raw) return json({ error: 'not_found' }, { status: 404 });
 
     const item = JSON.parse(raw);
 
+    // --------- Update Logik ----------
     if (body.action === 'approve') {
       item.status = 'approved';
       item.approvedAt = new Date().toISOString();
@@ -38,11 +45,14 @@ export default async (req, context) => {
       item.status = 'rejected';
       item.rejectedAt = new Date().toISOString();
     } else {
-      // freie Felder, z.B. Menü/Featured
       if (typeof body.menuText === 'string') item.menuText = body.menuText;
       if (typeof body.featured !== 'undefined') item.featured = !!body.featured;
       item.updatedAt = new Date().toISOString();
     }
+
+    // --------- NEU: Bildpfade dauerhaft korrigieren ----------
+    if (item.thumbUrl) item.thumbUrl = norm(item.thumbUrl);
+    if (Array.isArray(item.images)) item.images = item.images.map(norm);
 
     await store.set(id, JSON.stringify(item));
     return json({ ok: true, id, item }, { status: 200 });
