@@ -1,6 +1,6 @@
 import { getStore } from '@netlify/blobs';
 
-export const config = { path: '/entries-list' }; // Route explizit setzen!
+export const config = { path: '/entries-list' }; // >>> explizite Route
 
 const json = (b, init = {}) =>
   new Response(JSON.stringify(b), {
@@ -13,13 +13,14 @@ export default async (req, context) => {
     const url = new URL(req.url);
     const status = url.searchParams.get('status') || 'approved';
 
+    // "pending" & "rejected" sind nur mit Identity-Token erlaubt
     if (status !== 'approved') {
       const { user } = context;
       if (!user) return json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const store = getStore('entries');
-    const { blobs } = await store.list();
+    const { blobs } = await store.list(); // [{ key, ... }]
     const out = [];
 
     for (const b of blobs) {
@@ -31,6 +32,7 @@ export default async (req, context) => {
       }
     }
 
+    // neueste zuerst
     out.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
     return json(out, { status: 200 });
   } catch (e) {
