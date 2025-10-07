@@ -5,54 +5,64 @@ const json = (b, init={}) => new Response(JSON.stringify(b), {
   ...init, headers: { 'content-type': 'application/json', ...(init.headers||{}) }
 });
 
-// Hilfsfunktion: Datei in images-Store speichern
-async function saveImage(file) {
-  const images = getStore('images');
-  const buf = Buffer.from(await file.arrayBuffer());
-  const id = `img_${Date.now()}_${Math.random().toString(36).slice(2)}.${(file.name||'').split('.').pop()||'jpg'}`;
-  await images.set(id, buf, { metadata: { contentType: file.type || 'image/jpeg' } });
-  // Öffentliche URL: https://{site}.netlify.app/_blob/images/<key>
-  return `/_blob/images/${id}`;
-}
+export const config = { path: '/entries-create' }; // optional
 
 export default async (req) => {
   try {
-    if (req.method !== 'POST') return json({ error: 'Method not allowed' }, { status: 405 });
+    if (req.method === 'OPTIONS') {
+      return new Response(null, {
+        status: 204,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET,POST,PATCH,OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        }
+      });
+    }
+
+    if (req.method !== 'POST') {
+      return json({ error: 'Method not allowed' }, { status: 405 });
+    }
 
     const form = await req.formData();
+
+    // Basisdaten
     const entry = {
-      id: `e_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
       name: form.get('name') || '',
       category: form.get('category') || '',
-      plz: form.get('plz') || '',
       city: form.get('ort') || '',
-      street: form.get('strasse') || '',
-      house: form.get('hausnr') || '',
-      tel: form.get('tel') || '',
-      website: form.get('website') || '',
-      hours: [],      // kannst du befüllen
+      address: [
+        form.get('strasse') || '',
+        form.get('hausnr') || '',
+        form.get('plz') || '',
+        form.get('ort') || ''
+      ].filter(Boolean).join(' '),
+      menuText: form.get('menuText') || '',
+      featured: false,
       images: [],
-      thumbUrl: '',
-      createdAt: new Date().toISOString(),
-      status: 'pending',
-      featured: false
     };
 
-    // Adresse als ein String für Anzeige
-    entry.address = [entry.street && `${entry.street} ${entry.house}`, entry.plz && entry.city].filter(Boolean).join(', ');
-
-    // Bilder
-    const files = form.getAll('menuImages').filter(f => typeof f === 'object');
-    for (const f of files) {
-      const url = await saveImage(f);
-      entry.images.push(url);
+    // Bilder in "images"-Store speichern
+    const imgStore = getStore('images');
+    const files = form.getAll('menuImages') || [];
+    for (const file of files) {
+      if (!(file instanceof Blob)) continue;
+      const filename = `img_${Date.now()}_${Math.random().toString(36).slice(2)}.${(file.type.split('/')[1]||'jpg')}`;
+      await imgStore.set(filename, file);
+      // gleich korrekten Pfad merken
+      entry.images.push(`/_blob/images/${filename}`);
     }
-    entry.thumbUrl = entry.images[0] || '';
+    if (entry.images.length) entry.thumbUrl = entry.images[0];
 
-    const store = getStore('entries');
-    await store.set(entry.id, JSON.stringify(entry));
+    // Eintrag speichern
+    const id = `e_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    const entStore = getStore('entries');
+    await entStore.set(id, JSON.stringify(entry));
 
-    return json({ ok:true, id: entry.id });
+    return json({ ok: true, id }, { status: 200 });
+
   } catch (e) {
     console.error('entries-create error', e);
     return json({ error: 'create_failed' }, { status: 500 });
