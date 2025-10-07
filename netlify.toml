@@ -5,7 +5,6 @@
 [functions]
   node_bundler = "esbuild"
 
-# CORS für Functions (hilft beim lokalen Testen & aus dem Admin)
 [[headers]]
   for = "/.netlify/functions/*"
   [headers.values]
@@ -13,29 +12,6 @@
     Access-Control-Allow-Methods = "GET,POST,PATCH,OPTIONS"
     Access-Control-Allow-Headers = "Content-Type, Authorization"
 
-# ---------- WICHTIG: Explizite Redirects auf die Functions ----------
-# List (GET)
-[[redirects]]
-  from   = "/entries-list"
-  to     = "/.netlify/functions/entries-list"
-  status = 200
-  force  = true
-
-# Update (PATCH/POST/GET) – Querystrings (z.B. id=...) werden automatisch übernommen
-[[redirects]]
-  from   = "/entries-list"
-  to     = "/.netlify/functions/entries-update"
-  status = 200
-  force  = true
-
-# Create (POST) – nur der Vollständigkeit halber (deine Function geht schon)
-[[redirects]]
-  from   = "/entries-list"
-  to     = "/.netlify/functions/entries-create"
-  status = 200
-  force  = true
-
-# ---------- Netlify Blobs Stores ----------
 [[blobs]]
   name = "entries"
   retention = "manual"
@@ -43,5 +19,3 @@
 [[blobs]]
   name = "images"
   retention = "manual"
-
-
