@@ -1,19 +1,16 @@
 [build]
-  publish = "."
+  publish   = "."
   functions = "netlify/functions"
 
-[functions]
-  node_bundler = "esbuild"
-
-# CORS für Functions
+# CORS für alle Functions
 [[headers]]
   for = "/.netlify/functions/*"
   [headers.values]
-    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Origin  = "*"
     Access-Control-Allow-Methods = "GET,POST,PATCH,OPTIONS"
     Access-Control-Allow-Headers = "Content-Type, Authorization"
 
-# Blob Stores
+# Blobs Stores
 [[blobs]]
   name = "entries"
   retention = "manual"
@@ -21,4 +18,3 @@
 [[blobs]]
   name = "images"
   retention = "manual"
-  visibility = "public"   # <-- wichtig für öffentliche Bild-URLs
