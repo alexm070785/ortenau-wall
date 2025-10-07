@@ -1,66 +1,72 @@
 // netlify/functions/entries-update.js
-import { getStore } from '@netlify/blobs';
+import { getStore } from "@netlify/blobs";
 
-/** Gemeinsame CORS-Header */
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET,POST,PATCH,OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-};
-
-const json = (data, status = 200) =>
-  new Response(JSON.stringify(data), {
-    status,
-    headers: { 'content-type': 'application/json', ...CORS },
-  });
-
-const empty = (status = 204) =>
-  new Response(null, { status, headers: CORS });
+export const config = { path: "/.netlify/functions/entries-update" };
 
 export default async (req, context) => {
-  // Preflight
-  if (req.method === 'OPTIONS') return empty(204);
+  // --- Auth ---
+  const user = context.clientContext?.user || null;         // kommt aus Netlify Identity
+  if (!user) {
+    return json({ error: "Unauthorized" }, 401);
+  }
+  const roles = user.app_metadata?.roles || [];
+  const isAdmin = roles.includes("admin");
 
-  // Auth: irgendein eingeloggter Identity-User reicht
-  const token = context.clientContext?.identity?.token;
-  if (!token) return json({ error: 'Unauthorized' }, 401);
+  // -> wenn NUR Admins dürfen, folgende 2 Zeilen aktivieren:
+  // if (!isAdmin) {
+  //   return json({ error: "Forbidden" }, 403);
+  // }
 
-  // id kommt jetzt als ?id=... (nicht mehr /:id)
-  const { searchParams } = new URL(req.url);
-  const id = (searchParams.get('id') || '').trim();
-  if (!id) return json({ error: 'Missing id' }, 400);
+  // --- ID & Body ---
+  const id = req.query?.get("id") || new URL(req.url).searchParams.get("id");
+  if (!id) return json({ error: "Missing id" }, 400);
 
-  const store = getStore('entries');
-
-  // Eintrag laden (neues API: get(..., { type: 'json' }))
-  let entry = await store.get(id, { type: 'json' });
-  if (!entry) return json({ error: 'Not found' }, 404);
-
-  // Body lesen (kann leer sein)
   let body = {};
   try {
     body = await req.json();
-  } catch {
-    body = {};
+  } catch { /* leer */ }
+
+  try {
+    const store = getStore("entries");
+
+    // Eintrag laden
+    const item = await store.getJSON(id);
+    if (!item) return json({ error: "Not found" }, 404);
+
+    // Aktionen
+    if (body.action === "approve") {
+      item.status = "approved";
+      item.approvedAt = Date.now();
+    } else if (body.action === "reject") {
+      // du kannst auch löschen statt Status setzen:
+      // await store.delete(id);
+      item.status = "rejected";
+      item.rejectedAt = Date.now();
+    } else {
+      // normale Feldupdates (z.B. menuText, featured)
+      if (typeof body.menuText === "string") item.menuText = body.menuText;
+      if (typeof body.featured === "boolean") item.featured = body.featured;
+      item.updatedAt = Date.now();
+    }
+
+    // Speichern (nur wenn nicht gelöscht)
+    if (body.action !== "reject" /* und du nicht löschst */) {
+      await store.setJSON(id, item);
+    }
+
+    return json({ ok: true, id, item }, 200);
+  } catch (e) {
+    return json({ error: String(e?.message || e) }, 500);
   }
-
-  // Aktionen: approve / reject ODER Felder (menuText, featured) patchen
-  const now = new Date().toISOString();
-
-  if (body.action === 'approve') {
-    entry.status = 'approved';
-    entry.approvedAt = now;
-  } else if (body.action === 'reject') {
-    entry.status = 'rejected';
-    entry.rejectedAt = now;
-  } else {
-    if (typeof body.menuText === 'string') entry.menuText = body.menuText;
-    if (typeof body.featured === 'boolean') entry.featured = body.featured;
-    entry.updatedAt = now;
-  }
-
-  // Speichern (neues API: setJSON)
-  await store.setJSON(id, entry);
-
-  return json({ ok: true, id, status: entry.status });
 };
+
+// kleine Helper
+function json(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "access-control-allow-origin": "*"
+    }
+  });
+}
