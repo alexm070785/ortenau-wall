@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Ortenau-Wall · Lokale Angebote</title>
+<title>Ortenau liefert · Lokale Angebote</title>
 <style>
   :root{
     --accent:#e7e7e7; --text:#4f4f4f; --bg:#f6f6f6; --card:#fff;
@@ -12,17 +12,14 @@
   }
   *{box-sizing:border-box}
   body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;background:var(--bg);color:var(--text);padding-bottom:40px;}
-
   .visually-hidden{position:absolute!important;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 
-  /* Header + Hamburger */
+  /* Header + Menü */
   header.site{position:sticky;top:0;z-index:100;background:var(--accent);border-bottom:1px solid #b0b0b0;}
   .head{max-width:1360px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:14px 16px;}
   .hamburger{display:inline-flex;align-items:center;justify-content:center;width:46px;height:40px;border-radius:8px;background:var(--accent);border:0;cursor:pointer}
   .hamburger:hover{background:#FFB2B3}
   .hamburger svg{width:28px;height:28px;display:block}
-
-  /* Backdrop + Drawer (Menü) */
   .backdrop{position:fixed;inset:0;background:rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:opacity .2s;z-index:99}
   .backdrop.show{opacity:1;pointer-events:auto}
   .drawer{position:fixed;top:0;right:-280px;width:280px;height:100%;background:#f6f6f6;border-left:1px solid #d9d9d9;box-shadow:-12px 0 24px rgba(0,0,0,.18);transition:right .25s;z-index:100;display:flex;flex-direction:column}
@@ -33,80 +30,43 @@
   .menu a:hover{background:#FFB2B3}
   .menu a.active{background:#f6f6f6}
 
-  /* Toolbar (Suche + CTA) */
-  .toolbar{
-    max-width:1360px;margin:8px auto 0;
-    display:flex;align-items:center;gap:12px;
-    padding:0 16px;justify-content:space-between;
-  }
-  .search-wrap{
-    position:relative;display:flex;align-items:center;
-    flex:1 1 420px; max-width:720px;
-  }
+  /* Toolbar */
+  .toolbar{max-width:1360px;margin:8px auto 0;display:flex;align-items:center;gap:12px;padding:0 16px;justify-content:space-between;}
+  .search-wrap{position:relative;display:flex;align-items:center;flex:1 1 420px; max-width:720px;}
   .search-wrap svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);pointer-events:none}
   #search{width:100%;padding:10px 38px 10px 36px;border:1px solid #d0d0d0;border-radius:10px;background:#fff;color:var(--text);}
   #clearBtn{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:28px;height:28px;border:0;border-radius:50%;cursor:pointer;background:#f6f6f6;}
   #clearBtn:hover{background:#eaeaea}
-
-  /* CTA rechts neben der Suche */
-  .cta{
-    flex:0 0 auto;
-    display:inline-flex;align-items:center;gap:10px;
-    padding:10px 14px;border-radius:10px;
-    background:#fff;border:1px solid #d0d0d0; text-decoration:none; color:var(--text);
-    box-shadow:var(--shadow); transition:transform .15s, box-shadow .15s, background .15s;
-  }
+  .cta{flex:0 0 auto;display:inline-flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;background:#fff;border:1px solid #d0d0d0; text-decoration:none; color:var(--text);box-shadow:var(--shadow); transition:transform .15s, box-shadow .15s, background .15s;}
   .cta:hover{transform:translateY(-1px); box-shadow:var(--shadowHover); background:#f9f9f9;}
-  .cta .plus{
-    width:22px;height:22px;display:inline-block;background:#4f4f4f;border-radius:6px;
+  .cta .plus{width:22px;height:22px;display:inline-block;background:#4f4f4f;border-radius:6px;
     -webkit-mask:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"/></svg>') no-repeat center / contain;
-            mask:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"/></svg>') no-repeat center / contain;
-  }
-  @media (max-width:480px){
-    .cta .txt{display:none;}
-  }
+            mask:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"/></svg>') no-repeat center / contain;}
+  @media (max-width:480px){ .cta .txt{display:none;} }
 
-  /* Featured Row (Top today) */
+  /* Grids */
   .featured-wrap{max-width:1360px;margin:14px auto 10px;padding:0 16px;}
   .featured-grid{display:grid;gap:16px;grid-template-columns:1fr;}
   @media(min-width:768px){ .featured-grid{grid-template-columns:repeat(3,1fr);} }
 
-  /* Grid */
   .grid{display:grid;gap:16px;}
   @media(min-width:640px){.grid{grid-template-columns:repeat(auto-fill,minmax(220px,1fr));max-width:1360px;margin:14px auto 20px;padding:0 16px;}}
   @media(max-width:639px){.grid{grid-template-columns:repeat(2,1fr);margin:12px;}}
 
-  /* Karten */
-  .card{
-    background:var(--card);border-radius:var(--radius);overflow:hidden;text-decoration:none;color:inherit;
-    box-shadow:var(--shadow);transition:transform .2s, box-shadow .2s;
-    display:grid;grid-template-rows:auto auto;
-    min-height:260px;position:relative;
-  }
+  /* Cards */
+  .card{background:var(--card);border-radius:var(--radius);overflow:hidden;text-decoration:none;color:inherit;box-shadow:var(--shadow);transition:transform .2s, box-shadow .2s;display:grid;grid-template-rows:auto auto;min-height:260px;position:relative;}
   .card:hover{transform:translateY(-2px);box-shadow:var(--shadowHover);}
-
-  /* Farbiges oberes Fenster */
-  .icon-wrap{
-    display:flex;align-items:center;justify-content:center;
-    background:var(--cat-color, #fff);
-    overflow:hidden;aspect-ratio:16/9;
-    padding:12px;
-  }
-  .icon{width:100%;height:100%;object-fit:contain;}
-
+  .icon-wrap{display:flex;align-items:center;justify-content:center;background:var(--cat-color, #fff);overflow:hidden;aspect-ratio:16/9;padding:0;}
+  .icon{width:100%;height:100%;object-fit:cover;}
   .content{background:#fff;padding:12px 14px;}
   .title{font-weight:700;}
   .muted{color:var(--muted);}
   .hide{display:none !important;}
-
-  /* Featured größer + Stern */
   .card.featured{min-height:320px;}
   .card.featured .title{font-size:1.05rem;}
-  .card.featured .star{
-    position:absolute; top:8px; right:8px; width:28px; height:28px; background:#FFD700;
+  .card.featured .star{position:absolute; top:8px; right:8px; width:28px; height:28px; background:#FFD700;
     -webkit-mask:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 .587l3.668 7.429L24 9.753l-6 5.847L19.335 24 12 19.897 4.665 24 6 15.6 0 9.753l8.332-1.737z"/></svg>') no-repeat center;
-    -webkit-mask-size:contain; mask:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 .587l3.668 7.429L24 9.753l-6 5.847L19.335 24 12 19.897 4.665 24 6 15.6 0 9.753l8.332-1.737z"/></svg>') no-repeat center; mask-size:contain;
-  }
+    -webkit-mask-size:contain; mask:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 .587l3.668 7.429L24 9.753l-6 5.847L19.335 24 12 19.897 4.665 24 6 15.6 0 9.753l8.332-1.737z"/></svg>') no-repeat center; mask-size:contain;}
 
   /* Pagination */
   .pagination{max-width:1360px;margin:20px auto;text-align:center;}
@@ -122,15 +82,16 @@
 <body>
 <header class="site">
   <div class="head">
-    <img src="header.png" alt="Ortenau-Wall Logo" height="68">
-    <h1 class="visually-hidden">Ortenau-Wall – Lokale Angebote</h1>
+    <a href="index.html" aria-label="Zur Startseite von Ortenau liefert">
+      <img src="header.png" alt="Ortenau liefert Logo" height="68">
+    </a>
+    <h1 class="visually-hidden">Ortenau liefert – Lokale Angebote</h1>
     <button class="hamburger" id="menuBtn" aria-label="Menü öffnen" aria-expanded="false" aria-controls="drawer">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4f4f4f" d="M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h18v2H3v-2z"/></svg>
     </button>
   </div>
 </header>
 
-<!-- Backdrop + Drawer -->
 <div class="backdrop" id="backdrop" hidden></div>
 <aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-hidden="true">
   <header>
@@ -157,7 +118,7 @@
 <div class="toolbar">
   <div class="search-wrap" role="search">
     <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="#9a9a9a" d="M15.5 14h-.79l-.28-.27a6.471 6.471 0 0 0 1.57-4.23C16 6.01 13.99 4 11.5 4S7 6.01 7 9.5 9.01 15 11.5 15c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l4.25 4.25c.41.41 1.08.41 1.49 0 .41-.41.41-1.08 0-1.49L15.5 14zm-4 0C9.01 14 7 11.99 7 9.5S9.01 5 11.5 5 16 7.01 16 9.5 13.99 14 11.5 14z"/></svg>
-    <input id="search" type="search" placeholder="Suche z. B. „Restaurant Offenburg“" aria-label="Suche">
+    <input id="search" type="search" placeholder="Suche z. B. „Pizzeria Offenburg“" aria-label="Suche">
     <button id="clearBtn" type="button" aria-label="Suche leeren">×</button>
   </div>
 
@@ -177,9 +138,8 @@
   <nav class="pagination" id="pagination" aria-label="Seiten-Navigation"></nav>
 </main>
 
-<footer><div class="footer-inner">© <span id="jahr"></span> Ortenau-Wall</div></footer>
+<footer><div class="footer-inner">© <span id="jahr"></span> Ortenau liefert</div></footer>
 
-<!-- Template -->
 <template id="cardTpl">
   <a class="card" href="#" data-category="">
     <span class="star"></span>
@@ -194,10 +154,10 @@
 </template>
 
 <script>
-  // Jahr
+  // Jahr im Footer
   document.getElementById("jahr").textContent = new Date().getFullYear();
 
-  // aktiver Link markieren
+  // aktiver Menüpunkt
   (function(){
     const cur = 'index.html';
     document.querySelectorAll('.menu a').forEach(a=>{
@@ -206,135 +166,106 @@
     });
   })();
 
-  // Drawer (Menü)
+  // Drawer
   (function(){
     const menuBtn = document.getElementById('menuBtn');
     const closeBtn = document.getElementById('closeBtn');
     const drawer = document.getElementById('drawer');
     const backdrop = document.getElementById('backdrop');
     let lastFocused = null;
-
-    function openDrawer(){
-      drawer.classList.add('show');
-      drawer.setAttribute('aria-hidden','false');
-      backdrop.hidden=false; requestAnimationFrame(()=>backdrop.classList.add('show'));
-      document.body.style.overflow='hidden';
-      menuBtn.setAttribute('aria-expanded','true');
-      lastFocused = document.activeElement;
-      const first = drawer.querySelector('a,button');
-      if(first) first.focus();
-    }
-    function closeDrawer(){
-      drawer.classList.remove('show');
-      drawer.setAttribute('aria-hidden','true');
-      backdrop.classList.remove('show');
-      document.body.style.overflow='';
-      menuBtn.setAttribute('aria-expanded','false');
-      setTimeout(()=>backdrop.hidden=true,200);
-      if(lastFocused) lastFocused.focus();
-    }
+    function openDrawer(){ drawer.classList.add('show'); drawer.setAttribute('aria-hidden','false'); backdrop.hidden=false; requestAnimationFrame(()=>backdrop.classList.add('show')); document.body.style.overflow='hidden'; menuBtn.setAttribute('aria-expanded','true'); lastFocused = document.activeElement; const first = drawer.querySelector('a,button'); if(first) first.focus(); }
+    function closeDrawer(){ drawer.classList.remove('show'); drawer.setAttribute('aria-hidden','true'); backdrop.classList.remove('show'); document.body.style.overflow=''; menuBtn.setAttribute('aria-expanded','false'); setTimeout(()=>backdrop.hidden=true,200); if(lastFocused) lastFocused.focus(); }
     menuBtn.addEventListener('click', openDrawer);
     closeBtn.addEventListener('click', closeDrawer);
     backdrop.addEventListener('click', closeDrawer);
     window.addEventListener('keydown', e=>{ if(e.key==='Escape') closeDrawer(); });
   })();
 
-  // Kategorien & Farben (deine Vorgabe)
-  const CAT_COLORS = {
-    doener: "#CC5F34",
-    restaurant: "#6A865F",
-    pizza: "#FDF1DF",
-    pizzeria: "#FDF1DF"
-  };
+  // Kategorienfarben
+  const CAT_COLORS = { doener:"#CC5F34", restaurant:"#6A865F", pizza:"#FDF1DF", pizzeria:"#FDF1DF" };
 
-  // ===== Karten erzeugen (echte Orte, zufällig) =====
-  (function(){
-    const featured = document.getElementById('featuredGrid');
+  // ---- Hilfen ----
+  function normImg(u){
+    if(!u) return '';
+    if (u.startsWith('http') || u.startsWith('/_blob/')) return u;
+    return '/_blob/images/' + u.replace(/^\/+/, '');
+  }
+  const labelOf = v => v==='doener' ? 'Döner' : (v==='pizzeria' || v==='pizza' ? 'Pizza' : 'Restaurant');
+
+  // ---- Daten laden + rendern ----
+  (async function loadAndRender(){
+    const featuredWrap = document.getElementById('featuredGrid');
     const grid = document.getElementById('cardGrid');
     const tpl = document.getElementById('cardTpl');
 
-    // Echte Lokale im Ortenaukreis (Links zu Google-Maps-Suche)
-    const PLACES = [
-      { name: "Istanbul Döner & Pizza", city: "Offenburg", cat: "doener" },
-      { name: "Nazar Kebap", city: "Offenburg", cat: "doener" },
-      { name: "City Döner & Pizzahaus", city: "Offenburg", cat: "doener" },
-      { name: "Star Grill Kebap-Haus", city: "Kehl", cat: "doener" },
-      { name: "Erciyes Kebap", city: "Kehl", cat: "doener" },
-      { name: "Topal Kebaphaus", city: "Offenburg", cat: "doener" },
-
-      { name: "da Salva · Ristorante & Pizzeria", city: "Oberkirch", cat: "pizzeria" },
-      { name: "Don Camillo · Ristorante Pizzeria", city: "Oberkirch", cat: "pizzeria" },
-      { name: "La Toscana", city: "Oberkirch", cat: "pizzeria" },
-      { name: "Bella Italia", city: "Lahr", cat: "pizzeria" },
-      { name: "La Villa", city: "Kehl", cat: "pizzeria" },
-      { name: "Pizzeria Rustica", city: "Offenburg", cat: "pizzeria" },
-
-      { name: "CASAMORE (mediterran)", city: "Offenburg", cat: "restaurant" },
-      { name: "La Grappa", city: "Gengenbach", cat: "restaurant" },
-      { name: "Ristorante La Piazza", city: "Offenburg", cat: "restaurant" },
-      { name: "Ristorante Enoteca", city: "Achern", cat: "restaurant" },
-      { name: "Brandeck", city: "Offenburg", cat: "restaurant" },
-      { name: "Gasthaus Krone", city: "Haslach i.K.", cat: "restaurant" }
-    ];
-
-    // Hilfsfunktion: Maps-URL pro Eintrag (robust)
-    function mapsUrl(place){
-      const q = encodeURIComponent(`${place.name} ${place.city} Ortenaukreis`);
-      return `https://www.google.com/maps/search/?api=1&query=${q}`;
+    // 1) Approved-Einträge holen (öffentlich)
+    let items = [];
+    try {
+      const res = await fetch('/.netlify/functions/entries-list?status=approved');
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      items = await res.json();
+    } catch (e) {
+      grid.innerHTML = `<p class="muted" style="grid-column:1/-1;text-align:center;padding:16px">Konnte Einträge nicht laden.</p>`;
+      return;
     }
 
-    // Durcheinander mischen (Fisher-Yates)
-    for (let i = PLACES.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [PLACES[i], PLACES[j]] = [PLACES[j], PLACES[i]];
+    if (!items.length){
+      grid.innerHTML = `<p class="muted" style="grid-column:1/-1;text-align:center;padding:16px">Noch keine Einträge. <a href="eintragen.html">Trage die erste Speisekarte ein</a>.</p>`;
+      return;
     }
 
-    const featuredCount = 3;
-    const total = 24; // gewünschte Anzahl Karten
-    // falls weniger als total Einträge vorhanden sind -> zyklisch auffüllen
-    const items = Array.from({length: total}, (_, i) => PLACES[i % PLACES.length]);
+    // jüngste zuerst
+    items.sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
 
-    for (let i = 0; i < items.length; i++) {
-      const place = items[i];
-      const color = CAT_COLORS[place.cat] || "#ffffff";
+    // 2) Auswahl Featured (explizit oder fallback Top 3)
+    const expl = items.filter(i => i.featured);
+    const featured = (expl.length ? expl : items).slice(0,3);
 
+    // 3) Render Helfer
+    function renderCard(place, intoFeatured){
       const node = tpl.content.cloneNode(true);
       const card = node.querySelector('.card');
-      card.dataset.category = place.cat;
+      const color = CAT_COLORS[place.category] || "#ffffff";
+      card.dataset.category = place.category || '';
       card.style.setProperty('--cat-color', color);
-      card.href = mapsUrl(place);
-      card.target = "_blank";
-      card.rel = "noopener";
+      card.href = place.website || '#';
+      if (place.website) { card.target = "_blank"; card.rel = "noopener"; }
 
-      // featured?
-      if (i < featuredCount) {
+      if (intoFeatured) {
         card.classList.add('featured');
       } else {
         const st = node.querySelector('.star'); if (st) st.remove();
       }
 
-      // Bild (deine Kategorie-Icons)
       const img = node.querySelector('.icon');
-      const label = place.cat === 'doener' ? 'Döner' : (place.cat === 'pizzeria' ? 'Pizza' : 'Restaurant');
-      img.src = `icons/${place.cat}.png`;
-      img.alt = `${label}-Icon`;
+      const fallbackIcon = `icons/${place.category||'restaurant'}.png`;
+      const src = normImg(place.thumbUrl || (place.images && place.images[0]) || fallbackIcon);
+      img.src = src;
+      img.alt = `${labelOf(place.category)} – Bild`;
 
-      // Texte
       const title = node.querySelector('.title');
       const tag = node.querySelector('.tag');
-      title.textContent = `${place.name} · ${place.city}`;
-      tag.textContent = label;
+      title.textContent = `${place.name||''} · ${place.city||''}`.trim().replace(/\s·\s$/, '');
+      tag.textContent = labelOf(place.category);
 
-      (i < featuredCount ? featured : grid).appendChild(node);
+      (intoFeatured ? featuredWrap : grid).appendChild(node);
     }
+
+    // 4) Rendern
+    const featuredIds = new Set(featured.map(f=>f.id));
+    featured.forEach(p => renderCard(p, true));
+    items.filter(p=>!featuredIds.has(p.id)).forEach(p => renderCard(p, false));
+
+    // 5) Suche + Pagination aktivieren (nachdem Karten im DOM sind)
+    initSearchAndPaging();
   })();
 
-  // ---- Suche & Pagination mit "Orphan"-Fix ----
-  (function(){
+  // ---- Suche + Pagination ----
+  function initSearchAndPaging(){
     const input = document.getElementById('search');
     const clear = document.getElementById('clearBtn');
     const grid = document.getElementById('cardGrid');
-    const allCards = [...grid.querySelectorAll('.card')]; // nur normale Karten (nicht featured)
+    const allCards = [...grid.querySelectorAll('.card')];
     const perPage = 24;
     let currentPage = 1, filtered = [...allCards];
 
@@ -366,14 +297,12 @@
       const visibleSlice = filtered.slice(start,end);
       visibleSlice.forEach(c=>c.classList.remove('hide'));
 
-      // Orphan-Fix
       const cols = getColumnCount();
       const visibleCount = visibleSlice.length;
       if (visibleCount > cols && (visibleCount % cols === 1)) {
         const last = visibleSlice[visibleSlice.length - 1];
         if (last) last.classList.add('hide');
       }
-
       renderPagination();
     }
 
@@ -398,28 +327,10 @@
     input.addEventListener('input', applyFilter);
     clear.addEventListener('click',()=>{ input.value=''; applyFilter(); input.focus(); });
 
-    // bei Resize neu layouten (debounced)
     let t;
     window.addEventListener('resize', ()=>{ clearTimeout(t); t=setTimeout(showPage, 150); });
 
-    // initial
     applyFilter();
-  })();
-</script>
-
-<!-- Netlify Identity: minimal & ohne Redirect (nur für Reset/Bestätigung) -->
-<script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-<script>
-  if (window.netlifyIdentity) {
-    netlifyIdentity.on('init', (user) => {
-      // Falls ein Reset-/Bestätigungs-Token im Hash steckt → Dialog anzeigen
-      if (!user && (location.hash.includes('recovery_token') || location.hash.includes('confirmation_token'))) {
-        netlifyIdentity.open();
-        // Nach Login nur das Popup schließen – KEIN Redirect
-        netlifyIdentity.on('login', () => netlifyIdentity.close());
-      }
-    });
-    netlifyIdentity.init();
   }
 </script>
 </body>
