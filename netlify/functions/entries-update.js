@@ -1,22 +1,12 @@
-// netlify/functions/entries-update.js
 import { getStore } from '@netlify/blobs';
+
+export const config = { path: '/entries-update' }; // Route explizit setzen!
 
 const json = (b, init = {}) =>
   new Response(JSON.stringify(b), {
     ...init,
-    headers: {
-      'content-type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET,POST,PATCH,OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-      ...(init.headers || {}),
-    },
+    headers: { 'content-type': 'application/json', ...(init.headers || {}) },
   });
-
-function hasBearer(req) {
-  const h = req.headers.get('authorization') || '';
-  return /^Bearer\s+[\w-]+\.[\w-]+\.[\w-]+$/.test(h);
-}
 
 function norm(u) {
   if (!u) return u;
@@ -24,12 +14,13 @@ function norm(u) {
   return '/_blob/images/' + u.replace(/^\/+/, '');
 }
 
-export default async (req) => {
-  // CORS preflight
-  if (req.method === 'OPTIONS') return json(null, { status: 204 });
-
-  // Admin-Zugriff nur mit Token
-  if (!hasBearer(req)) return json({ error: 'Unauthorized' }, { status: 401 });
+export default async (req, context) => {
+  try {
+    const { user } = context;
+    if (!user) return json({ error: 'Unauthorized' }, { status: 401 });
+  } catch {
+    return json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
   try {
     if (req.method !== 'PATCH')
@@ -38,17 +29,16 @@ export default async (req) => {
     const url = new URL(req.url);
     let id = url.pathname.split('/').pop();
     if (!id || id === 'entries-update') id = url.searchParams.get('id');
+
     if (!id) return json({ error: 'missing_id' }, { status: 400 });
 
     const body = await req.json();
     const store = getStore('entries');
-
     const raw = await store.get(id);
     if (!raw) return json({ error: 'not_found' }, { status: 404 });
 
     const item = JSON.parse(raw);
 
-    // Aktionen
     if (body.action === 'approve') {
       item.status = 'approved';
       item.approvedAt = new Date().toISOString();
@@ -61,7 +51,6 @@ export default async (req) => {
       item.updatedAt = new Date().toISOString();
     }
 
-    // Bildpfade korrigieren
     if (item.thumbUrl) item.thumbUrl = norm(item.thumbUrl);
     if (Array.isArray(item.images)) item.images = item.images.map(norm);
 
@@ -72,5 +61,3 @@ export default async (req) => {
     return json({ error: 'update_failed' }, { status: 500 });
   }
 };
-
-export const config = { path: '/entries-update' };
