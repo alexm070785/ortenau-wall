@@ -88,13 +88,11 @@
 
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   <script>
-    // ===== Helpers =====
     const $ = (s,r=document)=>r.querySelector(s);
     const fmt = iso => iso ? new Date(iso).toLocaleString('de-DE') : '';
     const toast = (m)=>{ const t=$('#toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2000); };
     const esc = s => (s||'').replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
 
-    // Bild-URL: zuerst echte URL, sonst aus Blob-Key bauen
     function blobImageUrl(item) {
       if (item?.thumbUrl && /^https?:\/\//.test(item.thumbUrl)) return item.thumbUrl;
       if (item?.imageUrl && /^https?:\/\//.test(item.imageUrl)) return item.imageUrl;
@@ -118,15 +116,11 @@
     const cache = new Map();
     let currentView = 'pending';
 
-    // ===== Identity =====
     (function(){
       const who = $('#who'), btnLogin=$('#btnLogin'), btnLogout=$('#btnLogout');
-
       function setUser(u){ who.textContent = u ? (u.user_metadata?.full_name || u.email) : 'nicht eingeloggt'; }
-
       btnLogin.addEventListener('click', ()=> netlifyIdentity.open('login'));
       btnLogout.addEventListener('click', ()=> netlifyIdentity.logout());
-
       netlifyIdentity.on('init', user=>{
         setUser(user);
         if(!user && location.hash.includes('recovery_token')) netlifyIdentity.open();
@@ -144,7 +138,6 @@
       netlifyIdentity.init();
     })();
 
-    // ===== UI Events =====
     $('#btnRefresh').addEventListener('click', ()=> load(currentView));
     $('#btnShowPending').addEventListener('click', ()=> load('pending'));
     $('#btnShowApproved').addEventListener('click', ()=> load('approved'));
@@ -159,7 +152,6 @@
       if(act==='cancel') toggleEditor(id, false);
     });
 
-    // ===== Load & Render =====
     async function load(view='pending'){
       currentView = view;
       const tbody = $('#rows');
@@ -224,7 +216,7 @@
       const menuText = document.querySelector(`#m_${CSS.escape(id)}`)?.value || '';
       const featured = (document.querySelector(`#f_${CSS.escape(id)}`)?.value === 'true');
       try{
-        const res = await authedFetch(`/.netlify/functions/entries-update/${encodeURIComponent(id)}`, {
+        const res = await authedFetch(`/.netlify/functions/entries-update?id=${encodeURIComponent(id)}`, {
           method:'PATCH',
           headers:{'Content-Type':'application/json'},
           body: JSON.stringify({ menuText, featured })
@@ -238,7 +230,7 @@
 
     async function approve(id){
       try{
-        const res = await authedFetch(`/.netlify/functions/entries-update/${encodeURIComponent(id)}`,{
+        const res = await authedFetch(`/.netlify/functions/entries-update?id=${encodeURIComponent(id)}`,{
           method:'PATCH',
           headers:{'Content-Type':'application/json'},
           body: JSON.stringify({ action:'approve' })
@@ -252,7 +244,7 @@
     async function rejectEntry(id){
       if(!confirm('Diesen Eintrag wirklich ablehnen?')) return;
       try{
-        const res = await authedFetch(`/.netlify/functions/entries-update/${encodeURIComponent(id)}`,{
+        const res = await authedFetch(`/.netlify/functions/entries-update?id=${encodeURIComponent(id)}`,{
           method:'PATCH',
           headers:{'Content-Type':'application/json'},
           body: JSON.stringify({ action:'reject' })
