@@ -1,28 +1,44 @@
-// netlify/functions/entries-update.js
 import { getStore } from '@netlify/blobs';
 
-const json = (b, init={}) => new Response(JSON.stringify(b), {
-  ...init, headers: { 'content-type': 'application/json', ...(init.headers||{}) }
-});
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET,POST,PATCH,OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
 
-// Normalisierung: alte Dateinamen -> korrekter Blob-Pfad
-function norm(u){
-  if(!u) return u;
+const json = (b, init = {}) =>
+  new Response(JSON.stringify(b), {
+    ...init,
+    headers: {
+      'content-type': 'application/json',
+      ...CORS,
+      ...(init.headers || {}),
+    },
+  });
+
+function getUser(context) {
+  if (context?.user) return context.user;
+  if (context?.clientContext?.user) return context.clientContext.user;
+  return null;
+}
+
+function norm(u) {
+  if (!u) return u;
   if (u.startsWith('http') || u.startsWith('/_blob/')) return u;
   return '/_blob/images/' + u.replace(/^\/+/, '');
 }
 
 export default async (req, context) => {
-  // Identity prüfen (Admin-Aktion)
   try {
-    const { user } = context;
-    if (!user) return json({ error: 'Unauthorized' }, { status: 401 });
-  } catch {
-    return json({ error: 'Unauthorized' }, { status: 401 });
-  }
+    if (req.method === 'OPTIONS') {
+      return new Response(null, { status: 204, headers: CORS });
+    }
 
-  try {
-    if (req.method !== 'PATCH') return json({ error: 'Method not allowed' }, { status: 405 });
+    const user = getUser(context);
+    if (!user) return json({ error: 'Unauthorized' }, { status: 401 });
+
+    if (req.method !== 'PATCH')
+      return json({ error: 'Method not allowed' }, { status: 405 });
 
     const url = new URL(req.url);
     let id = url.pathname.split('/').pop();
@@ -37,7 +53,6 @@ export default async (req, context) => {
 
     const item = JSON.parse(raw);
 
-    // --------- Update Logik ----------
     if (body.action === 'approve') {
       item.status = 'approved';
       item.approvedAt = new Date().toISOString();
@@ -50,13 +65,11 @@ export default async (req, context) => {
       item.updatedAt = new Date().toISOString();
     }
 
-    // --------- NEU: Bildpfade dauerhaft korrigieren ----------
     if (item.thumbUrl) item.thumbUrl = norm(item.thumbUrl);
     if (Array.isArray(item.images)) item.images = item.images.map(norm);
 
     await store.set(id, JSON.stringify(item));
     return json({ ok: true, id, item }, { status: 200 });
-
   } catch (e) {
     console.error('entries-update error', e);
     return json({ error: 'update_failed' }, { status: 500 });
