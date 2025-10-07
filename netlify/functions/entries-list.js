@@ -1,30 +1,21 @@
-// netlify/functions/entries-list.js
 import { getStore } from '@netlify/blobs';
+
+export const config = { path: '/entries-list' }; // Route explizit setzen!
 
 const json = (b, init = {}) =>
   new Response(JSON.stringify(b), {
     ...init,
-    headers: {
-      'content-type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
-      ...(init.headers || {}),
-    },
+    headers: { 'content-type': 'application/json', ...(init.headers || {}) },
   });
 
-// kleine Helper: Ist ein Bearer-Token vorhanden?
-function hasBearer(req) {
-  const h = req.headers.get('authorization') || '';
-  return /^Bearer\s+[\w-]+\.[\w-]+\.[\w-]+$/.test(h);
-}
-
-export default async (req) => {
+export default async (req, context) => {
   try {
     const url = new URL(req.url);
     const status = url.searchParams.get('status') || 'approved';
 
-    // „pending“ & „rejected“ nur mit Token
-    if (status !== 'approved' && !hasBearer(req)) {
-      return json({ error: 'Unauthorized' }, { status: 401 });
+    if (status !== 'approved') {
+      const { user } = context;
+      if (!user) return json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const store = getStore('entries');
@@ -47,6 +38,3 @@ export default async (req) => {
     return json({ error: 'list_failed' }, { status: 500 });
   }
 };
-
-// Optional: OPTIONS für CORS
-export const config = { path: '/entries-list' };
