@@ -1,16 +1,16 @@
 // netlify/functions/entries-update.js
-// PATCH erwartet JSON-Body: { id, status? , menuText? , featured? }
-// Erfordert Login (Identity-Token). Optional kannst du admin-Rolle prüfen.
+// PATCH JSON-Body: { id, status? , menuText? , featured? }
+// erfordert Authorization: Bearer <jwt>
 
 import { getStore } from "@netlify/blobs";
 
-export default async (req, context) => {
+export default async (req /*, context */) => {
   try {
     if (req.method === "OPTIONS") return ok();
     if (req.method !== "PATCH") return j(405, { error: "Method not allowed" });
 
-    const hasToken = Boolean(context.clientContext?.identity?.token);
-    if (!hasToken) return j(401, { error: "Unauthorized" });
+    const auth = req.headers.get("authorization") || "";
+    if (!/^Bearer\s+.+/i.test(auth)) return j(401, { error: "Unauthorized" });
 
     const body = await req.json().catch(() => ({}));
     const id = (body.id || "").toString().trim();
@@ -20,12 +20,10 @@ export default async (req, context) => {
     const item = await store.getJSON(id);
     if (!item) return j(404, { error: "not found" });
 
-    // Statusänderung (approve/reject) oder inhaltliche Updates
     if (typeof body.status === "string") {
       const next = body.status.toLowerCase();
-      if (!["pending", "approved", "rejected"].includes(next)) {
+      if (!["pending", "approved", "rejected"].includes(next))
         return j(400, { error: "invalid status" });
-      }
       item.status = next;
     }
 
@@ -34,8 +32,8 @@ export default async (req, context) => {
       item.featured = Boolean(body.featured === true || body.featured === "true");
 
     item.updatedAt = new Date().toISOString();
-
     await store.setJSON(id, item);
+
     return j(200, { ok: true });
   } catch (err) {
     console.error("entries-update error:", err);
