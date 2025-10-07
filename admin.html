@@ -5,10 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Ortenau-Wall · Admin</title>
   <style>
-    :root{
-      --bg:#f6f7f9;--fg:#222;--muted:#6b7280;--card:#fff;--line:#e5e7eb;
-      --primary:#0ea5e9;--primary-600:#0284c7;--danger:#ef4444;
-    }
+    :root { --bg:#f6f7f9;--fg:#222;--muted:#6b7280;--card:#fff;--line:#e5e7eb;
+            --primary:#0ea5e9;--primary-600:#0284c7;--danger:#ef4444; }
     *{box-sizing:border-box}
     body{margin:0;font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial;color:var(--fg);background:var(--bg)}
     .topbar{position:sticky;top:0;z-index:10;background:#fff;border-bottom:1px solid var(--line)}
@@ -89,30 +87,25 @@
   <!-- Netlify Identity -->
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   <script>
-    // ===== kleine Helpers =====
+    // ===== Endpoints (DIREKT, ohne /.netlify/functions) =====
+    const URL_LIST   = (status) => `/entries-list?status=${encodeURIComponent(status)}&t=${Date.now()}`;
+    const URL_UPDATE = (id)     => `/entries-update?id=${encodeURIComponent(id)}`;
+
+    // ===== Utilities =====
     const $ = (s,r=document)=>r.querySelector(s);
     const fmt = iso => iso ? new Date(iso).toLocaleString('de-DE') : '';
-    const esc = s => (s||'').replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]));
     const toast = (m)=>{ const t=$('#toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2000); };
+    const esc = s => (s||'').replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
 
-    // Autorisierten Fetch bauen (holt immer JWT und setzt Authorization)
-    async function authedFetch(url, opt={}) {
-      try {
-        const user = netlifyIdentity.currentUser();
-        const token = user ? await user.jwt() : null; // WICHTIG: await!
-        const headers = new Headers(opt.headers || {});
-        if (token) headers.set('Authorization', 'Bearer ' + token);
-        headers.set('Accept', 'application/json');
-        return fetch(url, { ...opt, headers });
-      } catch (e) {
-        console.warn('authedFetch token error', e);
-        return fetch(url, opt);
-      }
+    async function authedFetch(url,opt={}) {
+      const u = netlifyIdentity.currentUser();
+      const tok = u && await u.jwt();
+      return fetch(url,{...opt,headers:{...(opt.headers||{}),Authorization: tok?`Bearer ${tok}`:''}});
     }
 
     // ===== State =====
     const cache = new Map();
-    let currentView = 'approved'; // Start-Tab
+    let currentView = 'pending';
 
     // ===== Identity =====
     (function(){
@@ -123,10 +116,18 @@
       btnLogin.addEventListener('click', ()=> netlifyIdentity.open('login'));
       btnLogout.addEventListener('click', ()=> netlifyIdentity.logout());
 
-      netlifyIdentity.on('init', user=>{ setUser(user); load(currentView); });
-      netlifyIdentity.on('login', user=>{ setUser(user); netlifyIdentity.close(); load(currentView); });
-      netlifyIdentity.on('logout', ()=>{ setUser(null); load('approved'); });
-
+      netlifyIdentity.on('init', user=>{
+        setUser(user);
+        if(!user && location.hash.includes('recovery_token')) netlifyIdentity.open();
+        // öffentlich: approved, privat: pending
+        load(user ? 'pending' : 'approved');
+      });
+      netlifyIdentity.on('login', user=>{
+        setUser(user); netlifyIdentity.close(); load('pending');
+      });
+      netlifyIdentity.on('logout', ()=>{
+        setUser(null); load('approved');
+      });
       netlifyIdentity.init();
     })();
 
@@ -135,17 +136,25 @@
     $('#btnShowPending').addEventListener('click', ()=> load('pending'));
     $('#btnShowApproved').addEventListener('click', ()=> load('approved'));
 
-    // ===== Render + Data =====
-    async function load(view='approved') {
+    $('#rows').addEventListener('click', (e)=>{
+      const btn = e.target.closest('button'); if(!btn) return;
+      const id = btn.dataset.id, act = btn.dataset.action;
+      if(act==='edit') toggleEditor(id, true);
+      if(act==='approve') approve(id);
+      if(act==='reject') rejectEntry(id);
+      if(act==='save') save(id);
+      if(act==='cancel') toggleEditor(id, false);
+    });
+
+    // ===== Load & Render =====
+    async function load(view='pending'){
       currentView = view;
       const tbody = $('#rows');
       tbody.innerHTML = `<tr><td colspan="6" class="empty">Lade ${view}…</td></tr>`;
       try{
-        const url = `/.netlify/functions/entries-list?status=${encodeURIComponent(view)}&t=${Date.now()}`;
-        // WICHTIG: Pending/Rejeted nur authedFetch (mit Bearer)
-        const res = (view === 'approved')
-          ? await fetch(url, { headers: { 'Accept':'application/json' }})
-          : await authedFetch(url, { headers: { 'Accept':'application/json' }});
+        const url = URL_LIST(view);
+        const needsAuth = (view !== 'approved');
+        const res = needsAuth ? await authedFetch(url) : await fetch(url);
         if(!res.ok) throw new Error(`HTTP ${res.status}`);
         const items = await res.json();
         cache.clear();
@@ -192,16 +201,6 @@
       return tr;
     }
 
-    $('#rows').addEventListener('click', async (e)=>{
-      const btn = e.target.closest('button'); if(!btn) return;
-      const id = btn.dataset.id, act = btn.dataset.action;
-      if(act==='edit') toggleEditor(id, true);
-      if(act==='cancel') toggleEditor(id, false);
-      if(act==='save') await save(id);
-      if(act==='approve') await approve(id);
-      if(act==='reject') await rejectEntry(id);
-    });
-
     function toggleEditor(id, show){
       const box = document.querySelector(`#edit_${CSS.escape(id)}`);
       if(box) box.style.display = show? 'grid' : 'none';
@@ -211,23 +210,23 @@
       const menuText = document.querySelector(`#m_${CSS.escape(id)}`)?.value || '';
       const featured = (document.querySelector(`#f_${CSS.escape(id)}`)?.value === 'true');
       try{
-        const res = await authedFetch(`/.netlify/functions/entries-update?id=${encodeURIComponent(id)}&t=${Date.now()}`,{
+        const res = await authedFetch(URL_UPDATE(id), {
           method:'PATCH',
-          headers:{ 'Content-Type':'application/json' },
+          headers:{'Content-Type':'application/json'},
           body: JSON.stringify({ menuText, featured })
         });
         if(!res.ok) throw new Error(`HTTP ${res.status}`);
         toast('Gespeichert');
-        toggleEditor(id,false);
+        toggleEditor(id, false);
         load(currentView);
       }catch(e){ toast('Speichern fehlgeschlagen'); }
     }
 
     async function approve(id){
       try{
-        const res = await authedFetch(`/.netlify/functions/entries-update?id=${encodeURIComponent(id)}&t=${Date.now()}`,{
+        const res = await authedFetch(URL_UPDATE(id),{
           method:'PATCH',
-          headers:{ 'Content-Type':'application/json' },
+          headers:{'Content-Type':'application/json'},
           body: JSON.stringify({ action:'approve' })
         });
         if(!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -239,9 +238,9 @@
     async function rejectEntry(id){
       if(!confirm('Diesen Eintrag wirklich ablehnen?')) return;
       try{
-        const res = await authedFetch(`/.netlify/functions/entries-update?id=${encodeURIComponent(id)}&t=${Date.now()}`,{
+        const res = await authedFetch(URL_UPDATE(id),{
           method:'PATCH',
-          headers:{ 'Content-Type':'application/json' },
+          headers:{'Content-Type':'application/json'},
           body: JSON.stringify({ action:'reject' })
         });
         if(!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -250,7 +249,7 @@
       }catch(e){ toast('Ablehnen fehlgeschlagen'); }
     }
 
-    // initial
+    // initial: approved (öffentlich), Identity-Init setzt ggf. auf pending
     document.addEventListener('DOMContentLoaded', ()=> load('approved'));
   </script>
 </body>
