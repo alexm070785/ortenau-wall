@@ -1,40 +1,30 @@
+// netlify/functions/entries-list.js
 import { getStore } from '@netlify/blobs';
-
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET,POST,PATCH,OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-};
 
 const json = (b, init = {}) =>
   new Response(JSON.stringify(b), {
     ...init,
     headers: {
       'content-type': 'application/json',
-      ...CORS,
+      'Access-Control-Allow-Origin': '*',
       ...(init.headers || {}),
     },
   });
 
-function getUser(context) {
-  if (context?.user) return context.user;
-  if (context?.clientContext?.user) return context.clientContext.user;
-  return null;
+// kleine Helper: Ist ein Bearer-Token vorhanden?
+function hasBearer(req) {
+  const h = req.headers.get('authorization') || '';
+  return /^Bearer\s+[\w-]+\.[\w-]+\.[\w-]+$/.test(h);
 }
 
-export default async (req, context) => {
+export default async (req) => {
   try {
-    if (req.method === 'OPTIONS') {
-      return new Response(null, { status: 204, headers: CORS });
-    }
-
     const url = new URL(req.url);
     const status = url.searchParams.get('status') || 'approved';
 
-    // pending/rejected nur für Admin
-    if (status !== 'approved') {
-      const user = getUser(context);
-      if (!user) return json({ error: 'Unauthorized' }, { status: 401 });
+    // „pending“ & „rejected“ nur mit Token
+    if (status !== 'approved' && !hasBearer(req)) {
+      return json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const store = getStore('entries');
@@ -57,3 +47,6 @@ export default async (req, context) => {
     return json({ error: 'list_failed' }, { status: 500 });
   }
 };
+
+// Optional: OPTIONS für CORS
+export const config = { path: '/entries-list' };
