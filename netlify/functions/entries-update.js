@@ -1,43 +1,56 @@
 // netlify/functions/entries-update.js
+// PATCH erwartet JSON-Body: { id, status? , menuText? , featured? }
+// Erfordert Login (Identity-Token). Optional kannst du admin-Rolle prüfen.
+
 import { getStore } from "@netlify/blobs";
 
 export default async (req, context) => {
   try {
     if (req.method === "OPTIONS") return ok();
-    if (req.method !== "PATCH") return json(405, { error: "Method not allowed" });
+    if (req.method !== "PATCH") return j(405, { error: "Method not allowed" });
 
-    const isAdmin = Boolean(context.clientContext?.identity?.token);
-    if (!isAdmin) return json(401, { error: "Unauthorized" });
-
-    // URL-Form: /.netlify/functions/entries-update/<ID>
-    const parts = new URL(req.url).pathname.split("/");
-    const id = parts[parts.length - 1];
-    if (!id) return json(400, { error: "missing id" });
-
-    const store = getStore("entries");
-    const entry = await store.getJSON(id);
-    if (!entry) return json(404, { error: "Not found" });
+    const hasToken = Boolean(context.clientContext?.identity?.token);
+    if (!hasToken) return j(401, { error: "Unauthorized" });
 
     const body = await req.json().catch(() => ({}));
+    const id = (body.id || "").toString().trim();
+    if (!id) return j(400, { error: "id required" });
 
-    if (body.action === "approve") entry.status = "approved";
-    if (body.action === "reject") entry.status = "rejected";
-    if (typeof body.menuText === "string") entry.menuText = body.menuText;
-    if (typeof body.featured !== "undefined") entry.featured = Boolean(body.featured);
+    const store = getStore("entries");
+    const item = await store.getJSON(id);
+    if (!item) return j(404, { error: "not found" });
 
-    await store.setJSON(id, entry);
-    return json(200, { ok: true, id, status: entry.status });
-  } catch (e) {
-    console.error("entries-update", e);
-    return json(500, { error: e?.message || "internal error" });
+    // Statusänderung (approve/reject) oder inhaltliche Updates
+    if (typeof body.status === "string") {
+      const next = body.status.toLowerCase();
+      if (!["pending", "approved", "rejected"].includes(next)) {
+        return j(400, { error: "invalid status" });
+      }
+      item.status = next;
+    }
+
+    if (typeof body.menuText === "string") item.menuText = body.menuText;
+    if (typeof body.featured !== "undefined")
+      item.featured = Boolean(body.featured === true || body.featured === "true");
+
+    item.updatedAt = new Date().toISOString();
+
+    await store.setJSON(id, item);
+    return j(200, { ok: true });
+  } catch (err) {
+    console.error("entries-update error:", err);
+    return j(500, { error: err?.message || "internal error" });
   }
 };
 
 const ok = () => new Response(null, { status: 204, headers: cors() });
-const json = (s, b) =>
-  new Response(JSON.stringify(b), { status: s, headers: { "content-type": "application/json", ...cors() } });
+const j = (s, body) =>
+  new Response(JSON.stringify(body), {
+    status: s,
+    headers: { "content-type": "application/json", ...cors() },
+  });
 const cors = () => ({
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
-  "Access-Control-Allow-Methods": "PATCH,OPTIONS",
+  "Access-Control-Allow-Methods": "GET,POST,PATCH,OPTIONS",
 });
