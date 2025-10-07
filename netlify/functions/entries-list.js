@@ -1,32 +1,32 @@
 // netlify/functions/entries-list.js
-// Liefert Einträge aus dem Blob-Store "entries" gefiltert nach status.
+// Liste Einträge aus Blob-Store "entries" gefiltert nach status.
 // - approved: öffentlich
-// - pending / rejected: nur mit Identity-Token (Login)
-// Admin-Rolle ist optional – Token reicht (kannst du leicht verschärfen).
+// - pending / rejected: nur mit Authorization: Bearer <jwt>
 
 import { getStore } from "@netlify/blobs";
 
-export default async (req, context) => {
+export default async (req /*, context */) => {
   try {
-    // CORS
     if (req.method === "OPTIONS") return ok();
 
     const url = new URL(req.url);
     const status = (url.searchParams.get("status") || "approved").toLowerCase();
-
     const needsAuth = status === "pending" || status === "rejected";
-    const hasToken = Boolean(context.clientContext?.identity?.token);
+
+    // **Robust:** Header direkt lesen, nicht auf context verlassen
+    const auth = req.headers.get("authorization") || "";
+    const hasToken = /^Bearer\s+.+/i.test(auth);
 
     if (needsAuth && !hasToken) {
       return j(401, { error: "Unauthorized" });
     }
 
     const store = getStore("entries");
-    const { blobs } = await store.list(); // [{ key, size, uploadedAt, ... }]
+    const { blobs } = await store.list(); // [{ key, ... }]
 
     const out = [];
     for (const b of blobs) {
-      const item = await store.getJSON(b.key);
+      const item = await store.getJSON(b.key).catch(() => null);
       if (item && item.status === status) out.push(item);
     }
 
