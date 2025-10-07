@@ -1,119 +1,54 @@
 // netlify/functions/entries-update.js
-import { getStore } from "@netlify/blobs";
+import { getStore } from '@netlify/blobs';
 
-export const config = { path: "/.netlify/functions/entries-update" };
+const json = (b, init={}) => new Response(JSON.stringify(b), {
+  ...init, headers: { 'content-type': 'application/json', ...(init.headers||{}) }
+});
 
 export default async (req, context) => {
-  // ---- CORS / Preflight
-  if (req.method === "OPTIONS") {
-    return new Response(null, {
-      status: 204,
-      headers: corsHeaders(),
-    });
-  }
-
-  // ---- Nur eingeloggte Benutzer
-  const user = context.clientContext?.user || null;
-  if (!user) {
-    return json({ error: "Unauthorized" }, 401);
-  }
-  const roles = user.app_metadata?.roles || [];
-  const isAdmin = roles.includes("admin");
-  // Wenn NUR Admins dürfen, nächstes if einkommentieren:
-  // if (!isAdmin) return json({ error: "Forbidden" }, 403);
-
-  // ---- ID aus Query oder Pfad
-  const url = new URL(req.url);
-  const qid = url.searchParams.get("id");
-  const pid = url.pathname.split("/").pop();
-  const rawId = qid || pid;
-  if (!rawId) return json({ error: "Missing id" }, 400);
-
-  // ---- Body lesen (bei PATCH)
-  let body = {};
-  if (req.method === "PATCH" || req.method === "POST") {
-    try { body = await req.json(); } catch {}
+  // Identity erfordern
+  try {
+    const { user } = context;          // Netlify Identity (JWT) wird automatisch geparst
+    if (!user) return json({ error: 'Unauthorized' }, { status: 401 });
+  } catch {
+    return json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
-    const store = getStore("entries");
+    if (req.method !== 'PATCH') return json({ error: 'Method not allowed' }, { status: 405 });
 
-    // ID-Varianten durchprobieren
-    const candidates = [
-      rawId,
-      `entries/${rawId}`,
-      rawId.replace(/^entries\//, "")
-    ];
+    const url = new URL(req.url);
+    // ID aus Pfad ODER Query holen
+    let id = url.pathname.split('/').pop();
+    if (!id || id === 'entries-update') id = url.searchParams.get('id');
+    if (!id) return json({ error: 'missing_id' }, { status: 400 });
 
-    console.log("[entries-update] rawId =", rawId);
-    console.log("[entries-update] candidates =", candidates);
+    const body = await req.json();
 
-    let existing = null;
-    let keyUsed = null;
-    for (const k of candidates) {
-      try {
-        const item = await store.getJSON(k);
-        if (item) { existing = item; keyUsed = k; break; }
-      } catch (e) {
-        // ignorieren, nächste Variante probieren
-      }
-    }
+    const store = getStore('entries');
+    const raw = await store.get(id);
+    if (!raw) return json({ error: 'not_found' }, { status: 404 });
 
-    if (!existing) {
-      // Zum Debuggen: zeig die verfügbaren Keys einmal im Log
-      const ls = await store.list();
-      console.log(
-        "[entries-update] keys in store:",
-        ls.blobs?.map(b => b.key) ?? []
-      );
-      return json({ error: "Not found", id: rawId }, 404);
-    }
+    const item = JSON.parse(raw);
 
-    // ---- Aktualisieren / Aktionen
-    if (body.action === "approve") {
-      existing.status = "approved";
-      existing.approvedAt = Date.now();
-    } else if (body.action === "reject") {
-      existing.status = "rejected";
-      existing.rejectedAt = Date.now();
-      // Optional: wirklich löschen
-      // await store.delete(keyUsed);
-      // return json({ ok: true, id: rawId, deleted: true });
+    if (body.action === 'approve') {
+      item.status = 'approved';
+      item.approvedAt = new Date().toISOString();
+    } else if (body.action === 'reject') {
+      item.status = 'rejected';
+      item.rejectedAt = new Date().toISOString();
     } else {
-      if (typeof body.menuText === "string") existing.menuText = body.menuText;
-      if (typeof body.featured === "boolean") existing.featured = body.featured;
-      existing.updatedAt = Date.now();
+      // freie Felder, z.B. Menü/Featured
+      if (typeof body.menuText === 'string') item.menuText = body.menuText;
+      if (typeof body.featured !== 'undefined') item.featured = !!body.featured;
+      item.updatedAt = new Date().toISOString();
     }
 
-    await store.setJSON(keyUsed, existing);
+    await store.set(id, JSON.stringify(item));
+    return json({ ok: true, id, item }, { status: 200 });
 
-    return new Response(JSON.stringify({ ok: true, id: rawId, keyUsed, item: existing }), {
-      status: 200,
-      headers: {
-        "content-type": "application/json; charset=utf-8",
-        ...corsHeaders(),
-      },
-    });
   } catch (e) {
-    console.error("[entries-update] error:", e);
-    return json({ error: String(e?.message || e) }, 500);
+    console.error('entries-update error', e);
+    return json({ error: 'update_failed' }, { status: 500 });
   }
 };
-
-function json(data, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: {
-      "content-type": "application/json; charset=utf-8",
-      ...corsHeaders(),
-    },
-  });
-}
-
-function corsHeaders() {
-  return {
-    "access-control-allow-origin": "*",
-    "access-control-allow-methods": "GET,POST,PATCH,OPTIONS",
-    "access-control-allow-headers": "Content-Type, Authorization",
-  };
-}
