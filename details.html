@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ortenau liefert · Detail</title>
+<style>
+  :root{ --accent:#e7e7e7; --text:#333; --bg:#f6f6f6; --card:#fff; --border:#d0d0d0; --muted:#70798C; --shadow:0 4px 12px rgba(0,0,0,.08); --radius:14px; --badge:#f2f2f2 }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif}
+  header{position:sticky;top:0;background:var(--accent);border-bottom:1px solid #b0b0b0;z-index:5}
+  .head{max-width:1200px;margin:auto;display:flex;gap:12px;align-items:center;justify-content:space-between;padding:10px 16px}
+  a.back{display:inline-flex;align-items:center;gap:8px;text-decoration:none;color:#222;border:1px solid var(--border);background:#fff;padding:8px 12px;border-radius:10px;box-shadow:var(--shadow)}
+  main{max-width:1100px;margin:18px auto;padding:0 16px;display:grid;gap:16px;grid-template-columns:2fr 1fr}
+  @media (max-width:900px){ main{grid-template-columns:1fr} }
+  .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}
+  h1{margin:0 0 8px}
+  .muted{color:var(--muted)}
+  .badge{display:inline-block; background:var(--badge); border:1px solid var(--border); border-radius:999px; padding:2px 8px; font-size:.85rem; margin-right:6px}
+  .section h2{margin:0 0 8px;font-size:1.05rem}
+  .kv{display:grid;grid-template-columns:140px 1fr;gap:6px}
+  .kv div{padding:4px 0}
+  .links a{display:inline-block;margin:4px 6px 0 0;text-decoration:none;border:1px solid var(--border);border-radius:999px;padding:6px 10px;background:#fff}
+  .hero{display:flex;gap:14px;align-items:center}
+  .hero img{width:140px;height:140px;object-fit:cover;border-radius:12px;border:1px solid var(--border)}
+</style>
+</head>
+<body>
+<header>
+  <div class="head">
+    <a class="back" href="index.html">← Zur Übersicht</a>
+    <img src="header.png" alt="Ortenau liefert" height="48">
+  </div>
+</header>
+
+<main>
+  <article class="card" id="detail">
+    <div class="hero">
+      <img id="bild" alt="" src="icons/restaurant.png">
+      <div>
+        <h1 id="titel">Lokal</h1>
+        <div id="kategorie" class="badge">Kategorie</div>
+        <div id="badges" style="margin-top:6px"></div>
+        <div id="ort" class="muted" style="margin-top:4px"></div>
+      </div>
+    </div>
+
+    <section class="section" style="margin-top:14px">
+      <h2>Öffnungszeiten & Hinweise</h2>
+      <div class="kv">
+        <div class="muted">Öffnungszeiten</div><div id="oeffnungszeiten">–</div>
+        <div class="muted">Schließtage</div><div id="schliesstage">–</div>
+      </div>
+    </section>
+
+    <section class="section" style="margin-top:14px">
+      <h2>Kontakt & Adresse</h2>
+      <div class="kv">
+        <div class="muted">Adresse</div><div id="adresse">–</div>
+        <div class="muted">Telefon</div><div id="telefon">–</div>
+        <div class="muted">E-Mail</div><div id="email">–</div>
+      </div>
+    </section>
+
+    <section class="section" style="margin-top:14px">
+      <h2>Beschreibung</h2>
+      <div id="beschreibung">–</div>
+    </section>
+  </article>
+
+  <aside class="card">
+    <h2 style="margin:0 0 8px">Links</h2>
+    <div class="links" id="links"></div>
+  </aside>
+</main>
+
+<script>
+function getParam(name){
+  const u = new URL(location.href);
+  return u.searchParams.get(name);
+}
+function textOrDash(v){ return v && String(v).trim() ? v : "–"; }
+function esc(s){ return (s||'').replace(/[&<>\"']/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[m])); }
+
+(async function(){
+  const id = getParam('id');
+  const q  = getParam('q'); // fallback (alter Index ohne id)
+  const res = await fetch('/api/entries');
+  const data = await res.json();
+
+  let item = null;
+  if (id) item = data.find(x => x.id === id);
+  if (!item && q) item = data.find(x => (x.titel||'').toLowerCase().includes(q.toLowerCase()));
+
+  if (!item) {
+    document.getElementById('detail').innerHTML = '<p class="muted">Eintrag nicht gefunden.</p>';
+    return;
+  }
+
+  // Hero
+  const ort = item.stadt || item?.adresse?.stadt || '';
+  document.getElementById('titel').textContent = item.titel || 'Ohne Titel';
+  document.getElementById('kategorie').textContent = item.kategorie || '';
+  document.getElementById('ort').textContent = ort ? ort : '';
+
+  const img = document.getElementById('bild');
+  img.src = item.bild || `icons/${item.kategorie||'restaurant'}.png`;
+  img.alt = (item.titel||'') + ' Bild';
+
+  // Badges
+  const badges = [];
+  if (item?.optionen?.abholung) badges.push('Abholung');
+  if (item?.optionen?.lieferung) badges.push('Lieferung');
+  if (item?.info?.preisklasse) badges.push(item.info.preisklasse);
+  document.getElementById('badges').innerHTML = badges.map(t=>`<span class="badge">${esc(t)}</span>`).join('');
+
+  // Öffnungszeiten/Schließtage
+  document.getElementById('oeffnungszeiten').textContent = textOrDash(item?.info?.oeffnungszeiten);
+  document.getElementById('schliesstage').textContent   = textOrDash(item?.info?.schliesstage);
+
+  // Adresse/Kontakt
+  const adr = item?.adresse || {};
+  const adrStr = [adr.strasse, adr.plz, adr.stadt].filter(Boolean).join(', ');
+  document.getElementById('adresse').textContent = textOrDash(adrStr);
+  document.getElementById('telefon').textContent = textOrDash(item?.kontakt?.telefon);
+  document.getElementById('email').textContent   = textOrDash(item?.kontakt?.email);
+
+  // Beschreibung
+  document.getElementById('beschreibung').textContent = textOrDash(item?.info?.beschreibung);
+
+  // Links
+  const links = document.getElementById('links');
+  const out = [];
+  if (item.url) out.push(`<a href="${esc(item.url)}" target="_blank" rel="noopener">Bestellen / Seite</a>`);
+  if (item?.web?.website) out.push(`<a href="${esc(item.web.website)}" target="_blank" rel="noopener">Website</a>`);
+  if (item?.web?.speisekarte) out.push(`<a href="${esc(item.web.speisekarte)}" target="_blank" rel="noopener">Speisekarte</a>`);
+  if (item?.web?.instagram) out.push(`<a href="${esc(item.web.instagram)}" target="_blank" rel="noopener">Instagram</a>`);
+  if (item?.web?.facebook) out.push(`<a href="${esc(item.web.facebook)}" target="_blank" rel="noopener">Facebook</a>`);
+  if (item?.web?.tiktok) out.push(`<a href="${esc(item.web.tiktok)}" target="_blank" rel="noopener">TikTok</a>`);
+  links.innerHTML = out.join(' ');
+})();
+</script>
+</body>
+</html>
