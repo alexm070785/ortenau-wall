@@ -7,6 +7,7 @@
   :root{
     --bg:#f6f6f6; --card:#fff; --text:#222; --muted:#70798C; --radius:12px;
     --border:#d0d0d0; --shadow:0 4px 12px rgba(0,0,0,.08); --tap:48px;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   }
   *{box-sizing:border-box}
   html{font-size:16px}
@@ -36,6 +37,15 @@
   th{background:#fafafa}
   .right{text-align:right}
   .pill{display:inline-block;padding:4px 10px;border-radius:999px;border:1px solid #ddd;font-size:.9rem;background:#fafafa}
+
+  /* Speisekarte */
+  .menu-wrap{grid-column:1/-1}
+  .menu-editor{font-family:var(--mono);min-height:260px}
+  .menu-meta{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-top:6px;flex-wrap:wrap}
+  .menu-preview{background:#fff;border:1px dashed var(--border);border-radius:12px;padding:12px;margin-top:10px;white-space:pre-wrap;line-height:1.5}
+  .menu-preview h3{margin:14px 0 6px;font-size:1.05rem}
+  .menu-preview .price{opacity:.9}
+  .hint{font-size:.9rem}
 </style>
 
 <div class="wrap">
@@ -88,19 +98,19 @@
       <input id="website" placeholder="https://…">
     </div>
     <div>
-      <label for="speisekarte">Speisekarte-URL</label>
+      <label for="speisekarte">Speisekarte-URL (optional)</label>
       <input id="speisekarte" placeholder="https://…/speisekarte.pdf">
     </div>
 
-    <div class="g2" style="grid-column:1/-1;display:grid;gap:12px">
-      <div>
-        <label for="oeffnungszeiten">Öffnungszeiten</label>
-        <textarea id="oeffnungszeiten" placeholder="Mo–Fr 11–22; Sa 12–23; So geschlossen"></textarea>
+    <!-- SPEISEKARTE EDITOR -->
+    <div class="menu-wrap">
+      <label for="menuText">Speisekarte – Text (lang)</label>
+      <textarea id="menuText" class="menu-editor" placeholder="Hier den kompletten Speisekarten-Text einfügen …"></textarea>
+      <div class="menu-meta">
+        <div class="muted hint">Tipp: Einfach Text einfügen – Zeilenumbrüche bleiben erhalten. Emojis wie 🥙 🥗 🍕 werden später als Abschnittstitel erkannt.</div>
+        <div class="muted"><span id="menuCount">0</span> Zeichen</div>
       </div>
-      <div>
-        <label for="schliesstage">Schließtage / Hinweise</label>
-        <textarea id="schliesstage" placeholder="Feiertage geschlossen; Betriebsferien 1.–15. Aug."></textarea>
-      </div>
+      <div class="menu-preview" id="menuPreview" aria-live="polite"></div>
     </div>
 
     <div>
@@ -142,7 +152,7 @@
     </div>
 
     <div class="row" style="grid-column:1/-1">
-      <label style="display:flex;gap:18px;align-items:center;font-weight:600;flex-wrap:wrap">
+      <label style="display:flex;gap:18px;align-items:center;flex-wrap:wrap;font-weight:600">
         <span><input type="checkbox" id="abholung"> Abholung</span>
         <span><input type="checkbox" id="lieferung"> Lieferung</span>
         <span><input type="checkbox" id="featured"> Featured (Top)</span>
@@ -153,7 +163,6 @@
     <div style="grid-column:1/-1">
       <label for="token">Admin-Token (nur nötig, wenn in Netlify gesetzt)</label>
       <input id="token" placeholder="optional – NETLIFY_ADMIN_TOKEN">
-      <div class="muted">Wenn in Netlify ein <b>NETLIFY_ADMIN_TOKEN</b> existiert, hier denselben Wert eintragen.</div>
     </div>
 
     <div class="actions" style="grid-column:1/-1">
@@ -185,42 +194,77 @@
 
 <script>
 const API = "/api/entries";
+const $ = s => document.querySelector(s);
+
+// --- Speisekarte Live-Vorschau (einfach: Überschriften erkennen, sonst Text) ---
+function renderMenuPreview(txt){
+  const box = $("#menuPreview");
+  if(!txt.trim()){ box.textContent = "Vorschau erscheint hier …"; return; }
+
+  const lines = txt.replace(/\r\n/g,"\n").split("\n");
+  const parts = [];
+  let inList = false;
+
+  function pushPara(html){ parts.push(`<p>${html}</p>`); }
+  function esc(s){ return s.replace(/[&<>\"']/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[m])); }
+
+  for(let i=0;i<lines.length;i++){
+    const l = lines[i].trim();
+    if(!l){ parts.push("<br>"); continue; }
+
+    // Abschnitts-Überschriften: Emoji am Anfang oder komplette Wortzeile ohne Preis
+    const isSection = /^[\u{1F300}-\u{1FAFF}]/u.test(l) || (!/[0-9€]/.test(l) && l.length<60);
+    if(isSection){
+      parts.push(`<h3>${esc(l)}</h3>`);
+      inList = false;
+      continue;
+    }
+
+    // Preiszeilen zusammen mit vorheriger Zeile verbinden (typisch "Name" / "preise")
+    const next = lines[i+1]?.trim() || "";
+    const looksLikePrice = /€|\d,\d{2}/.test(next);
+    if(!/€|\d,\d{2}/.test(l) && looksLikePrice){
+      pushPara(`${esc(l)}<br><span class="price">${esc(next)}</span>`);
+      i++; // eine Zeile zusätzlich verbrauchen
+      continue;
+    }
+
+    // normale Zeile
+    pushPara(esc(l));
+  }
+
+  box.innerHTML = parts.join("\n");
+}
 
 function hdrs(){
   const h = {"Content-Type":"application/json"};
-  const t = document.getElementById('token').value.trim();
+  const t = $("#token").value.trim();
   if(t) h["x-admin-token"]=t;
   return h;
 }
 function toPayload(){
-  const titel = document.getElementById('titel').value.trim();
-  const stadt = document.getElementById('stadt').value.trim();
-  const kategorie = document.getElementById('kategorie').value;
+  const titel = $("#titel").value.trim();
+  const stadt = $("#stadt").value.trim();
+  const kategorie = $("#kategorie").value;
 
   return {
     titel, stadt, kategorie,
-    url: document.getElementById('url').value.trim(),
-    adresse: { strasse: document.getElementById('strasse').value.trim(), plz: document.getElementById('plz').value.trim(), stadt },
-    kontakt: { telefon: document.getElementById('telefon').value.trim(), email: document.getElementById('email').value.trim() },
-    web: {
-      website: document.getElementById('website').value.trim(),
-      speisekarte: document.getElementById('speisekarte').value.trim(),
-      instagram: document.getElementById('instagram').value.trim(),
-      facebook: document.getElementById('facebook').value.trim(),
-      tiktok: document.getElementById('tiktok').value.trim()
-    },
+    url: $("#url").value.trim(),
+    adresse: { strasse: $("#strasse").value.trim(), plz: $("#plz").value.trim(), stadt },
+    kontakt: { telefon: $("#telefon").value.trim(), email: $("#email").value.trim() },
+    web: { website: $("#website").value.trim(), speisekarte: $("#speisekarte").value.trim(),
+           instagram: $("#instagram").value.trim(), facebook: $("#facebook").value.trim(), tiktok: $("#tiktok").value.trim() },
     info: {
-      oeffnungszeiten: document.getElementById('oeffnungszeiten').value.trim(),
-      schliesstage: document.getElementById('schliesstage').value.trim(),
-      beschreibung: document.getElementById('beschreibung').value.trim(),
-      preisklasse: document.getElementById('preisklasse').value
+      oeffnungszeiten: $("#oeffnungszeiten")?.value?.trim() || "",
+      schliesstage: $("#schliesstage")?.value?.trim() || "",
+      beschreibung: $("#beschreibung").value.trim(),
+      preisklasse: $("#preisklasse").value
     },
-    optionen: {
-      abholung: document.getElementById('abholung').checked,
-      lieferung: document.getElementById('lieferung').checked,
-      featured: document.getElementById('featured').checked
-    },
-    bild: document.getElementById('bild').value.trim()
+    optionen: { abholung: $("#abholung").checked, lieferung: $("#lieferung").checked, featured: $("#featured").checked },
+    bild: $("#bild").value.trim(),
+
+    // NEU: Speisekarte als großer Textblock
+    menu: { text: $("#menuText").value }
   };
 }
 
@@ -230,10 +274,10 @@ async function loadList(){
   renderTable(data);
 }
 function renderTable(items){
-  const tb = document.getElementById('tbody');
+  const tb = $("#tbody");
   tb.innerHTML='';
   if(!items.length){ tb.innerHTML='<tr><td colspan="5" class="muted">Keine Einträge gespeichert.</td></tr>'; return; }
-  const q = document.getElementById('filter').value.trim().toLowerCase();
+  const q = $("#filter").value.trim().toLowerCase();
   items
     .filter(i => !q || JSON.stringify(i).toLowerCase().includes(q))
     .forEach(i=>{
@@ -254,7 +298,7 @@ function renderTable(items){
     });
 }
 
-document.getElementById('save').onclick = async (e)=>{
+$("#save").onclick = async (e)=>{
   e.preventDefault();
   const p = toPayload();
   if(!p.titel){ alert('Bitte einen Namen eingeben.'); return; }
@@ -263,24 +307,24 @@ document.getElementById('save').onclick = async (e)=>{
   alert('Gespeichert!');
   loadList();
 };
-document.getElementById('fetch').onclick = loadList;
-document.getElementById('clear').onclick = async ()=>{
+$("#fetch").onclick = loadList;
+$("#clear").onclick = async ()=>{
   if(!confirm('WIRKLICH alle Einträge löschen?')) return;
   const res = await fetch(API, { method:"DELETE", headers:hdrs() }).then(r=>r.json());
   if(res.error){ alert('Fehler: ' + res.error); return; }
   alert('Alles gelöscht.'); loadList();
 };
-document.getElementById('filter').addEventListener('input', loadList);
+$("#filter").addEventListener('input', loadList);
 
 // Export/Import
-document.getElementById('exportBtn').onclick = async ()=>{
+$("#exportBtn").onclick = async ()=>{
   const r = await fetch(API); const data = await r.json();
   const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
   const url = URL.createObjectURL(blob);
   const a = Object.assign(document.createElement('a'), {href:url, download:'eintraege.json'});
   document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
 };
-document.getElementById('importFile').onchange = async (ev)=>{
+$("#importFile").onchange = async (ev)=>{
   const file = ev.target.files[0]; if(!file) return;
   const text = await file.text(); let arr;
   try { arr = JSON.parse(text); } catch { alert('Ungültiges JSON.'); return; }
@@ -290,5 +334,21 @@ document.getElementById('importFile').onchange = async (ev)=>{
   alert('Import abgeschlossen.'); loadList();
 };
 
+// --- Editor Komfort: Auto-Resize + Zeichenanzahl + Live-Preview
+const menuTA = $("#menuText"), menuCount = $("#menuCount");
+function autoResize(){
+  menuTA.style.height = "auto";
+  menuTA.style.height = (menuTA.scrollHeight + 4) + "px";
+}
+function updateMenuUI(){
+  menuCount.textContent = menuTA.value.length;
+  autoResize();
+  renderMenuPreview(menuTA.value);
+}
+menuTA.addEventListener("input", updateMenuUI);
+menuTA.addEventListener("change", updateMenuUI);
+updateMenuUI();
+
+// Erste Liste laden
 loadList();
 </script>
