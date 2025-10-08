@@ -1,6 +1,7 @@
 // netlify/functions/entries-update.js
+import { createStore } from "@netlify/blobs";
 
-// 🧩 Hilfsfunktionen für JSON-kompatible Speicherung:
+// 🧩 Hilfsfunktionen für JSON-kompatible Speicherung
 const getJsonCompat = (store, key) =>
   typeof store.getJSON === "function"
     ? store.getJSON(key)
@@ -13,8 +14,8 @@ const setJsonCompat = (store, key, obj) =>
         contentType: "application/json",
       });
 
-// 🟢 Haupteinstiegspunkt – MUSS async sein!
-exports.handler = async (event, context) => {
+// 🟢 Hauptfunktion
+export async function handler(event, context) {
   try {
     // 🔐 Authentifizierung prüfen
     const { user } = context.clientContext || {};
@@ -29,10 +30,10 @@ exports.handler = async (event, context) => {
       return { statusCode: 400, body: "Fehlende Parameter (id/action)" };
     }
 
-    // 🔸 Beispiel: Zugriff auf deine Datenbank (z. B. Netlify Store)
-    const store = require("@netlify/blobs").createStore("entries");
+    // 📦 Blob Store initialisieren
+    const store = createStore("entries");
 
-    // 📖 Eintrag lesen
+    // 📖 Eintrag laden
     const item = await getJsonCompat(store, id);
     if (!item) {
       return { statusCode: 404, body: "Eintrag nicht gefunden" };
@@ -57,4 +58,4 @@ exports.handler = async (event, context) => {
       body: JSON.stringify({ error: err.message || "Serverfehler" }),
     };
   }
-};
+}
