@@ -1,5 +1,5 @@
-// CommonJS-Version für Netlify Functions
-const { getStore } = require("@netlify/blobs");
+// /netlify/functions/entries.js  (CommonJS)
+const { createClient } = require("@netlify/blobs");
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -7,27 +7,22 @@ const CORS = {
   "Access-Control-Allow-Headers": "Content-Type, x-admin-token",
 };
 
-// Blobs-Store "seiten" mit SiteID + Token aus den Environment Variables
-const store = getStore("seiten", {
-  siteID: process.env.NETLIFY_SITE_ID,
-  token: process.env.NETLIFY_AUTH_TOKEN,
-});
+function mkStore() {
+  const siteID = process.env.NETLIFY_SITE_ID;
+  const token  = process.env.NETLIFY_AUTH_TOKEN;
+  if (!siteID || !token) {
+    throw new Error("Blobs not configured: missing NETLIFY_SITE_ID or NETLIFY_AUTH_TOKEN");
+  }
+  const client = createClient({ siteID, token });
+  return client.store("seiten");            // Store-Name frei wählbar
+}
 
 const KEY = "data";
 
-function ok(body) {
-  return {
-    statusCode: 200,
-    headers: { ...CORS, "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  };
-}
-function bad(code, msg) {
-  return { statusCode: code, headers: CORS, body: JSON.stringify({ error: msg }) };
-}
+const ok  = (b) => ({ statusCode: 200, headers: { ...CORS, "Content-Type":"application/json" }, body: JSON.stringify(b) });
+const bad = (c,m) => ({ statusCode: c, headers: CORS, body: JSON.stringify({ error: m }) });
 
-// Optional: Admin-Token setzen (ENV: NETLIFY_ADMIN_TOKEN). Ohne ENV ist POST/DELETE offen.
-function requireAdmin(event) {
+function requireAdmin(event){
   const need = !!process.env.NETLIFY_ADMIN_TOKEN;
   if (!need) return true;
   const got = event.headers["x-admin-token"];
@@ -38,6 +33,8 @@ exports.handler = async (event) => {
   if (event.httpMethod === "OPTIONS") return { statusCode: 204, headers: CORS };
 
   try {
+    const store = mkStore();
+
     if (event.httpMethod === "GET") {
       const raw = await store.get(KEY);
       const arr = raw ? JSON.parse(raw) : [];
