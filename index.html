@@ -8,14 +8,11 @@
   :root{
     --accent:#e7e7e7; --text:#4f4f4f; --bg:#f6f6f6; --card:#fff;
     --muted:#70798C; --radius:12px; --shadow:0 4px 12px rgba(0,0,0,.08);
-    --shadowHover:0 6px 18px rgba(0,0,0,.12); --border:#d0d0d0;
-    --badge:#f2f2f2;
+    --shadowHover:0 6px 18px rgba(0,0,0,.12); --border:#d0d0d0; --badge:#f2f2f2;
   }
   *{box-sizing:border-box}
   body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;background:var(--bg);color:var(--text);padding-bottom:40px;}
   .visually-hidden{position:absolute!important;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
-
-  /* Header + Toolbar */
   header.site{position:sticky;top:0;z-index:10;background:var(--accent);border-bottom:1px solid #b0b0b0;}
   .head{max-width:1360px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:10px 16px;}
   .toolbar{max-width:1360px;margin:8px auto 0;display:flex;align-items:center;gap:12px;padding:0 16px;justify-content:space-between;}
@@ -30,16 +27,12 @@
     -webkit-mask:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"/></svg>') no-repeat center / contain;
             mask:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"/></svg>') no-repeat center / contain;}
   @media (max-width:480px){ .cta .txt{display:none;} }
-
-  /* Featured + Grid */
   .featured-wrap{max-width:1360px;margin:14px auto 10px;padding:0 16px;}
   .featured-grid{display:grid;gap:16px;grid-template-columns:1fr;}
   @media(min-width:768px){ .featured-grid{grid-template-columns:repeat(3,1fr);} }
-
   .grid{display:grid;gap:16px;}
   @media(min-width:640px){.grid{grid-template-columns:repeat(auto-fill,minmax(220px,1fr));max-width:1360px;margin:14px auto 20px;padding:0 16px;}}
   @media(max-width:639px){.grid{grid-template-columns:repeat(2,1fr);margin:12px;}}
-
   .card{background:var(--card);border-radius:var(--radius);overflow:hidden;text-decoration:none;color:inherit;box-shadow:var(--shadow);transition:transform .2s, box-shadow .2s;display:grid;grid-template-rows:auto auto;min-height:260px;position:relative;border:1px solid var(--border);}
   .card:hover{transform:translateY(-2px);box-shadow:var(--shadowHover);}
   .icon-wrap{display:flex;align-items:center;justify-content:center;background:var(--cat-color, #fff);overflow:hidden;aspect-ratio:16/9;padding:12px;}
@@ -93,7 +86,7 @@
 <footer class="footer"><div class="footer-inner">© <span id="jahr"></span> Ortenau liefert</div></footer>
 
 <template id="cardTpl">
-  <a class="card" href="#" data-category="" target="_blank" rel="noopener">
+  <a class="card" href="#" data-category="" >
     <span class="star"></span>
     <div class="icon-wrap">
       <img class="icon" alt="" width="96" height="96" loading="lazy" decoding="async">
@@ -107,23 +100,17 @@
 </template>
 
 <script>
-  // Jahr in Footer
   document.getElementById("jahr").textContent = new Date().getFullYear();
 
-  // Kategorie-Farben
   const CAT_COLORS = {
     doener:"#CC5F34", restaurant:"#6A865F", pizza:"#FDF1DF", pizzeria:"#FDF1DF",
     cafe:"#E6F7FF", imbiss:"#FFF3E0", "bäckerei":"#FFF8E1"
   };
 
-  // Hilfsfunktionen
   const $ = s => document.querySelector(s);
   function normalize(s){
     try { return s.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu,''); }
     catch { return (s||'').toLowerCase(); }
-  }
-  function pickUrl(item){
-    return item.url || item?.web?.website || item?.web?.speisekarte || "#";
   }
   function buildTooltip(item){
     const p = [];
@@ -133,7 +120,6 @@
     return p.join(" · ");
   }
 
-  // Render Cards
   function render(items){
     const featuredWrap = $("#featuredGrid");
     const grid = $("#cardGrid");
@@ -151,71 +137,61 @@
       return;
     }
 
-    // Featured zuerst, dann Rest alphabetisch
     const list = [...items].sort((a,b)=>{
       const fa = !!(a.optionen && a.optionen.featured), fb = !!(b.optionen && b.optionen.featured);
       if (fa!==fb) return fa? -1 : 1;
       return (a.titel||"").localeCompare(b.titel||"");
     });
 
-    list.forEach((place, idx)=>{
+    list.forEach((place)=>{
       const node = tpl.content.cloneNode(true);
       const card = node.querySelector(".card");
       const color = CAT_COLORS[place.kategorie] || "#ffffff";
       card.style.setProperty("--cat-color", color);
 
-      const href = pickUrl(place);
-      card.href = href || "#";
-      if (href==="#") { card.removeAttribute("target"); card.removeAttribute("rel"); }
-
-      // featured?
-      const isFeatured = !!(place.optionen && place.optionen.featured);
-      if (isFeatured) {
-        card.classList.add("featured");
+      // → Link zur Detailseite
+      if (place.id) {
+        card.href = `details.html?id=${encodeURIComponent(place.id)}`;
       } else {
-        node.querySelector(".star").remove();
+        // Fallback: falls alte Einträge noch keine id haben
+        const slug = encodeURIComponent((place.titel||"").toLowerCase());
+        card.href = `details.html?q=${slug}`;
       }
 
-      // Bild/Icon
+      const isFeatured = !!(place.optionen && place.optionen.featured);
+      if (isFeatured) card.classList.add("featured"); else node.querySelector(".star").remove();
+
       const img = node.querySelector(".icon");
       const label = place.kategorie ? place.kategorie.charAt(0).toUpperCase()+place.kategorie.slice(1) : "Restaurant";
       img.src = `icons/${place.kategorie||"restaurant"}.png`;
       img.alt = `${label}-Icon`;
 
-      // Titel & Tag
       const title = node.querySelector(".title");
       const tag = node.querySelector(".tag");
       const ort = place.stadt || place?.adresse?.stadt || "";
       title.textContent = ort ? `${place.titel} · ${ort}` : place.titel;
       tag.textContent = label;
 
-      // Badges
       const badges = node.querySelector(".badges");
       const have = [];
       if (place?.optionen?.abholung) have.push("Abholung");
       if (place?.optionen?.lieferung) have.push("Lieferung");
       if (place?.info?.preisklasse) have.push(place.info.preisklasse);
-      if (have.length) {
-        badges.innerHTML = have.map(t=>`<span class="badge">${t}</span>`).join("");
-      }
+      if (have.length) badges.innerHTML = have.map(t=>`<span class="badge">${t}</span>`).join("");
 
-      // Tooltip mit Öffnungszeiten / Hinweis / Kurzbeschreibung
       const tip = buildTooltip(place);
       if (tip) card.title = tip;
 
-      // Einhängen
       (isFeatured ? featuredWrap : grid).appendChild(node);
     });
   }
 
-  // Daten holen + Suche
   async function loadAndRender(){
     const res = await fetch("/api/entries");
     const all = await res.json();
 
     const input = $("#search");
     const clear = $("#clearBtn");
-
     function apply(){
       const q = normalize(input.value.trim());
       const filtered = !q ? all : all.filter(item=>{
@@ -228,7 +204,6 @@
     clear.onclick = ()=>{ input.value=""; apply(); input.focus(); };
     apply();
   }
-
   loadAndRender();
 </script>
 </body>
