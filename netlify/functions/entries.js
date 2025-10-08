@@ -1,6 +1,7 @@
-// /netlify/functions/entries.js  (CommonJS, nutzt BlobsServer)
+// /netlify/functions/entries.js
+// CommonJS + Netlify Blobs (Server-Client) – robust für unterschiedliche SDK-Versionen
 const blobs = require("@netlify/blobs");
-const { BlobsServer } = blobs; // <- in deiner Version vorhanden
+const { BlobsServer } = blobs; // in deiner Version vorhanden
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -8,11 +9,22 @@ const CORS = {
   "Access-Control-Allow-Headers": "Content-Type, x-admin-token",
 };
 
-const KEY = "data";
-const ok  = (b) => ({ statusCode: 200, headers: { ...CORS, "Content-Type":"application/json" }, body: JSON.stringify(b) });
-const bad = (c,m) => ({ statusCode: c, headers: CORS, body: JSON.stringify({ error: m }) });
+const KEY = "data"; // hier speichern wir das Array
 
-function requireAdmin(event){
+const ok = (body) => ({
+  statusCode: 200,
+  headers: { ...CORS, "Content-Type": "application/json" },
+  body: JSON.stringify(body),
+});
+const bad = (code, msg) => ({
+  statusCode: code,
+  headers: CORS,
+  body: JSON.stringify({ error: msg }),
+});
+
+// Schreibschutz optional: Setze NETLIFY_ADMIN_TOKEN in den Environment Variables,
+// und übergib denselben Wert im Header `x-admin-token` (siehe admin.html).
+function requireAdmin(event) {
   const need = !!process.env.NETLIFY_ADMIN_TOKEN;
   if (!need) return true;
   const got = event.headers["x-admin-token"];
@@ -20,9 +32,11 @@ function requireAdmin(event){
 }
 
 exports.handler = async (event) => {
-  if (event.httpMethod === "OPTIONS") return { statusCode: 204, headers: CORS };
+  if (event.httpMethod === "OPTIONS") {
+    return { statusCode: 204, headers: CORS };
+  }
 
-  // Debug bleibt drin: /api/entries?debug=1
+  // Debug-Helfer: /api/entries?debug=1 zeigt ENV-Präsenz & verfügbare Exporte
   if (event.queryStringParameters && event.queryStringParameters.debug === "1") {
     const envPresent = {
       NETLIFY_SITE_ID: !!process.env.NETLIFY_SITE_ID,
@@ -34,14 +48,14 @@ exports.handler = async (event) => {
   }
 
   const siteID = process.env.NETLIFY_SITE_ID;
-  const token  = process.env.NETLIFY_AUTH_TOKEN;
+  const token = process.env.NETLIFY_AUTH_TOKEN;
   if (!siteID || !token) {
     return bad(500, "Blobs not configured: missing NETLIFY_SITE_ID or NETLIFY_AUTH_TOKEN");
   }
 
-  // >>> WICHTIG: BlobsServer statt getStore
+  // WICHTIG: In deiner SDK-Version hat BlobsServer die Methode getStore(...)
   const client = new BlobsServer({ siteID, token });
-  const store = client.store("seiten");
+  const store = client.getStore("seiten"); // ← Store-Name frei wählbar
 
   try {
     if (event.httpMethod === "GET") {
@@ -53,7 +67,12 @@ exports.handler = async (event) => {
     if (event.httpMethod === "POST") {
       if (!requireAdmin(event)) return bad(401, "Unauthorized");
       let payload;
-      try { payload = JSON.parse(event.body || "{}"); } catch { return bad(400, "Invalid JSON"); }
+      try {
+        payload = JSON.parse(event.body || "{}");
+      } catch {
+        return bad(400, "Invalid JSON");
+      }
+
       const { titel, url, kategorie, stadt } = payload;
       if (!titel) return bad(400, "titel fehlt");
 
@@ -65,6 +84,7 @@ exports.handler = async (event) => {
         kategorie: kategorie || "restaurant",
         createdAt: new Date().toISOString(),
       });
+
       await store.set(KEY, JSON.stringify(arr));
       return ok(arr);
     }
