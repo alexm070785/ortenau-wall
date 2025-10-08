@@ -171,4 +171,30 @@ function renderMenuText(raw){
   const links = document.getElementById('links');
   const out = [];
   if (item.url) out.push(`<a href="${esc(item.url)}" target="_blank" rel="noopener">Bestellen / Seite</a>`);
-  if (item?.web?.website) out.push(`<a
+  if (item?.web?.website) out.push(`<a href="${esc(item.web.website)}" target="_blank" rel="noopener">Website</a>`);
+  if (item?.web?.speisekarte) out.push(`<a href="${esc(item.web.speisekarte)}" target="_blank" rel="noopener">Speisekarte (PDF)</a>`);
+  if (item?.web?.instagram) out.push(`<a href="${esc(item.web.instagram)}" target="_blank" rel="noopener">Instagram</a>`);
+  if (item?.web?.facebook) out.push(`<a href="${esc(item.web.facebook)}" target="_blank" rel="noopener">Facebook</a>`);
+  if (item?.web?.tiktok) out.push(`<a href="${esc(item.web.tiktok)}" target="_blank" rel="noopener">TikTok</a>`);
+  links.innerHTML = out.join(' ');
+
+  // Handy-CTA
+  const cta = document.getElementById('ctaBar');
+  const tel = item?.kontakt?.telefon || "";
+  const mail = item?.kontakt?.email || "";
+  const telHref = tel ? `tel:${encodeURIComponent(tel.replace(/\s+/g,''))}` : "";
+  const mailHref = mail ? `mailto:${encodeURIComponent(mail)}` : "";
+  const ctas = [];
+  if (telHref) ctas.push(`<a href="${telHref}">📞 Anrufen</a>`);
+  if (mailHref) ctas.push(`<a href="${mailHref}">✉️ E-Mail</a>`);
+  if (item.url) ctas.push(`<a href="${esc(item.url)}" target="_blank" rel="noopener">🛒 Bestellen</a>`);
+  cta.innerHTML = ctas.join("");
+
+  // Speisekarte einfügen
+  const menuRaw = item?.menu?.text || "";
+  const html = renderMenuText(menuRaw);
+  document.getElementById('menuHtml').innerHTML = html;
+})();
+</script>
+</body>
+</html>
