@@ -1,62 +1,107 @@
 // netlify/functions/entries-create.mjs
-import { createStore } from '@netlify/blobs';
+import { createStore } from "@netlify/blobs";
 
-// v5/v6-kompatibel speichern
-const setJsonCompat = async (store, key, obj) => {
-  if (typeof store.setJSON === 'function') return store.setJSON(key, obj); // v6+
-  return store.set(key, JSON.stringify(obj), { contentType: 'application/json' }); // v5
+/** CORS-Header für Browser-Requests */
+const CORS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET,POST,PATCH,OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
+
+const res = (statusCode, bodyObj) => ({
+  statusCode,
+  headers: { "content-type": "application/json", ...CORS },
+  body: JSON.stringify(bodyObj ?? {}),
+});
 
 export async function handler(event) {
   try {
-    if (event.httpMethod === 'OPTIONS') {
+    // Preflight (CORS)
+    if (event.httpMethod === "OPTIONS") {
       return { statusCode: 204, headers: CORS };
     }
-    if (event.httpMethod !== 'POST') {
-      return { statusCode: 405, body: 'Method not allowed', headers: CORS };
+
+    // Nur POST zulassen
+    if (event.httpMethod !== "POST") {
+      return res(405, { error: "Method not allowed" });
     }
 
-    // FormData (Bilder etc.) liest du in deiner vollen Version aus;
-    // hier nur die Minimalfelder für den Statusfluss
-    const form = event.isBase64Encoded
-      ? Buffer.from(event.body, 'base64').toString()
-      : event.body;
+    // Body in einen WHATWG Request wickeln, damit formData() funktioniert
+    const req = new Request("http://local", {
+      method: event.httpMethod,
+      headers: event.headers,
+      body: event.body
+        ? Buffer.from(
+            event.body,
+            event.isBase64Encoded ? "base64" : "utf8"
+          )
+        : undefined,
+    });
 
-    // Wenn du JSON sendest:
-    let body = {};
-    try { body = JSON.parse(form || '{}'); } catch {}
+    const form = await req.formData();
 
-    const id = crypto.randomUUID();
-    const now = new Date().toISOString();
+    // --- Felder einsammeln (genau wie deine Seite sie schickt) ---
+    const name = (form.get("name") || "").trim();
+    const category = (form.get("category") || "").trim();
+    const ort = (form.get("ort") || "").trim();
+    const strasse = (form.get("strasse") || "").trim();
+    const hausnr = (form.get("hausnr") || "").trim();
+    const plz = (form.get("plz") || "").trim();
 
+    if (!name || !category || !ort || !strasse || !plz) {
+      return res(400, { error: "missing_required_fields" });
+    }
+
+    // Adresse zusammenbauen, so wie du sie brauchst
+    const address = [strasse, hausnr].filter(Boolean).join(" ") +
+      (plz || ort ? ", " + [plz, ort].filter(Boolean).join(" ") : "");
+
+    // Eintrags-Objekt
     const entry = {
-      id,
-      name: body.name || '',
-      category: (body.category || '').toLowerCase(),
-      city: body.ort || body.city || '',
-      street: body.strasse || '',
-      zip: body.plz || '',
-      // HIER WICHTIG:
-      status: 'pending',
-      createdAt: now,
+      status: "pending",
+      createdAt: new Date().toISOString(),
+      name,
+      category,
+      city: ort,
+      address,
+      menuText: form.get("menuText") || "",
+      featured: false,
+      images: [],
     };
 
-    const store = createStore('entries');
-    await setJsonCompat(store, id, entry);
+    // --- Bilder speichern ---
+    const imgStore = createStore("images");
+    const files = form.getAll("menuImages") || [];
+    for (const file of files) {
+      // Nur echte Bild-Blobs speichern
+      if (!(file instanceof Blob)) continue;
+      if (!String(file.type || "").startsWith("image/")) continue;
 
-    return {
-      statusCode: 200,
-      headers: CORS,
-      body: JSON.stringify({ ok: true, id }),
-    };
-  } catch (err) {
-    console.error('entries-create error', err);
-    return { statusCode: 500, headers: CORS, body: JSON.stringify({ error: 'create_failed' }) };
+      const ext = (file.type.split("/")[1] || "jpg").toLowerCase();
+      const filename =
+        `img_${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+
+      await imgStore.set(filename, file);
+      entry.images.push(`/.netlify/blobs/images/${filename}`);
+    }
+    if (entry.images.length) entry.thumbUrl = entry.images[0];
+
+    // --- Eintrag speichern ---
+    const id = `e_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    const entStore = createStore("entries");
+
+    // kompatibel JSON speichern (v5/v6 SDK)
+    if (typeof entStore.setJSON === "function") {
+      await entStore.setJSON(id, entry);
+    } else {
+      await entStore.set(id, JSON.stringify(entry), {
+        contentType: "application/json",
+      });
+    }
+
+    return res(200, { ok: true, id });
+  } catch (e) {
+    console.error("entries-create error", e);
+    return res(500, { error: "create_failed" });
   }
 }
-
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-  'Access-Control-Allow-Methods': 'GET,POST,PATCH,OPTIONS',
-};
