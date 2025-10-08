@@ -1,59 +1,68 @@
-// netlify/functions/entries-update.mjs
-import { createStore } from "@netlify/blobs";
+import { getStore } from '@netlify/blobs';
 
-// JSON-kompatible Helpers
-const getJsonCompat = (store, key) =>
-  typeof store.getJSON === "function"
-    ? store.getJSON(key)
-    : store.get(key, { type: "json" });
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  'Access-Control-Allow-Methods': 'GET,POST,PATCH,OPTIONS',
+};
 
-const setJsonCompat = (store, key, obj) =>
-  typeof store.setJSON === "function"
-    ? store.setJSON(key, obj)
-    : store.set(key, JSON.stringify(obj), {
-        contentType: "application/json",
-      });
+const ok204 = { statusCode: 204, headers: CORS };
+const json = (code, body) => ({
+  statusCode: code,
+  headers: { 'content-type': 'application/json', ...CORS },
+  body: JSON.stringify(body),
+});
+
+// Blobs v5/v6 kompatibel schreiben + lesen
+const getJsonCompat = async (store, key) => {
+  if (typeof store.getJSON === 'function') return store.getJSON(key);
+  return store.get(key, { type: 'json' });
+};
+const setJsonCompat = async (store, key, obj) => {
+  if (typeof store.setJSON === 'function') return store.setJSON(key, obj);
+  return store.set(key, JSON.stringify(obj), { contentType: 'application/json' });
+};
 
 export async function handler(event, context) {
   try {
-    // Nur Admins (Identity) dürfen updaten
-    const { user } = context.clientContext || {};
-    if (!user) {
-      return { statusCode: 401, body: "Nicht autorisiert." };
-    }
+    if (event.httpMethod === 'OPTIONS') return ok204;
+    if (event.httpMethod !== 'PATCH') return json(405, { error: 'Method not allowed' });
+
+    // Nur eingeloggte (Identity) dürfen ändern
+    const user = context?.clientContext?.user || null;
+    if (!user) return json(401, { error: 'Unauthorized' });
 
     const id = event.queryStringParameters?.id;
-    const { action, menuText, featured } = JSON.parse(event.body || "{}");
-    if (!id) return { statusCode: 400, body: "Fehlende id" };
+    if (!id) return json(400, { error: 'Missing id' });
 
-    const store = createStore("entries");
+    let payload = {};
+    try {
+      payload = JSON.parse(event.body || '{}');
+    } catch (_) {}
+
+    const { action, menuText, featured } = payload;
+
+    const store = getStore('entries');
     const item = await getJsonCompat(store, id);
-    if (!item) return { statusCode: 404, body: "Eintrag nicht gefunden" };
+    if (!item) return json(404, { error: 'Eintrag nicht gefunden' });
 
-    // Aktion anwenden
-    if (action === "approve") {
-      item.status = "approved";
+    if (action === 'approve') {
+      item.status = 'approved';
       item.approvedAt = new Date().toISOString();
-    } else if (action === "reject") {
-      item.status = "rejected";
+    } else if (action === 'reject') {
+      item.status = 'rejected';
       item.rejectedAt = new Date().toISOString();
     } else {
-      if (typeof menuText === "string") item.menuText = menuText;
-      if (typeof featured !== "undefined") item.featured = !!featured;
+      if (typeof menuText === 'string') item.menuText = menuText;
+      if (typeof featured !== 'undefined') item.featured = !!featured;
       item.updatedAt = new Date().toISOString();
     }
 
     await setJsonCompat(store, id, item);
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ ok: true, id, item }),
-    };
+    return json(200, { ok: true, id, item });
   } catch (err) {
-    console.error("entries-update error:", err);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: err.message || "Serverfehler" }),
-    };
+    console.error('entries-update error:', err);
+    return json(500, { error: err?.message || 'Serverfehler' });
   }
 }
