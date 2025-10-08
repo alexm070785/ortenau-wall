@@ -6,13 +6,13 @@
 <meta name="theme-color" content="#e7e7e7">
 <title>Ortenau liefert · Detail</title>
 <style>
-  :root{ --accent:#e7e7e7; --text:#333; --bg:#f6f6f6; --card:#fff; --border:#d0d0d0; --muted:#70798C; --shadow:0 4px 12px rgba(0,0,0,.08); --radius:14px; --badge:#f2f2f2; --tap:48px }
+  :root{ --accent:#e7e7e7; --text:#333; --bg:#f6f6f6; --card:#fff; --border:#d0d0d0; --muted:#70798C; --shadow:0 4px 12px rgba(0,0,0,.08); --radius:14px; --badge:#f2f2f2; --tap:48px; --mono: ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace }
   *{box-sizing:border-box}
   html{font-size:16px}
   @media (max-width:480px){ html{font-size:17px} }
   body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;line-height:1.5}
   header{position:sticky;top:0;background:var(--accent);border-bottom:1px solid #b0b0b0;z-index:5}
-  .head{max-width:1200px;margin:auto;display:flex;gap:12px;align-items:center;justify-content:space-between;padding:10px 16px}
+  .head{max_width:1200px;max-width:1200px;margin:auto;display:flex;gap:12px;align-items:center;justify-content:space-between;padding:10px 16px}
   .head img{height:48px}
   a.back{display:inline-flex;align-items:center;gap:8px;text-decoration:none;color:#222;border:1px solid var(--border);background:#fff;padding:10px 14px;border-radius:12px;box-shadow:var(--shadow);min-height:var(--tap)}
   a.back:active{transform:scale(.99)}
@@ -31,6 +31,13 @@
   .hero img{width:140px;height:140px;object-fit:cover;border-radius:12px;border:1px solid var(--border)}
   .cta-bar{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
   .cta-bar a{display:inline-flex;align-items:center;justify-content:center;min-height:var(--tap);padding:10px 14px;border-radius:12px;text-decoration:none;border:1px solid var(--border);background:#fff}
+
+  /* Speisekarte */
+  details.menu{margin-top:14px}
+  details.menu summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:#fff;user-select:none}
+  details.menu summary::-webkit-details-marker{display:none}
+  .menu-body{margin-top:10px;border:1px dashed var(--border);border-radius:12px;background:#fff;padding:12px}
+  .menu-pre{white-space:pre-wrap;font-family:var(--mono);line-height:1.5}
 </style>
 </head>
 <body>
@@ -75,6 +82,14 @@
       <h2>Beschreibung</h2>
       <div id="beschreibung">–</div>
     </section>
+
+    <!-- SPEISEKARTE -->
+    <details class="menu section">
+      <summary>🍽️ Speisekarte anzeigen / ausblenden</summary>
+      <div class="menu-body">
+        <div id="menuHtml" class="menu-pre">–</div>
+      </div>
+    </details>
   </article>
 
   <aside class="card">
@@ -84,14 +99,35 @@
 </main>
 
 <script>
-function getParam(name){
-  const u = new URL(location.href);
-  return u.searchParams.get(name);
-}
+function getParam(name){ const u = new URL(location.href); return u.searchParams.get(name); }
 function textOrDash(v){ return v && String(v).trim() ? v : "–"; }
 function esc(s){ return (s||'').replace(/[&<>\"']/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[m])); }
 function telLink(num){ const n=(num||"").replace(/\s+/g,''); return n ? `tel:${encodeURIComponent(n)}` : ""; }
 function mailLink(m){ return m ? `mailto:${encodeURIComponent(m)}` : ""; }
+
+// Optional hübschere Darstellung: einfache Erkennung von Überschriften + Preiszeilen
+function renderMenuText(raw){
+  if(!raw || !raw.trim()) return "–";
+  const lines = raw.replace(/\r\n/g,"\n").split("\n");
+  const out = [];
+  const headRe = /^[\u{1F300}-\u{1FAFF}]/u; // Emoji am Anfang
+  for(let i=0;i<lines.length;i++){
+    const l = lines[i].trim();
+    if(!l){ out.push(""); continue; }
+    const isHead = headRe.test(l) || (!/[0-9€]/.test(l) && l.length < 60);
+    if(isHead){ out.push("\n" + l.toUpperCase()); continue; }
+
+    const next = lines[i+1]?.trim() || "";
+    const looksPrice = /€|\d,\d{2}/.test(next);
+    if(!/€|\d,\d{2}/.test(l) && looksPrice){
+      out.push(l + "\n" + next);
+      i++;
+      continue;
+    }
+    out.push(l);
+  }
+  return esc(out.join("\n")).replace(/\n/g, "\n");
+}
 
 (async function(){
   const id = getParam('id');
@@ -104,10 +140,7 @@ function mailLink(m){ return m ? `mailto:${encodeURIComponent(m)}` : ""; }
   if (!item && q) item = data.find(x => (x.titel||'').toLowerCase().includes(q.toLowerCase()));
 
   const detail = document.getElementById('detail');
-  if (!item) {
-    detail.innerHTML = '<p class="muted">Eintrag nicht gefunden.</p>';
-    return;
-  }
+  if (!item) { detail.innerHTML = '<p class="muted">Eintrag nicht gefunden.</p>'; return; }
 
   const ort = item.stadt || item?.adresse?.stadt || '';
   document.getElementById('titel').textContent = item.titel || 'Ohne Titel';
@@ -138,25 +171,4 @@ function mailLink(m){ return m ? `mailto:${encodeURIComponent(m)}` : ""; }
   const links = document.getElementById('links');
   const out = [];
   if (item.url) out.push(`<a href="${esc(item.url)}" target="_blank" rel="noopener">Bestellen / Seite</a>`);
-  if (item?.web?.website) out.push(`<a href="${esc(item.web.website)}" target="_blank" rel="noopener">Website</a>`);
-  if (item?.web?.speisekarte) out.push(`<a href="${esc(item.web.speisekarte)}" target="_blank" rel="noopener">Speisekarte</a>`);
-  if (item?.web?.instagram) out.push(`<a href="${esc(item.web.instagram)}" target="_blank" rel="noopener">Instagram</a>`);
-  if (item?.web?.facebook) out.push(`<a href="${esc(item.web.facebook)}" target="_blank" rel="noopener">Facebook</a>`);
-  if (item?.web?.tiktok) out.push(`<a href="${esc(item.web.tiktok)}" target="_blank" rel="noopener">TikTok</a>`);
-  links.innerHTML = out.join(' ');
-
-  // Handy-CTA: Anrufen & E-Mail
-  const cta = document.getElementById('ctaBar');
-  const tel = item?.kontakt?.telefon || "";
-  const mail = item?.kontakt?.email || "";
-  const telHref = telLink(tel);
-  const mailHref = mailLink(mail);
-  const ctas = [];
-  if (telHref) ctas.push(`<a href="${telHref}">📞 Anrufen</a>`);
-  if (mailHref) ctas.push(`<a href="${mailHref}">✉️ E-Mail</a>`);
-  if (item.url) ctas.push(`<a href="${esc(item.url)}" target="_blank" rel="noopener">🛒 Bestellen</a>`);
-  cta.innerHTML = ctas.join("");
-})();
-</script>
-</body>
-</html>
+  if (item?.web?.website) out.push(`<a
