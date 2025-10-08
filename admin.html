@@ -1,263 +1,261 @@
 <!doctype html>
 <html lang="de">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Ortenau-Wall · Admin</title>
-<style>
-  :root{ --accent:#e7e7e7; --text:#4f4f4f; --bg:#f6f6f6; --card:#fff;
-         --muted:#70798C; --radius:12px; --shadow:0 4px 12px rgba(0,0,0,.08);
-         --shadowHover:0 6px 18px rgba(0,0,0,.12); }
-  *{box-sizing:border-box}
-  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;background:var(--bg);color:var(--text);}
-  header{position:sticky;top:0;z-index:10;background:var(--accent);border-bottom:1px solid #b0b0b0}
-  .head{max-width:1160px;margin:0 auto;display:flex;gap:8px;align-items:center;justify-content:space-between;padding:12px 16px;}
-  .btn{padding:8px 12px;border-radius:10px;border:1px solid #d0d0d0;background:#fff;cursor:pointer;box-shadow:var(--shadow)}
-  .btn:hover{box-shadow:var(--shadowHover)}
-  .pill{padding:7px 12px;border:1px solid #d0d0d0;border-radius:999px;background:#fff;cursor:pointer}
-  .pill.active{background:#e9e9e9;font-weight:700}
-  .wrap{max-width:1160px;margin:16px auto;padding:0 16px}
-  .card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow)}
-  .muted{color:var(--muted)}
-  table{width:100%;border-collapse:collapse}
-  th,td{border-bottom:1px solid #eee;padding:10px;text-align:left;font-size:.95rem}
-  th{background:#fafafa}
-  #toast{position:fixed;right:16px;bottom:56px;background:#2d7a3e;color:#fff;padding:12px 14px;border-radius:10px;box-shadow:var(--shadow);
-         opacity:0;transform:translateY(8px);transition:all .25s;z-index:9999}
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ortenau-Wall · Admin</title>
+  <style>
+    :root {
+      --bg:#f6f7f9;--fg:#222;--muted:#6b7280;--card:#fff;--line:#e5e7eb;
+      --primary:#0ea5e9;--primary-600:#0284c7;--danger:#ef4444;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial;color:var(--fg);background:var(--bg)}
+    .topbar{position:sticky;top:0;z-index:10;background:#fff;border-bottom:1px solid var(--line)}
+    .wrap{max-width:1200px;margin:0 auto;padding:12px 16px}
+    .row{display:flex;gap:12px;align-items:center;justify-content:space-between}
+    h1{margin:0;font-size:20px}
+    .pill{font-size:12px;padding:4px 8px;border-radius:999px;background:#eef2ff;color:#3730a3;border:1px solid #c7d2fe}
+    .btn{appearance:none;border:1px solid var(--line);background:#fff;padding:8px 12px;border-radius:10px;cursor:pointer}
+    .btn:hover{box-shadow:0 2px 8px rgba(0,0,0,.06)}
+    .btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}
+    .btn.primary:hover{background:var(--primary-600)}
+    .btn.danger{background:#fff;color:var(--danger);border-color:#fecaca}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 6px 20px rgba(0,0,0,.08)}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+    thead th{position:sticky;top:58px;background:#fff;z-index:1;font-size:12px;color:#374151;text-transform:uppercase;letter-spacing:.04em}
+    .thumb{width:72px;height:72px;object-fit:cover;border-radius:10px;border:1px solid var(--line)}
+    .muted{color:var(--muted);font-size:12px}
+    .tag{display:inline-block;padding:2px 8px;border-radius:999px;border:1px solid var(--line);background:#fafafa;font-size:12px}
+    .empty{padding:30px;text-align:center;color:var(--muted)}
+    .toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#111827;color:#fff;padding:10px 12px;border-radius:10px;opacity:0;transition:.2s;z-index:50}
+    .toast.show{opacity:1}
+    .edit{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:12px;border-top:1px dashed var(--line);background:#fafafa}
+    .field{display:grid;gap:6px}
+    .field input,.field select,.field textarea{padding:10px 12px;border:1px solid var(--line);border-radius:10px;font:inherit;width:100%}
+    .field textarea{min-height:120px;resize:vertical}
+  </style>
 </head>
 <body>
-
-<header>
-  <div class="head">
-    <div style="display:flex;gap:8px;align-items:center">
-      <strong>Ortenau-Wall · Admin</strong>
-      <span class="muted" data-admin-email></span>
-    </div>
-    <div style="display:flex;gap:8px;align-items:center">
-      <button class="pill" id="tabPending"  data-tab="pending">Pending</button>
-      <button class="pill" id="tabApproved" data-tab="approved">Approved</button>
-      <button class="btn" id="refreshBtn">🔄 Aktualisieren</button>
-      <button class="btn" id="loginBtn"  data-login>🔐 Login</button>
-      <button class="btn" id="logoutBtn" data-logout>🚪 Logout</button>
+  <div class="topbar">
+    <div class="wrap row">
+      <div class="row" style="gap:10px">
+        <h1>Ortenau-Wall · Admin</h1>
+        <span class="pill" id="who">nicht eingeloggt</span>
+      </div>
+      <div class="row" style="gap:8px">
+        <button class="btn" id="btnLogin">🔐 Login</button>
+        <button class="btn" id="btnRefresh">🔄 Aktualisieren</button>
+        <button class="btn" id="btnLogout">🚪 Logout</button>
+      </div>
     </div>
   </div>
-</header>
 
-<main class="wrap">
-  <div class="card">
-    <div style="overflow:auto">
-      <table aria-label="Einträge">
-        <thead>
-          <tr>
-            <th style="width:80px">Bild</th>
-            <th>Name &amp; Adresse</th>
-            <th>Ort</th>
-            <th>Kat.</th>
-            <th>Eingereicht</th>
-            <th style="width:220px">Aktion</th>
-          </tr>
-        </thead>
-        <tbody id="adminTableBody">
-          <tr><td colspan="6" class="muted" style="padding:14px 12px">Lade…</td></tr>
-        </tbody>
-      </table>
+  <div class="wrap">
+    <div class="card">
+      <div style="padding:14px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-weight:600">Warteschlange</div>
+          <div class="muted">Neue Einträge, die auf Freigabe warten</div>
+        </div>
+        <div class="row" style="gap:8px">
+          <button class="btn" id="btnShowPending">Pending</button>
+          <button class="btn" id="btnShowApproved">Approved</button>
+        </div>
+      </div>
+      <div style="overflow:auto">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:96px">Bild</th>
+              <th>Name & Adresse</th>
+              <th>Ort</th>
+              <th>Kat.</th>
+              <th>Eingereicht</th>
+              <th style="width:260px">Aktion</th>
+            </tr>
+          </thead>
+          <tbody id="rows">
+            <tr><td colspan="6" class="empty">Lade…</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
-</main>
 
-<div id="toast" role="status" aria-live="polite"></div>
+  <div class="toast" id="toast">Gespeichert</div>
 
-<!-- Netlify Identity Widget -->
-<script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script>
+    const $ = (s,r=document)=>r.querySelector(s);
+    const fmt = iso => iso ? new Date(iso).toLocaleString('de-DE') : '';
+    const toast = (m)=>{ const t=$('#toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2000); };
+    const esc = s => (s||'').replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
 
-<script>
-/* =========================
-   Endpunkte (Functions-Pfad)
-   ========================= */
-const API_LIST   = (status) => `/.netlify/functions/entries-list?status=${encodeURIComponent(status)}&t=${Date.now()}`;
-const API_UPDATE = (id)     => `/.netlify/functions/entries-update?id=${encodeURIComponent(id)}&t=${Date.now()}`;
-
-/* =============
-   UI-Helferlein
-   ============= */
-function $(s, r=document){ return r.querySelector(s); }
-function toast(msg, color = '#2d7a3e') {
-  const el = $('#toast');
-  el.textContent = msg;
-  el.style.background = color;
-  el.style.opacity = '1';
-  el.style.transform = 'translateY(0)';
-  clearTimeout(el._t);
-  el._t = setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translateY(8px)'; }, 3500);
-}
-
-/* =========================
-   Netlify Identity / Token
-   ========================= */
-function identityReady() {
-  // explizit initialisieren (manchmal wichtig nach Hard-Refresh)
-  try { window.netlifyIdentity && window.netlifyIdentity.init(); } catch {}
-}
-async function getAuthHeader() {
-  const id = window.netlifyIdentity;
-  if (!id) return null;
-  const user = id.currentUser();
-  if (!user) return null;
-  try {
-    // 1. normal probieren
-    let token = await user.jwt();
-    if (!token) throw new Error('no token');
-    return { 'Authorization': `Bearer ${token}` };
-  } catch {
-    try {
-      // 2. hartes Refresh erzwingen
-      const token = await user.jwt(true);
-      if (!token) throw new Error('no token refreshed');
-      return { 'Authorization': `Bearer ${token}` };
-    } catch {
-      return null;
-    }
-  }
-}
-function setEmailUI() {
-  const email = window.netlifyIdentity?.currentUser()?.email || '';
-  $('[data-admin-email]').textContent = email;
-}
-
-/* =======================================
-   Rendering der Tabellenzeilen
-   ======================================= */
-function renderRows(items) {
-  const body = $('#adminTableBody');
-  body.innerHTML = '';
-  if (!items?.length) {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td colspan="6" style="padding:12px;color:#a33">${window._lastErrorMsg || 'Keine Einträge.'}</td>`;
-    window._lastErrorMsg = '';
-    body.appendChild(tr);
-    return;
-  }
-  for (const it of items) {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${it.thumbUrl ? `<img src="${it.thumbUrl}" alt="" style="width:64px;height:40px;object-fit:cover;border-radius:6px">` : ''}</td>
-      <td><strong>${it.name || ''}</strong><br><span class="muted">${it.address || ''}</span></td>
-      <td>${it.city || ''}</td>
-      <td>${it.category || ''}</td>
-      <td>${it.createdAt ? new Date(it.createdAt).toLocaleString('de-DE') : ''}</td>
-      <td style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn" data-act="approve" data-id="${it.id}">Freigeben</button>
-        <button class="btn" data-act="reject"  data-id="${it.id}">Ablehnen</button>
-      </td>`;
-    body.appendChild(tr);
-  }
-  body.onclick = (e) => {
-    const btn = e.target.closest('button[data-act]');
-    if (!btn) return;
-    updateEntry(btn.dataset.id, btn.dataset.act);
-  };
-}
-
-/* =========================
-   Laden (Pending/Approved)
-   ========================= */
-let currentTab = 'pending';
-async function load(status = 'pending') {
-  currentTab = status;
-  try {
-    const headers = { 'Accept': 'application/json' };
-    if (status !== 'approved') {
-      const auth = await getAuthHeader();
-      if (auth) Object.assign(headers, auth);
-    }
-    const res = await fetch(API_LIST(status), { headers });
-    if (!res.ok) {
-      if (res.status === 401) {
-        window._lastErrorMsg = '401: Nicht eingeloggt oder Session abgelaufen. Bitte Login.';
-        toast(window._lastErrorMsg, '#c0392b');
-        // Login-Dialog automatisch öffnen
-        if (window.netlifyIdentity) window.netlifyIdentity.open('login');
-      } else {
-        window._lastErrorMsg = `Fehler: HTTP ${res.status}`;
-        toast(window._lastErrorMsg, '#c0392b');
+    function blobImageUrl(item) {
+      if (item?.thumbUrl && /^https?:\/\//.test(item.thumbUrl)) return item.thumbUrl;
+      if (item?.imageUrl && /^https?:\/\//.test(item.imageUrl)) return item.imageUrl;
+      if (Array.isArray(item?.imageUrls) && item.imageUrls.length && /^https?:\/\//.test(item.imageUrls[0])) {
+        return item.imageUrls[0];
       }
-      renderRows([]);
-      return;
+      if (item?.thumbKey) return `/.netlify/blobs/images/${item.thumbKey}`;
+      if (item?.imageKey) return `/.netlify/blobs/images/${item.imageKey}`;
+      if (Array.isArray(item?.imageKeys) && item.imageKeys.length) {
+        return `/.netlify/blobs/images/${item.imageKeys[0]}`;
+      }
+      return "";
     }
-    renderRows(await res.json());
-  } catch (err) {
-    console.error(err);
-    window._lastErrorMsg = 'Netzwerkfehler beim Laden.';
-    toast(window._lastErrorMsg, '#c0392b');
-    renderRows([]);
-  }
-}
 
-/* =========================
-   Approve / Reject
-   ========================= */
-async function updateEntry(id, action) {
-  try {
-    const auth = await getAuthHeader();
-    if (!auth) {
-      toast('Nicht eingeloggt. Bitte „Login“ klicken.', '#c0392b');
-      if (window.netlifyIdentity) window.netlifyIdentity.open('login');
-      return;
+    async function authedFetch(url,opt={}) {
+      const u = netlifyIdentity.currentUser();
+      const tok = u && await u.jwt();
+      return fetch(url,{...opt,headers:{...(opt.headers||{}),Authorization: tok?`Bearer ${tok}`:''}});
     }
-    const res = await fetch(API_UPDATE(id), {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', ...auth },
-      body: JSON.stringify({ action })
+
+    const cache = new Map();
+    let currentView = 'pending';
+
+    (function(){
+      const who = $('#who'), btnLogin=$('#btnLogin'), btnLogout=$('#btnLogout');
+      function setUser(u){ who.textContent = u ? (u.user_metadata?.full_name || u.email) : 'nicht eingeloggt'; }
+      btnLogin.addEventListener('click', ()=> netlifyIdentity.open('login'));
+      btnLogout.addEventListener('click', ()=> netlifyIdentity.logout());
+      netlifyIdentity.on('init', user=>{
+        setUser(user);
+        if(!user && location.hash.includes('recovery_token')) netlifyIdentity.open();
+        if(user) load('pending');
+      });
+      netlifyIdentity.on('login', user=>{
+        setUser(user);
+        netlifyIdentity.close();
+        load(currentView);
+      });
+      netlifyIdentity.on('logout', ()=>{
+        setUser(null);
+        load('approved');
+      });
+      netlifyIdentity.init();
+    })();
+
+    $('#btnRefresh').addEventListener('click', ()=> load(currentView));
+    $('#btnShowPending').addEventListener('click', ()=> load('pending'));
+    $('#btnShowApproved').addEventListener('click', ()=> load('approved'));
+
+    $('#rows').addEventListener('click', (e)=>{
+      const btn = e.target.closest('button'); if(!btn) return;
+      const id = btn.dataset.id, act = btn.dataset.action;
+      if(act==='edit') toggleEditor(id, true);
+      if(act==='approve') approve(id);
+      if(act==='reject') rejectEntry(id);
+      if(act==='save') save(id);
+      if(act==='cancel') toggleEditor(id, false);
     });
-    if (!res.ok) {
-      if (res.status === 401) {
-        toast('Session abgelaufen. Bitte erneut einloggen.', '#c0392b');
-        if (window.netlifyIdentity) window.netlifyIdentity.open('login');
-      } else {
-        toast(`Update fehlgeschlagen: ${res.status}`, '#c0392b');
+
+    async function load(view='pending'){
+      currentView = view;
+      const tbody = $('#rows');
+      tbody.innerHTML = `<tr><td colspan="6" class="empty">Lade ${view}…</td></tr>`;
+      try{
+        const url = `/.netlify/functions/entries-list?status=${encodeURIComponent(view)}`;
+        const res = (view==='approved') ? await fetch(url) : await authedFetch(url);
+        if(!res.ok) throw new Error(`HTTP ${res.status}`);
+        const items = await res.json();
+        cache.clear();
+        tbody.innerHTML = items.length? '' : `<tr><td colspan="6" class="empty">Keine Einträge gefunden.</td></tr>`;
+        items.forEach(it=>{ cache.set(it.id, it); tbody.appendChild(row(it, view==='pending')); });
+      }catch(err){
+        tbody.innerHTML = `<tr><td colspan="6" class="empty">Fehler beim Laden (${esc(err.message)}).</td></tr>`;
       }
-      return;
     }
-    toast(action === 'approve' ? 'Freigegeben ✅' : 'Abgelehnt ❌');
-    load(currentTab);
-  } catch (err) {
-    console.error(err);
-    toast('Netzwerkfehler beim Aktualisieren.', '#c0392b');
-  }
-}
 
-/* =========================
-   UI – Tabs, Login/Logout
-   ========================= */
-function wireUI(){
-  $('#tabPending').onclick  = () => { setActiveTab('pending');  load('pending');  };
-  $('#tabApproved').onclick = () => { setActiveTab('approved'); load('approved'); };
-  $('#refreshBtn').onclick  = () => load(currentTab);
+    function row(item, showApprove){
+      const tr = document.createElement('tr');
+      tr.id = `row_${item.id}`;
+      const imgSrc = blobImageUrl(item);
+      const adr = [item.street, item.zip && item.city ? `${item.zip}, ${item.city}` : item.city].filter(Boolean).join(', ');
+      tr.innerHTML = `
+        <td><img class="thumb" src="${esc(imgSrc)}" alt=""></td>
+        <td><b>${esc(item.name||'')}</b><div class="muted">${esc(adr||'')}</div></td>
+        <td>${esc(item.city||'')}</td>
+        <td><span class="tag">${esc(item.category||'-')}</span></td>
+        <td>${fmt(item.createdAt)}</td>
+        <td>
+          <div class="row" style="gap:8px;flex-wrap:wrap">
+            <button class="btn" data-action="edit" data-id="${item.id}">✏️ Bearbeiten</button>
+            ${showApprove? `<button class="btn primary" data-action="approve" data-id="${item.id}">✅ Freigeben</button>`:''}
+            <button class="btn danger" data-action="reject" data-id="${item.id}">🗑️ Ablehnen</button>
+          </div>
+          <div class="edit" id="edit_${item.id}" style="display:none">
+            <div class="field">
+              <label>Menü (optional)</label>
+              <textarea id="m_${item.id}">${esc(item.menuText||'')}</textarea>
+            </div>
+            <div class="field">
+              <label>Featured</label>
+              <select id="f_${item.id}">
+                <option value="false"${item.featured? '':' selected'}>Nein</option>
+                <option value="true"${item.featured? ' selected':''}>Ja</option>
+              </select>
+            </div>
+            <div style="grid-column:1/-1;display:flex;gap:8px">
+              <button class="btn" data-action="save" data-id="${item.id}">💾 Speichern</button>
+              <button class="btn" data-action="cancel" data-id="${item.id}">Abbrechen</button>
+            </div>
+          </div>
+        </td>`;
+      return tr;
+    }
 
-  $('#loginBtn').onclick  = () => { window.netlifyIdentity && netlifyIdentity.open('login'); };
-  $('#logoutBtn').onclick = async () => { if (window.netlifyIdentity){ await netlifyIdentity.logout(); setEmailUI(); load(currentTab); } };
+    function toggleEditor(id, show){
+      const box = document.querySelector(`#edit_${CSS.escape(id)}`);
+      if(box) box.style.display = show? 'grid' : 'none';
+    }
 
-  if (window.netlifyIdentity) {
-    netlifyIdentity.on('init',   () => { setEmailUI(); });
-    netlifyIdentity.on('login',  () => { setEmailUI(); load(currentTab); netlifyIdentity.close(); });
-    netlifyIdentity.on('logout', () => { setEmailUI(); load(currentTab); });
-  }
-  setActiveTab('pending');
-}
-function setActiveTab(tab){
-  currentTab = tab;
-  $('#tabPending').classList.toggle('active', tab==='pending');
-  $('#tabApproved').classList.toggle('active', tab==='approved');
-}
+    async function save(id){
+      const menuText = document.querySelector(`#m_${CSS.escape(id)}`)?.value || '';
+      const featured = (document.querySelector(`#f_${CSS.escape(id)}`)?.value === 'true');
+      try{
+        const res = await authedFetch(`/.netlify/functions/entries-update?id=${encodeURIComponent(id)}`, {
+          method:'PATCH',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ menuText, featured })
+        });
+        if(!res.ok) throw new Error(`HTTP ${res.status}`);
+        toast('Gespeichert');
+        toggleEditor(id, false);
+        load(currentView);
+      }catch(e){ toast('Speichern fehlgeschlagen'); }
+    }
 
-/* Start */
-document.addEventListener('DOMContentLoaded', () => {
-  identityReady();
-  wireUI();
-  setEmailUI();
-  load('pending');
-});
-</script>
+    async function approve(id){
+      try{
+        const res = await authedFetch(`/.netlify/functions/entries-update?id=${encodeURIComponent(id)}`,{
+          method:'PATCH',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ action:'approve' })
+        });
+        if(!res.ok) throw new Error(`HTTP ${res.status}`);
+        toast('Freigeben OK');
+        load('pending');
+      }catch(e){ toast('Freigabe fehlgeschlagen'); }
+    }
+
+    async function rejectEntry(id){
+      if(!confirm('Diesen Eintrag wirklich ablehnen?')) return;
+      try{
+        const res = await authedFetch(`/.netlify/functions/entries-update?id=${encodeURIComponent(id)}`,{
+          method:'PATCH',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ action:'reject' })
+        });
+        if(!res.ok) throw new Error(`HTTP ${res.status}`);
+        toast('Abgelehnt');
+        load(currentView);
+      }catch(e){ toast('Ablehnen fehlgeschlagen'); }
+    }
+
+    document.addEventListener('DOMContentLoaded', ()=> load('approved'));
+  </script>
 </body>
 </html>
