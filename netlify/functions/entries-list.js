@@ -1,45 +1,73 @@
-import { getStore } from '@netlify/blobs';
+import { getStore } from "@netlify/blobs";
 
-const json = (b, init = {}) =>
-  new Response(JSON.stringify(b), {
-    ...init,
-    headers: { 'content-type': 'application/json', ...(init.headers || {}) },
-  });
-
-// Hilfsfunktion: User aus verschiedenen Context-Varianten lesen
-function getUserFromContext(ctx) {
-  return ctx?.user || ctx?.clientContext?.user || null;
-}
-
-export default async (req, context) => {
+export default async (req /*, context */) => {
   try {
-    const url = new URL(req.url);
-    const status = url.searchParams.get('status') || 'approved';
+    if (req.method === "OPTIONS") return ok();
 
-    // Nur approved ist öffentlich – alles andere erfordert Identity-User
-    if (status !== 'approved') {
-      const user = getUserFromContext(context);
-      if (!user) return json({ error: 'Unauthorized' }, { status: 401 });
+    const url = new URL(req.url);
+    const status = (url.searchParams.get("status") || "approved").toLowerCase();
+    const needsAuth = status === "pending" || status === "rejected";
+
+    // Auth nur für geschützte Views
+    const auth = req.headers.get("authorization") || "";
+    const hasToken = /^Bearer\s+.+/i.test(auth);
+    if (needsAuth && !hasToken) return j(401, { error: "Unauthorized" });
+
+    // Store holen
+    let store;
+    try {
+      store = getStore("entries");
+    } catch (e) {
+      console.error("getStore(entries) failed:", e);
+      return j(200, []); // lieber leere Liste als 500
     }
 
-    const store = getStore('entries');
-    const { blobs } = await store.list(); // [{ key, ... }]
-    const out = [];
+    // Blobs auflisten
+    let blobs = [];
+    try {
+      const list = await store.list(); // => { blobs: [...] }
+      blobs = Array.isArray(list?.blobs) ? list.blobs : [];
+    } catch (e) {
+      console.error("store.list() failed:", e);
+      return j(200, []);
+    }
 
+    // Helper: kompatibel JSON laden (getJSON ODER get(..., {type:'json'}))
+    const getJsonCompat = async (key) => {
+      if (typeof store.getJSON === "function") {
+        return store.getJSON(key);
+      }
+      return store.get(key, { type: "json" }); // neue API
+    };
+
+    const out = [];
     for (const b of blobs) {
-      const raw = await store.get(b.key);
-      if (!raw) continue;
-      const item = JSON.parse(raw);
-      if ((item.status || 'pending') === status) {
-        out.push({ id: b.key, ...item });
+      try {
+        const item = await getJsonCompat(b.key);
+        if (item && item.status === status) out.push(item);
+      } catch (e) {
+        console.error("JSON read failed for", b?.key, e);
       }
     }
 
-    // neueste zuerst
-    out.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
-    return json(out, { status: 200 });
-  } catch (e) {
-    console.error('entries-list error', e);
-    return json({ error: 'list_failed' }, { status: 500 });
+    // Neueste oben
+    out.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+    return j(200, out);
+  } catch (err) {
+    console.error("entries-list TOP-LEVEL error:", err);
+    return j(200, []);
   }
 };
+
+const ok = () => new Response(null, { status: 204, headers: cors() });
+const j = (s, body) =>
+  new Response(JSON.stringify(body), {
+    status: s,
+    headers: { "content-type": "application/json", ...cors() },
+  });
+
+const cors = () => ({
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  "Access-Control-Allow-Methods": "GET,POST,PATCH,OPTIONS",
+});
