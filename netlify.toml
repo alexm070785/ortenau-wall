@@ -9,9 +9,10 @@
   for = "/.netlify/functions/*"
   [headers.values]
     Access-Control-Allow-Origin  = "*"
-    Access-Control-Allow-Methods = "GET,POST,PATCH,OPTIONS"
+    Access-Control-Allow-Methods = "GET,POST,PATCH,DELETE,OPTIONS"
     Access-Control-Allow-Headers = "Content-Type, Authorization"
 
+# Blobs-Buckets
 [[blobs]]
   name = "entries"
   retention = "manual"
