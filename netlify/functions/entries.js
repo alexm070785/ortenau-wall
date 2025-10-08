@@ -1,7 +1,7 @@
 // /netlify/functions/entries.js
 // CommonJS – robust gegenüber SDK-Unterschieden von @netlify/blobs
 
-const blobs = require("@netlify/blobs"); // NICHT destrukturieren → kompatibler
+const blobs = require("@netlify/blobs"); // nicht destrukturieren → kompatibler
 const { NETLIFY_SITE_ID: SITE_ID, NETLIFY_AUTH_TOKEN: AUTH_TOKEN } = process.env;
 
 const CORS = {
@@ -10,28 +10,20 @@ const CORS = {
   "Access-Control-Allow-Headers": "Content-Type, x-admin-token",
 };
 
-const KEY = "data";
 const STORE_NAME = "seiten";
+const KEY = "data";
 
-const ok = (body) => ({
-  statusCode: 200,
-  headers: { ...CORS, "Content-Type": "application/json" },
-  body: JSON.stringify(body),
-});
-const bad = (code, msg) => ({
-  statusCode: code,
-  headers: CORS,
-  body: JSON.stringify({ error: msg }),
-});
+const ok = (b) => ({ statusCode: 200, headers: { ...CORS, "Content-Type":"application/json" }, body: JSON.stringify(b) });
+const bad = (c,m) => ({ statusCode: c, headers: CORS, body: JSON.stringify({ error: m }) });
 
-function requireAdmin(event) {
-  const need = !!process.env.NETLIFY_ADMIN_TOKEN;
+function requireAdmin(event){
+  const need = !!process.env.NETLIFY_ADMIN_TOKEN; // wenn nicht gesetzt, ist POST/DELETE offen
   if (!need) return true;
   const got = event.headers["x-admin-token"];
   return got && got === process.env.NETLIFY_ADMIN_TOKEN;
 }
 
-// --- Ermittelt zur Laufzeit die passende Store-API für deine Blobs-Version
+// passende Store-API je nach SDK ermitteln
 function resolveStore() {
   if (!SITE_ID || !AUTH_TOKEN) {
     throw new Error("Blobs not configured: missing NETLIFY_SITE_ID or NETLIFY_AUTH_TOKEN");
@@ -41,49 +33,42 @@ function resolveStore() {
   if (typeof blobs.getStore === "function") {
     try {
       const st1 = blobs.getStore({ name: STORE_NAME, siteID: SITE_ID, token: AUTH_TOKEN });
-      if (st1 && typeof st1.get === "function" && typeof st1.set === "function") return st1;
+      if (st1?.get && st1?.set) return st1;
     } catch {}
     // 2) getStore("name", { siteID, token })
     try {
       const st2 = blobs.getStore(STORE_NAME, { siteID: SITE_ID, token: AUTH_TOKEN });
-      if (st2 && typeof st2.get === "function" && typeof st2.set === "function") return st2;
+      if (st2?.get && st2?.set) return st2;
     } catch {}
   }
 
-  // 3) getDeployStore({ siteID, token, name })  ODER  getDeployStore(...).store/getStore
+  // 3) getDeployStore – liefert teils Store direkt, teils Client
   if (typeof blobs.getDeployStore === "function") {
     try {
-      // Variante A: direkt ein Store-Objekt
       const stA = blobs.getDeployStore({ siteID: SITE_ID, token: AUTH_TOKEN, name: STORE_NAME });
-      if (stA && typeof stA.get === "function" && typeof stA.set === "function") return stA;
-
-      // Variante B: ein Client mit .store() oder .getStore()
+      if (stA?.get && stA?.set) return stA;
       const cli = blobs.getDeployStore({ siteID: SITE_ID, token: AUTH_TOKEN });
-      if (cli) {
-        if (typeof cli.store === "function") {
-          const stB = cli.store(STORE_NAME);
-          if (stB && typeof stB.get === "function" && typeof stB.set === "function") return stB;
-        }
-        if (typeof cli.getStore === "function") {
-          const stC = cli.getStore(STORE_NAME);
-          if (stC && typeof stC.get === "function" && typeof stC.set === "function") return stC;
-        }
+      if (cli?.store) {
+        const stB = cli.store(STORE_NAME);
+        if (stB?.get && stB?.set) return stB;
+      }
+      if (cli?.getStore) {
+        const stC = cli.getStore(STORE_NAME);
+        if (stC?.get && stC?.set) return stC;
       }
     } catch {}
   }
 
-  // 4) BlobsServer-Client (ältere/bestimmte Server-Builds)
+  // 4) BlobsServer-Client
   if (typeof blobs.BlobsServer === "function") {
     const client = new blobs.BlobsServer({ siteID: SITE_ID, token: AUTH_TOKEN });
-    if (client) {
-      if (typeof client.getStore === "function") {
-        const stD = client.getStore(STORE_NAME);
-        if (stD && typeof stD.get === "function" && typeof stD.set === "function") return stD;
-      }
-      if (typeof client.store === "function") {
-        const stE = client.store(STORE_NAME);
-        if (stE && typeof stE.get === "function" && typeof stE.set === "function") return stE;
-      }
+    if (client?.getStore) {
+      const stD = client.getStore(STORE_NAME);
+      if (stD?.get && stD?.set) return stD;
+    }
+    if (client?.store) {
+      const stE = client.store(STORE_NAME);
+      if (stE?.get && stE?.set) return stE;
     }
   }
 
@@ -102,7 +87,7 @@ exports.handler = async (event) => {
         NETLIFY_AUTH_TOKEN: !!AUTH_TOKEN,
         NETLIFY_ADMIN_TOKEN: !!process.env.NETLIFY_ADMIN_TOKEN,
       },
-      exports: exportsList,
+      exports: exportsList
     });
   }
 
@@ -123,22 +108,23 @@ exports.handler = async (event) => {
     if (event.httpMethod === "POST") {
       if (!requireAdmin(event)) return bad(401, "Unauthorized");
       let payload;
-      try {
-        payload = JSON.parse(event.body || "{}");
-      } catch {
-        return bad(400, "Invalid JSON");
-      }
-      const { titel, url, kategorie, stadt } = payload;
+      try { payload = JSON.parse(event.body || "{}"); } catch { return bad(400, "Invalid JSON"); }
+
+      const { titel } = payload;
       if (!titel) return bad(400, "titel fehlt");
 
       const raw = await store.get(KEY);
       const arr = raw ? JSON.parse(raw) : [];
-      arr.push({
-        titel: stadt ? `${titel} · ${stadt}` : titel,
-        url: url || "",
-        kategorie: kategorie || "restaurant",
-        createdAt: new Date().toISOString(),
-      });
+
+      // ALLES speichern (1:1), plus sichere Defaults/Systemfelder
+      const full = {
+        ...payload,
+        kategorie: payload.kategorie || "restaurant",
+        stadt: payload.stadt || payload?.adresse?.stadt || "",
+        createdAt: new Date().toISOString()
+      };
+
+      arr.push(full);
       await store.set(KEY, JSON.stringify(arr));
       return ok(arr);
     }
