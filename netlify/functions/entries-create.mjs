@@ -25,19 +25,18 @@ export async function handler(event, context) {
     const user = context?.clientContext?.user || null;
     if (!user) return json(401, { error: "unauthorized" });
 
-    // --- Body -> FormData (robust, inkl. Base64) ---
+    // Body -> FormData (robust)
     let form;
     try {
-      const ct = event.headers["content-type"] || event.headers["Content-Type"] || "";
+      const ct  = event.headers["content-type"] || event.headers["Content-Type"] || "";
       const raw = Buffer.from(event.body || "", event.isBase64Encoded ? "base64" : "utf8");
       const req = new Request("http://local", { method: "POST", headers: { "content-type": ct }, body: raw });
       form = await req.formData();
-    } catch (err) {
-      console.error("formData parse error", err);
+    } catch {
       return json(400, { error: "form_parse_failed" });
     }
 
-    // --- Felder: akzeptiere deutsch/englisch ---
+    // Felder (deutsch/englisch akzeptiert)
     const pick = (...keys) => {
       for (const k of keys) {
         const v = form.get(k);
@@ -45,7 +44,6 @@ export async function handler(event, context) {
       }
       return "";
     };
-
     const name     = pick("name");
     const category = pick("category", "kategorie");
     const city     = pick("city", "stadt", "ort");
@@ -55,9 +53,8 @@ export async function handler(event, context) {
     const phone    = pick("phone", "telefon");
     const mapsUrl  = pick("mapsUrl", "google", "maps", "googleMaps");
     const menuText = pick("menuText", "menü", "notiz", "menu", "memo");
-
     const featuredRaw = pick("featured");
-    const featured = featuredRaw ? ["true", "1", "yes", "ja"].includes(featuredRaw.toLowerCase()) : false;
+    const featured = featuredRaw ? ["true","1","yes","ja"].includes(featuredRaw.toLowerCase()) : false;
 
     if (!name || !category || !city || !zip || !street) {
       return json(400, { error: "missing_required_fields", details: { name, category, city, zip, street } });
@@ -65,42 +62,15 @@ export async function handler(event, context) {
 
     const address = `${street}, ${zip} ${city}`;
 
+    // Eintrag (ohne Bilder)
     const entry = {
-      status: "approved", // du trägst selbst ein → direkt freigegeben
+      status: "approved",               // du legst selbst an → direkt freigegeben
       createdAt: new Date().toISOString(),
-      name,
-      category,
-      city,
-      zip,
-      street,
-      address,
-      website,
-      phone,
-      mapsUrl,
-      menuText,
+      name, category, city, zip, street, address,
+      website, phone, mapsUrl, menuText,
       featured,
-      images: [],
     };
 
-    // --- Optional: Bild speichern (akzeptiere "image" ODER "bild") ---
-    try {
-      const file = form.get("image") || form.get("bild");
-      if (file instanceof Blob && file.size > 0) {
-        const images = getStore("images");
-        const ext = (file.type?.split("/")[1] || "jpg").toLowerCase();
-        const filename = `img_${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-        await images.set(filename, file);
-        const url = `/.netlify/blobs/images/${filename}`;
-        entry.imageUrl = url;
-        entry.thumbUrl = url;
-        entry.images.push(url);
-      }
-    } catch (imgErr) {
-      // Bild ist optional – nicht hart fehlschlagen
-      console.warn("image upload skipped:", imgErr?.message || imgErr);
-    }
-
-    // --- Speichern ---
     const id = `e_${Date.now()}_${Math.random().toString(36).slice(2)}`;
     const entries = getStore("entries");
     await setJsonCompat(entries, id, entry);
@@ -108,6 +78,6 @@ export async function handler(event, context) {
     return json(200, { ok: true, id, entry });
   } catch (err) {
     console.error("entries-create fatal", err);
-    return json(500, { error: "create_failed", msg: err?.message || String(err) });
+    return json(500, { error: "create_failed" });
   }
 }
