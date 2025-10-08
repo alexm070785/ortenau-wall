@@ -1,5 +1,5 @@
-// /netlify/functions/entries.js  (CommonJS)
-const blobs = require("@netlify/blobs"); // KEIN Destructure → kompatibel
+// /netlify/functions/entries.js  (CommonJS, robust + Debug)
+const blobs = require("@netlify/blobs"); // nicht destrukturieren → versionssicher
 const { getStore } = blobs;
 
 const CORS = {
@@ -12,7 +12,6 @@ const KEY = "data";
 const ok  = (b) => ({ statusCode: 200, headers: { ...CORS, "Content-Type":"application/json" }, body: JSON.stringify(b) });
 const bad = (c,m) => ({ statusCode: c, headers: CORS, body: JSON.stringify({ error: m }) });
 
-// Optional: Admin-Token (ENV: NETLIFY_ADMIN_TOKEN). Ohne ENV ist POST/DELETE offen.
 function requireAdmin(event){
   const need = !!process.env.NETLIFY_ADMIN_TOKEN;
   if (!need) return true;
@@ -23,13 +22,24 @@ function requireAdmin(event){
 exports.handler = async (event) => {
   if (event.httpMethod === "OPTIONS") return { statusCode: 204, headers: CORS };
 
-  // --- Store hier im Handler erzeugen (sicher, ENV garantiert verfügbar) ---
+  // --- Diagnosemodus: /api/entries?debug=1 zeigt, welche ENVs ankommen + verfügbare Exporte
+  if (event.queryStringParameters && event.queryStringParameters.debug === "1") {
+    const envPresent = {
+      NETLIFY_SITE_ID: !!process.env.NETLIFY_SITE_ID,
+      NETLIFY_AUTH_TOKEN: !!process.env.NETLIFY_AUTH_TOKEN,
+      NETLIFY_ADMIN_TOKEN: !!process.env.NETLIFY_ADMIN_TOKEN,
+    };
+    const exportsList = Object.keys(require("@netlify/blobs") || {});
+    return ok({ envPresent, exports: exportsList });
+  }
+
   const siteID = process.env.NETLIFY_SITE_ID;
   const token  = process.env.NETLIFY_AUTH_TOKEN;
   if (!siteID || !token) {
     return bad(500, "Blobs not configured: missing NETLIFY_SITE_ID or NETLIFY_AUTH_TOKEN");
   }
-  // WICHTIG: getStore mit Optionen-Objekt
+
+  // WICHTIG: getStore mit Optionen (siteID, token)
   const store = getStore("seiten", { siteID, token });
 
   try {
