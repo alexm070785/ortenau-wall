@@ -1,55 +1,67 @@
 import { getStore } from "@netlify/blobs";
 
-/** CORS-Header */
+/* ---- CORS Helpers ---- */
 const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET,POST,PATCH,OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
-
-const json = (code, body) => ({
-  statusCode: code,
+const res = (statusCode, bodyObj) => ({
+  statusCode,
   headers: { "content-type": "application/json", ...CORS },
-  body: JSON.stringify(body ?? {}),
+  body: JSON.stringify(bodyObj ?? {}),
 });
 
-/** Nur 1 Bild, max 8 MB => vermeidet 502 bei Free-Tier */
-const MAX_IMAGE_MB = 8;
+/* ---- JSON speichern: v5/v6 kompatibel ---- */
+const setJsonCompat = async (store, key, obj) => {
+  if (typeof store.setJSON === "function") return store.setJSON(key, obj); // v6+
+  return store.set(key, JSON.stringify(obj), { contentType: "application/json" }); // v5
+};
 
 export async function handler(event) {
   try {
+    // Preflight
     if (event.httpMethod === "OPTIONS") return { statusCode: 204, headers: CORS };
-    if (event.httpMethod !== "POST") return json(405, { error: "Method not allowed" });
 
-    // WHATWG Request bauen, damit formData() funktioniert
+    // Nur POST
+    if (event.httpMethod !== "POST") return res(405, { error: "Method not allowed" });
+
+    // Body für formData() vorbereiten
+    const buf = event.body
+      ? Buffer.from(event.body, event.isBase64Encoded ? "base64" : "utf8")
+      : undefined;
+
+    // Content-Type MUSS durchgereicht werden, sonst erkennt formData() kein multipart
+    const headers = new Headers();
+    for (const [k, v] of Object.entries(event.headers || {})) {
+      if (typeof v === "string") headers.set(k, v);
+    }
+
     const req = new Request("http://local", {
       method: "POST",
-      headers: event.headers,
-      body: event.body
-        ? Buffer.from(event.body, event.isBase64Encoded ? "base64" : "utf8")
-        : undefined,
+      headers,
+      body: buf,
     });
 
     const form = await req.formData();
 
-    // Pflichtfelder
+    // ---- Felder (GENAU wie dein Frontend sie sendet) ----
     const name     = (form.get("name") || "").trim();
     const category = (form.get("category") || "").trim();
     const ort      = (form.get("ort") || "").trim();
     const strasse  = (form.get("strasse") || "").trim();
     const hausnr   = (form.get("hausnr") || "").trim();
     const plz      = (form.get("plz") || "").trim();
+    const menuText = (form.get("menuText") || "").toString();
 
     if (!name || !category || !ort || !strasse || !plz) {
-      return json(400, { error: "missing_required_fields" });
+      return res(400, { error: "missing_required_fields" });
     }
 
-    // Adresse zusammenbauen
     const address =
       [strasse, hausnr].filter(Boolean).join(" ") +
       (plz || ort ? ", " + [plz, ort].filter(Boolean).join(" ") : "");
 
-    // Eintrag-Grunddaten
     const entry = {
       status: "pending",
       createdAt: new Date().toISOString(),
@@ -57,46 +69,38 @@ export async function handler(event) {
       category,
       city: ort,
       address,
-      menuText: form.get("menuText") || "",
+      menuText,
       featured: false,
       images: [],
     };
 
-    // === Bilder: nur 1 Bild zulassen, 8 MB Limit ===
-    const allFiles = form.getAll("menuImages") || [];
-    const first = allFiles.find((f) => f instanceof Blob && String(f.type).startsWith("image/"));
-    if (!first) {
-      return json(400, { error: "no_image_selected" });
-    }
-    if (first.size > MAX_IMAGE_MB * 1024 * 1024) {
-      return json(413, { error: "image_too_large", maxMB: MAX_IMAGE_MB });
-    }
-
+    // ---- Bilder speichern ----
     const imgStore = getStore("images");
-    const ext = (first.type.split("/")[1] || "jpg").toLowerCase();
-    const filename = `img_${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+    const files = form.getAll("menuImages") || [];
 
-    await imgStore.set(filename, first, { contentType: first.type || "image/jpeg" });
-    const blobUrl = `/.netlify/blobs/images/${filename}`;
-    entry.images.push(blobUrl);
-    entry.thumbUrl = blobUrl;
+    for (const file of files) {
+      if (!(file instanceof Blob)) continue;
+      const type = String(file.type || "");
+      if (!type.startsWith("image/")) continue;
 
-    // === Eintrag speichern ===
+      const ext = (type.split("/")[1] || "jpg").toLowerCase();
+      const filename = `img_${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+
+      await imgStore.set(filename, file);
+      // öffentlicher Blob-Pfad
+      entry.images.push(`/.netlify/blobs/images/${filename}`);
+    }
+
+    if (entry.images.length) entry.thumbUrl = entry.images[0];
+
+    // ---- Eintrag speichern ----
     const id = `e_${Date.now()}_${Math.random().toString(36).slice(2)}`;
     const entStore = getStore("entries");
+    await setJsonCompat(entStore, id, entry);
 
-    // v5/v6-kompatibel JSON schreiben
-    if (typeof entStore.setJSON === "function") {
-      await entStore.setJSON(id, entry);
-    } else {
-      await entStore.set(id, JSON.stringify(entry), {
-        contentType: "application/json",
-      });
-    }
-
-    return json(200, { ok: true, id });
+    return res(200, { ok: true, id });
   } catch (e) {
     console.error("entries-create error", e);
-    return json(500, { error: "create_failed" });
+    return res(500, { error: "create_failed" });
   }
 }
