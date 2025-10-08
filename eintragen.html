@@ -259,207 +259,85 @@
 <div class="toast" id="toast" role="status" aria-live="polite">Danke! Dein Eintrag wurde übermittelt.</div>
 
 <script>
-  document.getElementById("jahr").textContent = new Date().getFullYear();
+/* ... alles oberhalb bleibt wie bei dir ... */
 
-  (function(){
-    const cur = 'eintragen.html';
-    document.querySelectorAll('.menu a').forEach(a=>{
-      const f = (new URL(a.href, location.href)).pathname.split('/').pop().toLowerCase();
-      if(f === cur) a.classList.add('active');
+/* ===== Formular-Submit -> Netlify Function (ein Bild, 8 MB) ===== */
+(function(){
+  const form  = document.getElementById('entryForm');
+  const toast = document.getElementById('toast');
+  if (!form) return;
+
+  function showToast(text, color){
+    toast.textContent = text;
+    if(color) toast.style.background = color;
+    toast.classList.add('show');
+    setTimeout(()=>toast.classList.remove('show'), 4000);
+  }
+
+  function collectHoursJSON(){
+    const rows = document.querySelectorAll('#hoursBody tr');
+    const hours = [];
+    rows.forEach((row, i)=>{
+      const open = row.querySelector(`input[name="open_${i}"]`)?.value || "";
+      const close = row.querySelector(`input[name="close_${i}"]`)?.value || "";
+      const closed = row.querySelector(`input[name="closed_${i}"]`)?.checked || false;
+      hours.push({ day:i, open, close, closed });
     });
-  })();
+    return JSON.stringify(hours);
+  }
 
-  (function(){
-    const menuBtn = document.getElementById('menuBtn');
-    const closeBtn = document.getElementById('closeBtn');
-    const drawer = document.getElementById('drawer');
-    const backdrop = document.getElementById('backdrop');
-    let lastFocused = null;
+  form.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    if (!form.checkValidity()) return form.reportValidity();
 
-    function openDrawer(){
-      drawer.classList.add('show');
-      drawer.setAttribute('aria-hidden','false');
-      backdrop.hidden=false; requestAnimationFrame(()=>backdrop.classList.add('show'));
-      document.body.style.overflow='hidden';
-      menuBtn.setAttribute('aria-expanded','true');
-      lastFocused = document.activeElement;
-      const first = drawer.querySelector('a,button'); if(first) first.focus();
-    }
-    function closeDrawer(){
-      drawer.classList.remove('show');
-      drawer.setAttribute('aria-hidden','true');
-      backdrop.classList.remove('show');
-      document.body.style.overflow='';
-      menuBtn.setAttribute('aria-expanded','false');
-      setTimeout(()=>backdrop.hidden=true,200);
-      if(lastFocused) lastFocused.focus();
-    }
-    menuBtn.addEventListener('click', openDrawer);
-    if(closeBtn) closeBtn.addEventListener('click', closeDrawer);
-    backdrop.addEventListener('click', closeDrawer);
-    window.addEventListener('keydown', e=>{ if(e.key==='Escape') closeDrawer(); });
-  })();
-
-  const CAT_COLORS = { doener:"#CC5F34", restaurant:"#6A865F", pizza:"#FDF1DF", pizzeria:"#FDF1DF" };
-
-  (function(){
-    const select = document.getElementById('category');
-    const dot = document.getElementById('dot');
-    const dotLabel = document.getElementById('dotLabel');
-    function update(){
-      const v = select.value;
-      const color = CAT_COLORS[v] || '#e1e1e1';
-      dot.style.background = color;
-      const label = v==='doener'?'Döner':(v==='pizzeria'?'Pizza':v ? 'Restaurant' : 'Kategorie-Farbe');
-      dotLabel.textContent = label;
-    }
-    select.addEventListener('change', update);
-    update();
-  })();
-
-  (function(){
-    const days = ["Mo","Di","Mi","Do","Fr","Sa","So"];
-    const body = document.getElementById('hoursBody');
-    days.forEach((d,i)=>{
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${d}</td>
-        <td><input class="time" type="time" name="open_${i}" placeholder="09:00"></td>
-        <td><input class="time" type="time" name="close_${i}" placeholder="21:00"></td>
-        <td>
-          <label class="inline" style="gap:6px;">
-            <input type="checkbox" class="closed" name="closed_${i}">
-            Ruhetag
-          </label>
-        </td>`;
-      body.appendChild(tr);
-    });
-
-    body.querySelectorAll('.closed').forEach((cb, idx)=>{
-      const row = cb.closest('tr');
-      const open = row.querySelector(`input[name="open_${idx}"]`);
-      const close = row.querySelector(`input[name="close_${idx}"]`);
-      const onToggle = ()=>{
-        if(cb.checked){ open.value=""; close.value=""; open.disabled=true; close.disabled=true; }
-        else { open.disabled=false; close.disabled=false; }
-      };
-      cb.addEventListener('change', onToggle);
-      onToggle();
-    });
-  })();
-
-  (function(){
-    const imgInput = document.getElementById('menuImages');
-    const imgDrop = document.getElementById('dropImgs');
-    const preview = document.getElementById('imgPreview');
-
-    function preventDefaults(e){ e.preventDefault(); e.stopPropagation(); }
-    ['dragenter','dragover','dragleave','drop'].forEach(ev=>{
-      imgDrop.addEventListener(ev, preventDefaults, false);
-    });
-    ['dragenter','dragover'].forEach(()=>imgDrop.classList.add('dragover'));
-    ['dragleave','drop'].forEach(()=>imgDrop.classList.remove('dragover'));
-
-    imgDrop.addEventListener('drop', e=>{
-      const dt = e.dataTransfer;
-      if(!dt?.files?.length) return;
-      imgInput.files = dt.files;
-      renderPreview();
-    });
-    imgInput.addEventListener('change', renderPreview);
-
-    function renderPreview(){
-      preview.innerHTML = '';
-      const files = [...(imgInput.files||[])].filter(f=>f.type.startsWith('image/'));
-      files.forEach((file, idx)=>{
-        const url = URL.createObjectURL(file);
-        const item = document.createElement('div');
-        item.className = 'thumb';
-        item.innerHTML = `<img src="${url}" alt="Bild ${idx+1} der Speisekarte"><button type="button" aria-label="Bild entfernen">✕</button>`;
-        item.querySelector('button').addEventListener('click', ()=>{
-          const arr = [...(imgInput.files||[])];
-          arr.splice(idx,1);
-          const dt = new DataTransfer();
-          arr.forEach(f=>dt.items.add(f));
-          imgInput.files = dt.files;
-          renderPreview();
-        });
-        preview.appendChild(item);
-      });
-    }
-  })();
-
-  /* ===== Formular-Submit -> /entries-create (direkter Endpoint) ===== */
-  (function(){
-    const form  = document.getElementById('entryForm');
-    const toast = document.getElementById('toast');
-    if (!form) return;
-
-    function showToast(text, color){
-      toast.textContent = text;
-      if(color) toast.style.background = color;
-      toast.classList.add('show');
-      setTimeout(()=>toast.classList.remove('show'), 4000);
+    const menuImages = document.getElementById('menuImages');
+    if(!menuImages.files || menuImages.files.length === 0){
+      return showToast("Bitte mindestens ein Bild der Speisekarte auswählen.", "#c0392b");
     }
 
-    function collectHoursJSON(){
-      const rows = document.querySelectorAll('#hoursBody tr');
-      const hours = [];
-      rows.forEach((row, i)=>{
-        const open = row.querySelector(`input[name="open_${i}"]`)?.value || "";
-        const close = row.querySelector(`input[name="close_${i}"]`)?.value || "";
-        const closed = row.querySelector(`input[name="closed_${i}"]`)?.checked || false;
-        hours.push({ day:i, open, close, closed });
-      });
-      return JSON.stringify(hours);
+    // Nur 1 Bild + 8MB Limit
+    const first = menuImages.files[0];
+    const MAX_MB = 8;
+    if (first.size > MAX_MB * 1024 * 1024) {
+      return showToast(`Bild ist zu groß (>${MAX_MB} MB). Bitte kleineres Bild.`, "#c0392b");
     }
 
-    form.addEventListener('submit', async (e)=>{
-      e.preventDefault();
-      if (!form.checkValidity()) return form.reportValidity();
+    const fd = new FormData();
+    fd.set('name',     document.getElementById('name').value.trim());
+    fd.set('category', document.getElementById('category').value);
+    fd.set('ort',      document.getElementById('ort').value.trim());
+    fd.set('strasse',  document.getElementById('strasse').value.trim());
+    fd.set('hausnr',   document.getElementById('hausnr').value.trim());
+    fd.set('plz',      document.getElementById('plz').value.trim());
+    // optional:
+    // fd.set('menuText', '');
 
-      const menuImages = document.getElementById('menuImages');
-      if(!menuImages.files || menuImages.files.length === 0){
-        return showToast("Bitte mindestens ein Bild der Speisekarte auswählen.", "#c0392b");
-      }
+    // nur EIN Bild anhängen
+    fd.append('menuImages', first, first.name);
 
-      // FormData mit GENAU den Keys, die die Function erwartet
-      const fd = new FormData();
-      fd.set('name',     document.getElementById('name').value.trim());
-      fd.set('category', document.getElementById('category').value);
-      fd.set('ort',      document.getElementById('ort').value.trim());
-      fd.set('strasse',  document.getElementById('strasse').value.trim());
-      fd.set('hausnr',   document.getElementById('hausnr').value.trim());
-      fd.set('plz',      document.getElementById('plz').value.trim());
-      // optional: kurzer Text (wenn du willst; die Function liest menuText bereits)
-      // fd.set('menuText', ''); // leer lassen oder eigenes Feld ergänzen
+    // optionale Felder
+    fd.set('website', document.getElementById('website').value.trim());
+    fd.set('phone',   document.getElementById('tel').value.trim());
+    fd.set('hours_json', collectHoursJSON());
 
-      // alle Bilder als "menuImages" anhängen
-      [...menuImages.files].forEach(f => fd.append('menuImages', f, f.name));
+    try{
+      showToast("Wird gesendet…", "#666");
+      const res = await fetch('/.netlify/functions/entries-create', { method:'POST', body: fd });
+      const data = await res.json().catch(()=> ({}));
+      if(!res.ok) throw new Error(data?.error || ('HTTP '+res.status));
 
-      // optionale Felder (werden von der Function derzeit ignoriert – schaden aber nicht)
-      fd.set('website', document.getElementById('website').value.trim());
-      fd.set('phone',   document.getElementById('tel').value.trim());
-      fd.set('hours_json', collectHoursJSON());
-
-      try{
-        showToast("Wird gesendet…", "#666");
-        // WICHTIG: direkter Endpoint (ohne /.netlify/functions)
-        const res = await fetch('/.netlify/functions/entries-create', { method:'POST', body: fd });
-        const data = await res.json().catch(()=> ({}));
-        if(!res.ok) throw new Error(data?.error || ('HTTP '+res.status));
-
-        showToast("Danke! Dein Eintrag wurde gespeichert (ID: " + data.id + ")", "#2d7a3e");
-        form.reset();
-        document.getElementById('imgPreview').innerHTML='';
-        document.getElementById('category').dispatchEvent(new Event('change'));
-        document.querySelectorAll('#hoursBody .closed').forEach(cb=>cb.dispatchEvent(new Event('change')));
-      }catch(err){
-        console.error(err);
-        showToast("Fehler: " + err.message, "#c0392b");
-      }
-    });
-  })();
+      showToast("Danke! Dein Eintrag wurde gespeichert (ID: " + data.id + ")", "#2d7a3e");
+      form.reset();
+      document.getElementById('imgPreview').innerHTML='';
+      document.getElementById('category').dispatchEvent(new Event('change'));
+      document.querySelectorAll('#hoursBody .closed').forEach(cb=>cb.dispatchEvent(new Event('change')));
+    }catch(err){
+      console.error(err);
+      showToast("Fehler: " + err.message, "#c0392b");
+    }
+  });
+})();
 </script>
+
 </body>
 </html>
