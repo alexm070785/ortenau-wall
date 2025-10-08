@@ -13,7 +13,7 @@ const json = (code, body) => ({
   body: JSON.stringify(body),
 });
 
-// Blobs v5/v6 kompatibel schreiben + lesen
+// v5/v6 kompatibel lesen/schreiben
 const getJsonCompat = async (store, key) => {
   if (typeof store.getJSON === 'function') return store.getJSON(key);
   return store.get(key, { type: 'json' });
@@ -28,7 +28,7 @@ export async function handler(event, context) {
     if (event.httpMethod === 'OPTIONS') return ok204;
     if (event.httpMethod !== 'PATCH') return json(405, { error: 'Method not allowed' });
 
-    // Nur eingeloggte (Identity) dürfen ändern
+    // Identity nötig
     const user = context?.clientContext?.user || null;
     if (!user) return json(401, { error: 'Unauthorized' });
 
@@ -36,9 +36,7 @@ export async function handler(event, context) {
     if (!id) return json(400, { error: 'Missing id' });
 
     let payload = {};
-    try {
-      payload = JSON.parse(event.body || '{}');
-    } catch (_) {}
+    try { payload = JSON.parse(event.body || '{}'); } catch {}
 
     const { action, menuText, featured } = payload;
 
@@ -59,7 +57,6 @@ export async function handler(event, context) {
     }
 
     await setJsonCompat(store, id, item);
-
     return json(200, { ok: true, id, item });
   } catch (err) {
     console.error('entries-update error:', err);
