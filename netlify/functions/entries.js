@@ -1,6 +1,6 @@
-// /netlify/functions/entries.js  (CommonJS, robust + Debug)
-const blobs = require("@netlify/blobs"); // nicht destrukturieren → versionssicher
-const { getStore } = blobs;
+// /netlify/functions/entries.js  (CommonJS, nutzt BlobsServer)
+const blobs = require("@netlify/blobs");
+const { BlobsServer } = blobs; // <- in deiner Version vorhanden
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -22,7 +22,7 @@ function requireAdmin(event){
 exports.handler = async (event) => {
   if (event.httpMethod === "OPTIONS") return { statusCode: 204, headers: CORS };
 
-  // --- Diagnosemodus: /api/entries?debug=1 zeigt, welche ENVs ankommen + verfügbare Exporte
+  // Debug bleibt drin: /api/entries?debug=1
   if (event.queryStringParameters && event.queryStringParameters.debug === "1") {
     const envPresent = {
       NETLIFY_SITE_ID: !!process.env.NETLIFY_SITE_ID,
@@ -39,8 +39,9 @@ exports.handler = async (event) => {
     return bad(500, "Blobs not configured: missing NETLIFY_SITE_ID or NETLIFY_AUTH_TOKEN");
   }
 
-  // WICHTIG: getStore mit Optionen (siteID, token)
-  const store = getStore("seiten", { siteID, token });
+  // >>> WICHTIG: BlobsServer statt getStore
+  const client = new BlobsServer({ siteID, token });
+  const store = client.store("seiten");
 
   try {
     if (event.httpMethod === "GET") {
