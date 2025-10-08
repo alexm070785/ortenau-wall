@@ -1,0 +1,8 @@
+[functions]
+  node_bundler = "esbuild"
+
+# Saubere API-URL: /api/entries
+[[redirects]]
+  from = "/api/entries"
+  to = "/.netlify/functions/entries"
+  status = 200
