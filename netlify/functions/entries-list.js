@@ -1,45 +1,61 @@
 import { getStore } from '@netlify/blobs';
 
-const json = (b, init = {}) =>
-  new Response(JSON.stringify(b), {
-    ...init,
-    headers: { 'content-type': 'application/json', ...(init.headers || {}) },
-  });
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  'Access-Control-Allow-Methods': 'GET,POST,PATCH,OPTIONS',
+};
 
-// Hilfsfunktion: User aus verschiedenen Context-Varianten lesen
-function getUserFromContext(ctx) {
-  return ctx?.user || ctx?.clientContext?.user || null;
-}
+const ok204 = { statusCode: 204, headers: CORS };
+const json = (code, body) => ({
+  statusCode: code,
+  headers: { 'content-type': 'application/json', ...CORS },
+  body: JSON.stringify(body),
+});
 
-export default async (req, context) => {
+export async function handler(event, context) {
   try {
-    const url = new URL(req.url);
-    const status = url.searchParams.get('status') || 'approved';
+    if (event.httpMethod === 'OPTIONS') return ok204;
+    if (event.httpMethod !== 'GET') return json(405, { error: 'Method not allowed' });
 
-    // Nur approved ist öffentlich – alles andere erfordert Identity-User
-    if (status !== 'approved') {
-      const user = getUserFromContext(context);
-      if (!user) return json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const status =
+      (new URL(event.rawUrl).searchParams.get('status') || 'approved').toLowerCase();
+
+    // Nur "approved" ist öffentlich – alles andere braucht Identity-Login
+    const user = context?.clientContext?.user || null;
+    if (status !== 'approved' && !user) return json(401, { error: 'Unauthorized' });
 
     const store = getStore('entries');
-    const { blobs } = await store.list(); // [{ key, ... }]
-    const out = [];
 
-    for (const b of blobs) {
-      const raw = await store.get(b.key);
-      if (!raw) continue;
-      const item = JSON.parse(raw);
-      if ((item.status || 'pending') === status) {
-        out.push({ id: b.key, ...item });
+    // Kompatibler JSON-Reader (v5/v6 des Blobs SDK)
+    const getJsonCompat = async (key) => {
+      if (typeof store.getJSON === 'function') return store.getJSON(key); // v6+
+      return store.get(key, { type: 'json' }); // v5
+    };
+
+    const listed = await store.list(); // { blobs: [...] }
+    const keys = Array.isArray(listed?.blobs) ? listed.blobs.map((b) => b.key) : [];
+
+    const out = [];
+    for (const key of keys) {
+      try {
+        const item = await getJsonCompat(key);
+        if (!item) continue;
+        if ((item.status || 'pending').toLowerCase() === status) {
+          out.push({ id: key, ...item }); // ID immer mitsenden!
+        }
+      } catch (e) {
+        console.error('read failed', key, e);
       }
     }
 
-    // neueste zuerst
+    // Neueste zuerst
     out.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
-    return json(out, { status: 200 });
-  } catch (e) {
-    console.error('entries-list error', e);
-    return json({ error: 'list_failed' }, { status: 500 });
+
+    return json(200, out);
+  } catch (err) {
+    console.error('entries-list error', err);
+    // lieber leer liefern als 500, damit UI sauber bleibt
+    return json(200, []);
   }
-};
+}
