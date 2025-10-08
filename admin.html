@@ -24,22 +24,20 @@
   button{border:0;border-radius:10px;padding:10px 14px;cursor:pointer;background:#222;color:#fff}
   button.secondary{background:#efefef;color:#222;border:1px solid var(--border)}
   button.danger{background:#8b0000}
-  .bar{display:flex;gap:12px;align-items:center;margin:0 0 16px}
+  .bar{display:flex;gap:12px;align-items:center;margin:16px 0}
   .bar input{max-width:260px}
-  .list{margin-top:18px}
   table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden}
   th,td{padding:10px;border-bottom:1px solid #eee;text-align:left}
   th{background:#fafafa}
   .right{text-align:right}
   .pill{display:inline-block;padding:2px 8px;border-radius:999px;border:1px solid #ddd;font-size:.85rem;background:#fafafa}
-  .help{margin:8px 0 0}
   @media (max-width:760px){ .g2,.g3,.row{grid-template-columns:1fr} .bar{flex-direction:column;align-items:flex-start} }
 </style>
 
 <div class="wrap">
   <h1>Admin – Eintrag hinzufügen</h1>
 
-  <div class="card grid g2" role="form" aria-labelledby="form-title">
+  <div class="card grid g2" role="form">
     <div>
       <label for="titel">Name des Lokals *</label>
       <input id="titel" required placeholder="Bella Pizza">
@@ -93,7 +91,7 @@
     <div class="g2" style="grid-column:1/-1;display:grid;gap:12px">
       <div>
         <label for="oeffnungszeiten">Öffnungszeiten</label>
-        <textarea id="oeffnungszeiten" placeholder="Mo–Fr 11–22 Uhr; Sa 12–23 Uhr; So geschlossen"></textarea>
+        <textarea id="oeffnungszeiten" placeholder="Mo–Fr 11–22; Sa 12–23; So geschlossen"></textarea>
       </div>
       <div>
         <label for="schliesstage">Schließtage / Hinweise</label>
@@ -145,13 +143,13 @@
         <span><input type="checkbox" id="lieferung"> Lieferung</span>
         <span><input type="checkbox" id="featured"> Featured (Top)</span>
       </label>
-      <div class="muted help">Tipp: Nur wenige Einträge als „Featured“ markieren (Startseite oben).</div>
+      <div class="muted">Tipp: Nur wenige Einträge als „Featured“ markieren.</div>
     </div>
 
     <div style="grid-column:1/-1">
       <label for="token">Admin-Token (nur nötig, wenn in Netlify gesetzt)</label>
       <input id="token" placeholder="optional – NETLIFY_ADMIN_TOKEN">
-      <div class="muted help">Wenn du in Netlify einen <b>NETLIFY_ADMIN_TOKEN</b> angelegt hast, trage ihn hier ein, sonst ist Speichern/Löschen erlaubt ohne Token.</div>
+      <div class="muted">Wenn in Netlify ein <b>NETLIFY_ADMIN_TOKEN</b> existiert, hier denselben Wert eintragen.</div>
     </div>
 
     <div class="actions" style="grid-column:1/-1">
@@ -171,8 +169,8 @@
     <span class="muted">Nur Anzeige – Daten bleiben auf dem Server.</span>
   </div>
 
-  <div class="card list">
-    <table id="table">
+  <div class="card">
+    <table>
       <thead><tr>
         <th>Titel</th><th>Kategorie</th><th>Ort</th><th>Telefon</th><th class="right">Links</th>
       </tr></thead>
@@ -190,27 +188,16 @@ function hdrs(){
   if(t) h["x-admin-token"]=t;
   return h;
 }
-
 function toPayload(){
   const titel = document.getElementById('titel').value.trim();
   const stadt = document.getElementById('stadt').value.trim();
   const kategorie = document.getElementById('kategorie').value;
 
   return {
-    // Pflicht/Backend-kompatibel:
     titel, stadt, kategorie,
     url: document.getElementById('url').value.trim(),
-
-    // Erweiterte Felder (werden mitgespeichert – siehe Function-Patch unten):
-    adresse: {
-      strasse: document.getElementById('strasse').value.trim(),
-      plz: document.getElementById('plz').value.trim(),
-      stadt
-    },
-    kontakt: {
-      telefon: document.getElementById('telefon').value.trim(),
-      email: document.getElementById('email').value.trim()
-    },
+    adresse: { strasse: document.getElementById('strasse').value.trim(), plz: document.getElementById('plz').value.trim(), stadt },
+    kontakt: { telefon: document.getElementById('telefon').value.trim(), email: document.getElementById('email').value.trim() },
     web: {
       website: document.getElementById('website').value.trim(),
       speisekarte: document.getElementById('speisekarte').value.trim(),
@@ -238,21 +225,17 @@ async function loadList(){
   const data = await r.json();
   renderTable(data);
 }
-
 function renderTable(items){
   const tb = document.getElementById('tbody');
   tb.innerHTML='';
-  if(!items.length){
-    tb.innerHTML = '<tr><td colspan="5" class="muted">Keine Einträge gespeichert.</td></tr>';
-    return;
-  }
+  if(!items.length){ tb.innerHTML='<tr><td colspan="5" class="muted">Keine Einträge gespeichert.</td></tr>'; return; }
   const q = document.getElementById('filter').value.trim().toLowerCase();
   items
     .filter(i => !q || JSON.stringify(i).toLowerCase().includes(q))
     .forEach(i=>{
       const tr = document.createElement('tr');
-      const ort = i.stadt || (i.adresse && i.adresse.stadt) || '';
-      const tel = (i.kontakt && i.kontakt.telefon) || '';
+      const ort = i.stadt || i?.adresse?.stadt || '';
+      const tel = i?.kontakt?.telefon || '';
       tr.innerHTML = `
         <td>${i.titel || ''}</td>
         <td><span class="pill">${i.kategorie||''}</span></td>
@@ -275,21 +258,15 @@ document.getElementById('save').onclick = async (e)=>{
   if(res.error){ alert('Fehler: ' + res.error); return; }
   alert('Gespeichert!');
   loadList();
-  document.querySelector('form')?.reset();
 };
-
 document.getElementById('fetch').onclick = loadList;
-
 document.getElementById('clear').onclick = async ()=>{
   if(!confirm('WIRKLICH alle Einträge löschen?')) return;
   const res = await fetch(API, { method:"DELETE", headers:hdrs() }).then(r=>r.json());
   if(res.error){ alert('Fehler: ' + res.error); return; }
-  alert('Alles gelöscht.');
-  loadList();
+  alert('Alles gelöscht.'); loadList();
 };
-
 document.getElementById('filter').addEventListener('input', loadList);
-
 document.getElementById('exportBtn').onclick = async ()=>{
   const r = await fetch(API); const data = await r.json();
   const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
@@ -297,22 +274,14 @@ document.getElementById('exportBtn').onclick = async ()=>{
   const a = Object.assign(document.createElement('a'), {href:url, download:'eintraege.json'});
   document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
 };
-
 document.getElementById('importFile').onchange = async (ev)=>{
   const file = ev.target.files[0]; if(!file) return;
   const text = await file.text(); let arr;
   try { arr = JSON.parse(text); } catch { alert('Ungültiges JSON.'); return; }
   if(!Array.isArray(arr)){ alert('Erwarte ein Array von Einträgen.'); return; }
-  // Import: ganze Liste ersetzen
   if(!confirm('Import ersetzt die komplette Liste. Fortfahren?')) return;
-  // Wir posten nacheinander (einfach & robust)
-  for(const it of arr){
-    await fetch(API, { method:"POST", headers:hdrs(), body:JSON.stringify(it) });
-  }
-  alert('Import abgeschlossen.');
-  loadList();
+  for(const it of arr){ await fetch(API, { method:"POST", headers:hdrs(), body:JSON.stringify(it) }); }
+  alert('Import abgeschlossen.'); loadList();
 };
-
-// erste Liste laden
 loadList();
 </script>
