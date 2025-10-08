@@ -1,37 +1,41 @@
 <!doctype html>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f6f6f6">
 <title>Admin – Einträge verwalten</title>
 <style>
   :root{
     --bg:#f6f6f6; --card:#fff; --text:#222; --muted:#70798C; --radius:12px;
-    --border:#d0d0d0; --shadow:0 4px 12px rgba(0,0,0,.08);
+    --border:#d0d0d0; --shadow:0 4px 12px rgba(0,0,0,.08); --tap:48px;
   }
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;padding:24px}
-  h1{margin:0 0 16px}
+  html{font-size:16px}
+  @media (max-width:480px){ html{font-size:17px} }
+  body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;padding:16px}
+  h1{margin:4px 0 16px}
   .wrap{max-width:960px;margin:auto}
   .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}
   .grid{display:grid;gap:12px}
   .g2{grid-template-columns:1fr 1fr}
   .g3{grid-template-columns:repeat(3,1fr)}
+  @media (max-width:760px){ .g2,.g3{grid-template-columns:1fr} }
   label{font-weight:600;display:block;margin:6px 0}
-  input,select,textarea{width:100%;padding:10px;border:1px solid var(--border);border-radius:10px;background:#fff}
-  textarea{min-height:88px;resize:vertical}
+  input,select,textarea{width:100%;padding:12px;border:1px solid var(--border);border-radius:12px;background:#fff;font-size:1rem;min-height:44px}
+  textarea{min-height:100px;resize:vertical}
   .row{display:grid;gap:12px;grid-template-columns:1fr 1fr}
-  .muted{color:var(--muted);font-size:.92rem}
-  .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
-  button{border:0;border-radius:10px;padding:10px 14px;cursor:pointer;background:#222;color:#fff}
+  @media (max-width:760px){ .row{grid-template-columns:1fr} }
+  .muted{color:var(--muted);font-size:.95rem}
+  .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+  button{border:0;border-radius:12px;padding:12px 16px;cursor:pointer;background:#222;color:#fff;min-height:var(--tap)}
   button.secondary{background:#efefef;color:#222;border:1px solid var(--border)}
   button.danger{background:#8b0000}
-  .bar{display:flex;gap:12px;align-items:center;margin:16px 0}
-  .bar input{max-width:260px}
+  .bar{display:flex;gap:12px;align-items:center;margin:16px 0;flex-wrap:wrap}
+  .bar input{max-width:260px;min-height:var(--tap)}
   table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden}
   th,td{padding:10px;border-bottom:1px solid #eee;text-align:left}
   th{background:#fafafa}
   .right{text-align:right}
-  .pill{display:inline-block;padding:2px 8px;border-radius:999px;border:1px solid #ddd;font-size:.85rem;background:#fafafa}
-  @media (max-width:760px){ .g2,.g3,.row{grid-template-columns:1fr} .bar{flex-direction:column;align-items:flex-start} }
+  .pill{display:inline-block;padding:4px 10px;border-radius:999px;border:1px solid #ddd;font-size:.9rem;background:#fafafa}
 </style>
 
 <div class="wrap">
@@ -62,7 +66,7 @@
     <div class="row">
       <div>
         <label for="plz">PLZ</label>
-        <input id="plz" placeholder="77652">
+        <input id="plz" placeholder="77652" inputmode="numeric">
       </div>
       <div>
         <label for="stadt">Ort / Stadt</label>
@@ -72,7 +76,7 @@
 
     <div>
       <label for="telefon">Telefon</label>
-      <input id="telefon" placeholder="+49 781 …">
+      <input id="telefon" placeholder="+49 781 …" inputmode="tel">
     </div>
     <div>
       <label for="email">E-Mail</label>
@@ -138,7 +142,7 @@
     </div>
 
     <div class="row" style="grid-column:1/-1">
-      <label style="display:flex;gap:18px;align-items:center;font-weight:600">
+      <label style="display:flex;gap:18px;align-items:center;font-weight:600;flex-wrap:wrap">
         <span><input type="checkbox" id="abholung"> Abholung</span>
         <span><input type="checkbox" id="lieferung"> Lieferung</span>
         <span><input type="checkbox" id="featured"> Featured (Top)</span>
@@ -158,7 +162,7 @@
       <button id="exportBtn" class="secondary" type="button">Export (JSON)</button>
       <label class="secondary" style="padding:0;display:inline-flex;align-items:center;">
         <input id="importFile" type="file" accept="application/json" style="display:none">
-        <span style="padding:10px 14px;display:inline-block;cursor:pointer">Import (JSON)</span>
+        <span style="padding:12px 16px;display:inline-block;cursor:pointer">Import (JSON)</span>
       </label>
       <button id="clear" class="danger" type="button">ALLE löschen</button>
     </div>
@@ -267,6 +271,8 @@ document.getElementById('clear').onclick = async ()=>{
   alert('Alles gelöscht.'); loadList();
 };
 document.getElementById('filter').addEventListener('input', loadList);
+
+// Export/Import
 document.getElementById('exportBtn').onclick = async ()=>{
   const r = await fetch(API); const data = await r.json();
   const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
@@ -283,5 +289,6 @@ document.getElementById('importFile').onchange = async (ev)=>{
   for(const it of arr){ await fetch(API, { method:"POST", headers:hdrs(), body:JSON.stringify(it) }); }
   alert('Import abgeschlossen.'); loadList();
 };
+
 loadList();
 </script>
