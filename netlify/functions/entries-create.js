@@ -1,104 +1,93 @@
 import { getStore } from "@netlify/blobs";
 
-/* ---- CORS Helpers ---- */
 const CORS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET,POST,PATCH,OPTIONS",
+  "Access-Control-Allow-Methods": "GET,POST,PATCH,DELETE,OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
-const res = (statusCode, bodyObj) => ({
-  statusCode,
+const res = (code, body) => ({
+  statusCode: code,
   headers: { "content-type": "application/json", ...CORS },
-  body: JSON.stringify(bodyObj ?? {}),
+  body: JSON.stringify(body ?? {}),
 });
+const setJSON = async (store, key, obj) =>
+  typeof store.setJSON === "function"
+    ? store.setJSON(key, obj)
+    : store.set(key, JSON.stringify(obj), { contentType: "application/json" });
 
-/* ---- JSON speichern: v5/v6 kompatibel ---- */
-const setJsonCompat = async (store, key, obj) => {
-  if (typeof store.setJSON === "function") return store.setJSON(key, obj); // v6+
-  return store.set(key, JSON.stringify(obj), { contentType: "application/json" }); // v5
-};
-
-export async function handler(event) {
+export async function handler(event, context) {
   try {
-    // Preflight
     if (event.httpMethod === "OPTIONS") return { statusCode: 204, headers: CORS };
-
-    // Nur POST
     if (event.httpMethod !== "POST") return res(405, { error: "Method not allowed" });
 
-    // Body für formData() vorbereiten
+    // Nur eingeloggte (Admin/Identity) dürfen
+    const user = context?.clientContext?.user || null;
+    if (!user) return res(401, { error: "Unauthorized" });
+
+    // Request -> formData
     const buf = event.body
       ? Buffer.from(event.body, event.isBase64Encoded ? "base64" : "utf8")
       : undefined;
 
-    // Content-Type MUSS durchgereicht werden, sonst erkennt formData() kein multipart
     const headers = new Headers();
     for (const [k, v] of Object.entries(event.headers || {})) {
       if (typeof v === "string") headers.set(k, v);
     }
 
-    const req = new Request("http://local", {
-      method: "POST",
-      headers,
-      body: buf,
-    });
-
+    const req = new Request("http://local", { method: "POST", headers, body: buf });
     const form = await req.formData();
 
-    // ---- Felder (GENAU wie dein Frontend sie sendet) ----
     const name     = (form.get("name") || "").trim();
     const category = (form.get("category") || "").trim();
-    const ort      = (form.get("ort") || "").trim();
-    const strasse  = (form.get("strasse") || "").trim();
-    const hausnr   = (form.get("hausnr") || "").trim();
-    const plz      = (form.get("plz") || "").trim();
+    const city     = (form.get("city") || "").trim();
+    const street   = (form.get("street") || "").trim();
+    const zip      = (form.get("zip") || "").trim();
+    const website  = (form.get("website") || "").trim();
+    const phone    = (form.get("phone") || "").trim();
     const menuText = (form.get("menuText") || "").toString();
+    const mapsUrl  = (form.get("mapsUrl") || "").trim();
+    const featured = String(form.get("featured") || "") === "true";
 
-    if (!name || !category || !ort || !strasse || !plz) {
+    if (!name || !category || !city || !street || !zip) {
       return res(400, { error: "missing_required_fields" });
     }
 
-    const address =
-      [strasse, hausnr].filter(Boolean).join(" ") +
-      (plz || ort ? ", " + [plz, ort].filter(Boolean).join(" ") : "");
-
     const entry = {
-      status: "pending",
+      status: "approved",
       createdAt: new Date().toISOString(),
       name,
       category,
-      city: ort,
-      address,
+      city,
+      street,
+      zip,
+      website,
+      phone,
       menuText,
-      featured: false,
-      images: [],
+      mapsUrl,
+      featured,
+      imageUrl: "", // wird unten gesetzt, wenn Bild da
+      // Für Abwärtskompatibilität:
+      address: [street, zip && city ? `${zip} ${city}` : city].filter(Boolean).join(", "),
+      images: []
     };
 
-    // ---- Bilder speichern ----
-    const imgStore = getStore("images");
-    const files = form.getAll("menuImages") || [];
-
-    for (const file of files) {
-      if (!(file instanceof Blob)) continue;
-      const type = String(file.type || "");
-      if (!type.startsWith("image/")) continue;
-
-      const ext = (type.split("/")[1] || "jpg").toLowerCase();
+    // Bild speichern (optional)
+    const img = form.get("image");
+    if (img instanceof Blob && String(img.type || "").startsWith("image/")) {
+      const imagesStore = getStore("images");
+      const ext = (img.type.split("/")[1] || "jpg").toLowerCase();
       const filename = `img_${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-
-      await imgStore.set(filename, file);
-      // öffentlicher Blob-Pfad
-      entry.images.push(`/.netlify/blobs/images/${filename}`);
+      await imagesStore.set(filename, img);
+      entry.imageUrl = `/.netlify/blobs/images/${filename}`;
+      entry.images.push(entry.imageUrl);
+      entry.thumbUrl = entry.imageUrl;
     }
 
-    if (entry.images.length) entry.thumbUrl = entry.images[0];
-
-    // ---- Eintrag speichern ----
     const id = `e_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-    const entStore = getStore("entries");
-    await setJsonCompat(entStore, id, entry);
+    const ent = getStore("entries");
+    await setJSON(ent, id, entry);
 
-    return res(200, { ok: true, id });
+    return res(200, { ok: true, id, item: { id, ...entry } });
   } catch (e) {
     console.error("entries-create error", e);
     return res(500, { error: "create_failed" });
