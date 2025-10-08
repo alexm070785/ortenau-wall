@@ -1,4 +1,3 @@
-// netlify/functions/entries-list.mjs
 import { getStore } from '@netlify/blobs';
 
 const CORS = {
@@ -22,20 +21,18 @@ export async function handler(event, context) {
     const url = new URL(event.rawUrl);
     const statusParam = (url.searchParams.get('status') || 'approved').toLowerCase();
     const status = ['approved', 'pending', 'rejected', 'all'].includes(statusParam)
-      ? statusParam
-      : 'approved';
+      ? statusParam : 'approved';
 
-    // Nur "approved" ist öffentlich – alles andere erfordert Identity
+    // Nur "approved" ist öffentlich – andere Views erfordern Identity
     const user = context?.clientContext?.user || null;
-    const needsAuth = status !== 'approved';
-    if (needsAuth && !user) return json(401, { error: 'Unauthorized' });
+    if (status !== 'approved' && !user) return json(401, { error: 'Unauthorized' });
 
     const store = getStore('entries');
 
     // v5/v6-kompatibles JSON-Lesen
     const getJsonCompat = async (key) => {
       if (typeof store.getJSON === 'function') return store.getJSON(key);   // v6+
-      return store.get(key, { type: 'json' });                               // v5
+      return store.get(key, { type: 'json' });                              // v5
     };
 
     const listed = await store.list(); // { blobs: [...] }
@@ -46,11 +43,7 @@ export async function handler(event, context) {
       try {
         const item = await getJsonCompat(key);
         if (!item) continue;
-
-        if (
-          status === 'all' ||
-          (item.status || 'pending').toLowerCase() === status
-        ) {
+        if (status === 'all' || (item.status || 'pending').toLowerCase() === status) {
           out.push({ id: key, ...item });
         }
       } catch (e) {
