@@ -446,7 +446,7 @@
       try{
         showToast("Wird gesendet…", "#666");
         // WICHTIG: direkter Endpoint (ohne /.netlify/functions)
-        const res = await fetch('/entries-create', { method:'POST', body: fd });
+        const res = await fetch('/.netlify/functions/entries-create', { method:'POST', body: fd });
         const data = await res.json().catch(()=> ({}));
         if(!res.ok) throw new Error(data?.error || ('HTTP '+res.status));
 
