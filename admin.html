@@ -1,110 +1,318 @@
 <!doctype html>
-<html lang="de">
-<head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Admin – Seite erstellen (statisch)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin – Einträge verwalten</title>
 <style>
-  body{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;margin:0;background:#f6f6f6;color:#333}
-  .wrap{max-width:860px;margin:32px auto;padding:0 16px}
+  :root{
+    --bg:#f6f6f6; --card:#fff; --text:#222; --muted:#70798C; --radius:12px;
+    --border:#d0d0d0; --shadow:0 4px 12px rgba(0,0,0,.08);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;padding:24px}
   h1{margin:0 0 16px}
-  form{background:#fff;padding:16px;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,.08);display:grid;gap:12px}
-  label{font-weight:600}
-  input,textarea{width:100%;padding:10px 12px;border:1px solid #d0d0d0;border-radius:10px;background:#fff}
-  textarea{min-height:220px;font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace}
+  .wrap{max-width:960px;margin:auto}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}
+  .grid{display:grid;gap:12px}
+  .g2{grid-template-columns:1fr 1fr}
+  .g3{grid-template-columns:repeat(3,1fr)}
+  label{font-weight:600;display:block;margin:6px 0}
+  input,select,textarea{width:100%;padding:10px;border:1px solid var(--border);border-radius:10px;background:#fff}
+  textarea{min-height:88px;resize:vertical}
   .row{display:grid;gap:12px;grid-template-columns:1fr 1fr}
-  button{padding:10px 14px;border:0;border-radius:10px;background:#222;color:#fff;cursor:pointer}
-  .muted{color:#70798C;font-size:.95rem}
-  .out{white-space:pre-wrap;background:#fff;padding:12px;border-radius:10px;border:1px dashed #ddd}
+  .muted{color:var(--muted);font-size:.92rem}
+  .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+  button{border:0;border-radius:10px;padding:10px 14px;cursor:pointer;background:#222;color:#fff}
+  button.secondary{background:#efefef;color:#222;border:1px solid var(--border)}
+  button.danger{background:#8b0000}
+  .bar{display:flex;gap:12px;align-items:center;margin:0 0 16px}
+  .bar input{max-width:260px}
+  .list{margin-top:18px}
+  table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden}
+  th,td{padding:10px;border-bottom:1px solid #eee;text-align:left}
+  th{background:#fafafa}
+  .right{text-align:right}
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;border:1px solid #ddd;font-size:.85rem;background:#fafafa}
+  .help{margin:8px 0 0}
+  @media (max-width:760px){ .g2,.g3,.row{grid-template-columns:1fr} .bar{flex-direction:column;align-items:flex-start} }
 </style>
-</head>
-<body>
+
 <div class="wrap">
-  <h1>Neue Seite erstellen</h1>
-  <form id="f">
+  <h1>Admin – Eintrag hinzufügen</h1>
+
+  <div class="card grid g2" role="form" aria-labelledby="form-title">
+    <div>
+      <label for="titel">Name des Lokals *</label>
+      <input id="titel" required placeholder="Bella Pizza">
+    </div>
+    <div>
+      <label for="kategorie">Kategorie *</label>
+      <select id="kategorie">
+        <option value="restaurant">Restaurant</option>
+        <option value="pizzeria">Pizzeria</option>
+        <option value="pizza">Pizza</option>
+        <option value="doener">Döner</option>
+        <option value="cafe">Café</option>
+        <option value="imbiss">Imbiss</option>
+        <option value="bäckerei">Bäckerei</option>
+      </select>
+    </div>
+
+    <div>
+      <label for="strasse">Straße & Nr.</label>
+      <input id="strasse" placeholder="Hauptstr. 12">
+    </div>
     <div class="row">
       <div>
-        <label for="title">Titel</label>
-        <input id="title" placeholder="z. B. Bella Pizza – Speisekarte">
+        <label for="plz">PLZ</label>
+        <input id="plz" placeholder="77652">
       </div>
       <div>
-        <label for="filename">Dateiname</label>
-        <input id="filename" placeholder="bella-pizza.html">
+        <label for="stadt">Ort / Stadt</label>
+        <input id="stadt" placeholder="Offenburg">
       </div>
     </div>
-    <label for="content">Inhalt (HTML oder einfacher Text)</label>
-    <textarea id="content" placeholder="<h2>Unsere Speisen</h2>…"></textarea>
-    <div class="muted">
-      Hinweis: Die Seite wird als vollständige HTML-Datei mit deinem Design erzeugt. Lade sie danach auf deinen Server und verlinke sie z. B. auf der Startseite.
-    </div>
-    <button type="button" id="dl">Seite als .html herunterladen</button>
-  </form>
 
-  <h3 style="margin:24px 0 8px">Link-Snippet für die Startseite</h3>
-  <div class="out" id="snippet"></div>
+    <div>
+      <label for="telefon">Telefon</label>
+      <input id="telefon" placeholder="+49 781 …">
+    </div>
+    <div>
+      <label for="email">E-Mail</label>
+      <input id="email" type="email" placeholder="info@beispiel.de">
+    </div>
+
+    <div>
+      <label for="website">Website</label>
+      <input id="website" placeholder="https://…">
+    </div>
+    <div>
+      <label for="speisekarte">Speisekarte-URL</label>
+      <input id="speisekarte" placeholder="https://…/speisekarte.pdf">
+    </div>
+
+    <div class="g2" style="grid-column:1/-1;display:grid;gap:12px">
+      <div>
+        <label for="oeffnungszeiten">Öffnungszeiten</label>
+        <textarea id="oeffnungszeiten" placeholder="Mo–Fr 11–22 Uhr; Sa 12–23 Uhr; So geschlossen"></textarea>
+      </div>
+      <div>
+        <label for="schliesstage">Schließtage / Hinweise</label>
+        <textarea id="schliesstage" placeholder="Feiertage geschlossen; Betriebsferien 1.–15. Aug."></textarea>
+      </div>
+    </div>
+
+    <div>
+      <label for="beschreibung">Kurzbeschreibung</label>
+      <textarea id="beschreibung" placeholder="Hausgemachte Pasta & Steinofenpizza …"></textarea>
+    </div>
+    <div>
+      <label for="preisklasse">Preisniveau</label>
+      <select id="preisklasse">
+        <option value="">–</option>
+        <option value="€">€ Günstig</option>
+        <option value="€€">€€ Mittel</option>
+        <option value="€€€">€€€ Höher</option>
+      </select>
+    </div>
+
+    <div>
+      <label for="bild">Bild/Icon-URL</label>
+      <input id="bild" placeholder="https://…/bild.jpg">
+    </div>
+    <div>
+      <label for="url">Externe Seite (Detail/Bestellen)</label>
+      <input id="url" placeholder="https://…">
+    </div>
+
+    <div class="g3" style="grid-column:1/-1;display:grid;gap:12px">
+      <div>
+        <label for="instagram">Instagram</label>
+        <input id="instagram" placeholder="https://instagram.com/…">
+      </div>
+      <div>
+        <label for="facebook">Facebook</label>
+        <input id="facebook" placeholder="https://facebook.com/…">
+      </div>
+      <div>
+        <label for="tiktok">TikTok</label>
+        <input id="tiktok" placeholder="https://tiktok.com/@…">
+      </div>
+    </div>
+
+    <div class="row" style="grid-column:1/-1">
+      <label style="display:flex;gap:18px;align-items:center;font-weight:600">
+        <span><input type="checkbox" id="abholung"> Abholung</span>
+        <span><input type="checkbox" id="lieferung"> Lieferung</span>
+        <span><input type="checkbox" id="featured"> Featured (Top)</span>
+      </label>
+      <div class="muted help">Tipp: Nur wenige Einträge als „Featured“ markieren (Startseite oben).</div>
+    </div>
+
+    <div style="grid-column:1/-1">
+      <label for="token">Admin-Token (nur nötig, wenn in Netlify gesetzt)</label>
+      <input id="token" placeholder="optional – NETLIFY_ADMIN_TOKEN">
+      <div class="muted help">Wenn du in Netlify einen <b>NETLIFY_ADMIN_TOKEN</b> angelegt hast, trage ihn hier ein, sonst ist Speichern/Löschen erlaubt ohne Token.</div>
+    </div>
+
+    <div class="actions" style="grid-column:1/-1">
+      <button id="save">Speichern</button>
+      <button id="fetch" class="secondary" type="button">Liste laden</button>
+      <button id="exportBtn" class="secondary" type="button">Export (JSON)</button>
+      <label class="secondary" style="padding:0;display:inline-flex;align-items:center;">
+        <input id="importFile" type="file" accept="application/json" style="display:none">
+        <span style="padding:10px 14px;display:inline-block;cursor:pointer">Import (JSON)</span>
+      </label>
+      <button id="clear" class="danger" type="button">ALLE löschen</button>
+    </div>
+  </div>
+
+  <div class="bar">
+    <input id="filter" placeholder="Liste filtern …">
+    <span class="muted">Nur Anzeige – Daten bleiben auf dem Server.</span>
+  </div>
+
+  <div class="card list">
+    <table id="table">
+      <thead><tr>
+        <th>Titel</th><th>Kategorie</th><th>Ort</th><th>Telefon</th><th class="right">Links</th>
+      </tr></thead>
+      <tbody id="tbody"><tr><td colspan="5" class="muted">Noch nichts geladen.</td></tr></tbody>
+    </table>
+  </div>
 </div>
 
 <script>
-const BASE_SHELL = (title, inner) => `<!doctype html>
-<html lang="de">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>${title}</title>
-<style>
-  :root{--accent:#e7e7e7;--text:#4f4f4f;--bg:#f6f6f6;--card:#fff;--muted:#70798C;--radius:12px;--shadow:0 4px 12px rgba(0,0,0,.08);--shadowHover:0 6px 18px rgba(0,0,0,.12)}
-  *{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;background:var(--bg);color:var(--text);padding-bottom:40px}
-  header.site{position:sticky;top:0;z-index:10;background:var(--accent);border-bottom:1px solid #b0b0b0}
-  .head{max-width:1360px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:10px 16px}
-  .page{max-width:960px;margin:20px auto;padding:0 16px}
-  .card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}
-  .muted{color:var(--muted)}
-  footer{position:fixed;bottom:0;left:0;width:100%;height:40px;background:var(--accent);color:#595959;border-top:1px solid #b0b0b0;font-size:.9rem}
-  .footer-inner{max-width:1360px;margin:0 auto;height:100%;display:flex;justify-content:center;align-items:center;padding:0 12px}
-</style>
-</head>
-<body>
-<header class="site">
-  <div class="head">
-    <a href="index.html" aria-label="Zur Startseite"><img src="header.png" alt="Logo" height="48"></a>
-    <h1 style="font-size:1.1rem;margin:0">${title}</h1>
-  </div>
-</header>
-<main class="page">
-  <article class="card">
-    ${inner}
-  </article>
-</main>
-<footer><div class="footer-inner">© Ortenau liefert</div></footer>
-</body>
-</html>`;
+const API = "/api/entries";
 
-function sanitizeFileName(name){
-  return (name||'seite').toLowerCase().replace(/[^a-z0-9-]+/g,'-').replace(/^-+|-+$/g,'') + '.html';
+function hdrs(){
+  const h = {"Content-Type":"application/json"};
+  const t = document.getElementById('token').value.trim();
+  if(t) h["x-admin-token"]=t;
+  return h;
 }
 
-document.getElementById('dl').addEventListener('click', ()=>{
-  const title = document.getElementById('title').value.trim()||'Neue Seite';
-  let fn = document.getElementById('filename').value.trim();
-  if(!fn) fn = sanitizeFileName(title);
-  if(!fn.endsWith('.html')) fn += '.html';
+function toPayload(){
+  const titel = document.getElementById('titel').value.trim();
+  const stadt = document.getElementById('stadt').value.trim();
+  const kategorie = document.getElementById('kategorie').value;
 
-  const raw = document.getElementById('content').value.trim();
-  const inner = raw ? raw : '<p class="muted">Hier steht bald Inhalt…</p>';
+  return {
+    // Pflicht/Backend-kompatibel:
+    titel, stadt, kategorie,
+    url: document.getElementById('url').value.trim(),
 
-  const file = new Blob([BASE_SHELL(title, inner)], {type:'text/html;charset=utf-8'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(file);
-  a.download = fn;
-  a.click();
-  URL.revokeObjectURL(a.href);
+    // Erweiterte Felder (werden mitgespeichert – siehe Function-Patch unten):
+    adresse: {
+      strasse: document.getElementById('strasse').value.trim(),
+      plz: document.getElementById('plz').value.trim(),
+      stadt
+    },
+    kontakt: {
+      telefon: document.getElementById('telefon').value.trim(),
+      email: document.getElementById('email').value.trim()
+    },
+    web: {
+      website: document.getElementById('website').value.trim(),
+      speisekarte: document.getElementById('speisekarte').value.trim(),
+      instagram: document.getElementById('instagram').value.trim(),
+      facebook: document.getElementById('facebook').value.trim(),
+      tiktok: document.getElementById('tiktok').value.trim()
+    },
+    info: {
+      oeffnungszeiten: document.getElementById('oeffnungszeiten').value.trim(),
+      schliesstage: document.getElementById('schliesstage').value.trim(),
+      beschreibung: document.getElementById('beschreibung').value.trim(),
+      preisklasse: document.getElementById('preisklasse').value
+    },
+    optionen: {
+      abholung: document.getElementById('abholung').checked,
+      lieferung: document.getElementById('lieferung').checked,
+      featured: document.getElementById('featured').checked
+    },
+    bild: document.getElementById('bild').value.trim()
+  };
+}
 
-  const snippet = `<a class="card" href="${fn}" style="--cat-color:#FDF1DF">
-  <div class="icon-wrap"><img class="icon" src="icons/restaurant.png" alt="" width="96" height="96" loading="lazy" decoding="async"></div>
-  <div class="content"><b class="title">${title}</b><br><span class="muted tag">Seite</span></div>
-</a>`;
-  document.getElementById('snippet').textContent = snippet;
-});
+async function loadList(){
+  const r = await fetch(API);
+  const data = await r.json();
+  renderTable(data);
+}
+
+function renderTable(items){
+  const tb = document.getElementById('tbody');
+  tb.innerHTML='';
+  if(!items.length){
+    tb.innerHTML = '<tr><td colspan="5" class="muted">Keine Einträge gespeichert.</td></tr>';
+    return;
+  }
+  const q = document.getElementById('filter').value.trim().toLowerCase();
+  items
+    .filter(i => !q || JSON.stringify(i).toLowerCase().includes(q))
+    .forEach(i=>{
+      const tr = document.createElement('tr');
+      const ort = i.stadt || (i.adresse && i.adresse.stadt) || '';
+      const tel = (i.kontakt && i.kontakt.telefon) || '';
+      tr.innerHTML = `
+        <td>${i.titel || ''}</td>
+        <td><span class="pill">${i.kategorie||''}</span></td>
+        <td>${ort}</td>
+        <td>${tel}</td>
+        <td class="right">
+          ${i.url ? `<a href="${i.url}" target="_blank" rel="noopener">Seite</a>` : ''}
+          ${i.web?.website ? ` · <a href="${i.web.website}" target="_blank" rel="noopener">Website</a>` : ''}
+          ${i.web?.speisekarte ? ` · <a href="${i.web.speisekarte}" target="_blank" rel="noopener">Speisekarte</a>` : ''}
+        </td>`;
+      tb.appendChild(tr);
+    });
+}
+
+document.getElementById('save').onclick = async (e)=>{
+  e.preventDefault();
+  const p = toPayload();
+  if(!p.titel){ alert('Bitte einen Namen eingeben.'); return; }
+  const res = await fetch(API, { method:"POST", headers:hdrs(), body:JSON.stringify(p) }).then(r=>r.json());
+  if(res.error){ alert('Fehler: ' + res.error); return; }
+  alert('Gespeichert!');
+  loadList();
+  document.querySelector('form')?.reset();
+};
+
+document.getElementById('fetch').onclick = loadList;
+
+document.getElementById('clear').onclick = async ()=>{
+  if(!confirm('WIRKLICH alle Einträge löschen?')) return;
+  const res = await fetch(API, { method:"DELETE", headers:hdrs() }).then(r=>r.json());
+  if(res.error){ alert('Fehler: ' + res.error); return; }
+  alert('Alles gelöscht.');
+  loadList();
+};
+
+document.getElementById('filter').addEventListener('input', loadList);
+
+document.getElementById('exportBtn').onclick = async ()=>{
+  const r = await fetch(API); const data = await r.json();
+  const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = Object.assign(document.createElement('a'), {href:url, download:'eintraege.json'});
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+};
+
+document.getElementById('importFile').onchange = async (ev)=>{
+  const file = ev.target.files[0]; if(!file) return;
+  const text = await file.text(); let arr;
+  try { arr = JSON.parse(text); } catch { alert('Ungültiges JSON.'); return; }
+  if(!Array.isArray(arr)){ alert('Erwarte ein Array von Einträgen.'); return; }
+  // Import: ganze Liste ersetzen
+  if(!confirm('Import ersetzt die komplette Liste. Fortfahren?')) return;
+  // Wir posten nacheinander (einfach & robust)
+  for(const it of arr){
+    await fetch(API, { method:"POST", headers:hdrs(), body:JSON.stringify(it) });
+  }
+  alert('Import abgeschlossen.');
+  loadList();
+};
+
+// erste Liste laden
+loadList();
 </script>
-</body>
-</html>
