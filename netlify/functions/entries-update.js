@@ -1,65 +1,58 @@
-import { getStore } from '@netlify/blobs';
+import { getStore } from "@netlify/blobs";
 
 const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-  'Access-Control-Allow-Methods': 'GET,POST,PATCH,OPTIONS',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET,POST,PATCH,DELETE,OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
-
-const ok204 = { statusCode: 204, headers: CORS };
-const json = (code, body) => ({
+const res = (code, body) => ({
   statusCode: code,
-  headers: { 'content-type': 'application/json', ...CORS },
-  body: JSON.stringify(body),
+  headers: { "content-type": "application/json", ...CORS },
+  body: JSON.stringify(body ?? {}),
 });
-
-// v5/v6 kompatibel lesen/schreiben
-const getJsonCompat = async (store, key) => {
-  if (typeof store.getJSON === 'function') return store.getJSON(key);
-  return store.get(key, { type: 'json' });
-};
-const setJsonCompat = async (store, key, obj) => {
-  if (typeof store.setJSON === 'function') return store.setJSON(key, obj);
-  return store.set(key, JSON.stringify(obj), { contentType: 'application/json' });
-};
+const getJSON = async (store, key) =>
+  typeof store.getJSON === "function"
+    ? store.getJSON(key)
+    : store.get(key, { type: "json" });
+const setJSON = async (store, key, obj) =>
+  typeof store.setJSON === "function"
+    ? store.setJSON(key, obj)
+    : store.set(key, JSON.stringify(obj), { contentType: "application/json" });
 
 export async function handler(event, context) {
   try {
-    if (event.httpMethod === 'OPTIONS') return ok204;
-    if (event.httpMethod !== 'PATCH') return json(405, { error: 'Method not allowed' });
+    if (event.httpMethod === "OPTIONS") return { statusCode: 204, headers: CORS };
 
-    // Identity nötig
     const user = context?.clientContext?.user || null;
-    if (!user) return json(401, { error: 'Unauthorized' });
+    if (!user) return res(401, { error: "Unauthorized" });
 
     const id = event.queryStringParameters?.id;
-    if (!id) return json(400, { error: 'Missing id' });
+    if (!id) return res(400, { error: "missing_id" });
 
-    let payload = {};
-    try { payload = JSON.parse(event.body || '{}'); } catch {}
+    const store = getStore("entries");
 
-    const { action, menuText, featured } = payload;
-
-    const store = getStore('entries');
-    const item = await getJsonCompat(store, id);
-    if (!item) return json(404, { error: 'Eintrag nicht gefunden' });
-
-    if (action === 'approve') {
-      item.status = 'approved';
-      item.approvedAt = new Date().toISOString();
-    } else if (action === 'reject') {
-      item.status = 'rejected';
-      item.rejectedAt = new Date().toISOString();
-    } else {
-      if (typeof menuText === 'string') item.menuText = menuText;
-      if (typeof featured !== 'undefined') item.featured = !!featured;
-      item.updatedAt = new Date().toISOString();
+    if (event.httpMethod === "DELETE") {
+      await store.delete(id);
+      return res(200, { ok: true, deleted: id });
     }
 
-    await setJsonCompat(store, id, item);
-    return json(200, { ok: true, id, item });
-  } catch (err) {
-    console.error('entries-update error:', err);
-    return json(500, { error: err?.message || 'Serverfehler' });
+    if (event.httpMethod !== "PATCH") return res(405, { error: "Method not allowed" });
+
+    const payload = JSON.parse(event.body || "{}");
+    const item = await getJSON(store, id);
+    if (!item) return res(404, { error: "not_found" });
+
+    // erlaubte Felder
+    const fields = ["name","category","city","street","zip","website","phone","menuText","mapsUrl","featured"];
+    for (const k of fields) {
+      if (k in payload) item[k] = k === "featured" ? !!payload[k] : String(payload[k] || "");
+    }
+    item.updatedAt = new Date().toISOString();
+
+    await setJSON(store, id, item);
+    return res(200, { ok: true, id, item });
+  } catch (e) {
+    console.error("entries-update error", e);
+    return res(500, { error: "update_failed" });
   }
 }
