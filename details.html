@@ -2,33 +2,41 @@
 <html lang="de">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#e7e7e7">
 <title>Ortenau liefert · Detail</title>
 <style>
-  :root{ --accent:#e7e7e7; --text:#333; --bg:#f6f6f6; --card:#fff; --border:#d0d0d0; --muted:#70798C; --shadow:0 4px 12px rgba(0,0,0,.08); --radius:14px; --badge:#f2f2f2 }
+  :root{ --accent:#e7e7e7; --text:#333; --bg:#f6f6f6; --card:#fff; --border:#d0d0d0; --muted:#70798C; --shadow:0 4px 12px rgba(0,0,0,.08); --radius:14px; --badge:#f2f2f2; --tap:48px }
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif}
+  html{font-size:16px}
+  @media (max-width:480px){ html{font-size:17px} }
+  body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;line-height:1.5}
   header{position:sticky;top:0;background:var(--accent);border-bottom:1px solid #b0b0b0;z-index:5}
   .head{max-width:1200px;margin:auto;display:flex;gap:12px;align-items:center;justify-content:space-between;padding:10px 16px}
-  a.back{display:inline-flex;align-items:center;gap:8px;text-decoration:none;color:#222;border:1px solid var(--border);background:#fff;padding:8px 12px;border-radius:10px;box-shadow:var(--shadow)}
+  .head img{height:48px}
+  a.back{display:inline-flex;align-items:center;gap:8px;text-decoration:none;color:#222;border:1px solid var(--border);background:#fff;padding:10px 14px;border-radius:12px;box-shadow:var(--shadow);min-height:var(--tap)}
+  a.back:active{transform:scale(.99)}
   main{max-width:1100px;margin:18px auto;padding:0 16px;display:grid;gap:16px;grid-template-columns:2fr 1fr}
   @media (max-width:900px){ main{grid-template-columns:1fr} }
   .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}
-  h1{margin:0 0 8px}
+  h1{margin:0 0 8px;font-size:clamp(1.2rem, 1rem + 1.5vw, 1.8rem)}
   .muted{color:var(--muted)}
-  .badge{display:inline-block; background:var(--badge); border:1px solid var(--border); border-radius:999px; padding:2px 8px; font-size:.85rem; margin-right:6px}
+  .badge{display:inline-block; background:var(--badge); border:1px solid var(--border); border-radius:999px; padding:4px 10px; font-size:.9rem; margin-right:6px}
   .section h2{margin:0 0 8px;font-size:1.05rem}
   .kv{display:grid;grid-template-columns:140px 1fr;gap:6px}
   .kv div{padding:4px 0}
-  .links a{display:inline-block;margin:4px 6px 0 0;text-decoration:none;border:1px solid var(--border);border-radius:999px;padding:6px 10px;background:#fff}
-  .hero{display:flex;gap:14px;align-items:center}
+  @media (max-width:560px){ .kv{grid-template-columns:1fr} .kv div:first-child{font-weight:600} }
+  .links a{display:inline-flex;align-items:center;justify-content:center;min-height:var(--tap);margin:6px 6px 0 0;text-decoration:none;border:1px solid var(--border);border-radius:999px;padding:8px 12px;background:#fff}
+  .hero{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
   .hero img{width:140px;height:140px;object-fit:cover;border-radius:12px;border:1px solid var(--border)}
+  .cta-bar{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+  .cta-bar a{display:inline-flex;align-items:center;justify-content:center;min-height:var(--tap);padding:10px 14px;border-radius:12px;text-decoration:none;border:1px solid var(--border);background:#fff}
 </style>
 </head>
 <body>
 <header>
   <div class="head">
-    <a class="back" href="index.html">← Zur Übersicht</a>
+    <a class="back" href="index.html" aria-label="Zur Übersicht">← Zur Übersicht</a>
     <img src="header.png" alt="Ortenau liefert" height="48">
   </div>
 </header>
@@ -36,12 +44,13 @@
 <main>
   <article class="card" id="detail">
     <div class="hero">
-      <img id="bild" alt="" src="icons/restaurant.png">
+      <img id="bild" alt="" src="icons/restaurant.png" loading="eager" decoding="async">
       <div>
         <h1 id="titel">Lokal</h1>
         <div id="kategorie" class="badge">Kategorie</div>
         <div id="badges" style="margin-top:6px"></div>
         <div id="ort" class="muted" style="margin-top:4px"></div>
+        <div class="cta-bar" id="ctaBar"></div>
       </div>
     </div>
 
@@ -81,10 +90,12 @@ function getParam(name){
 }
 function textOrDash(v){ return v && String(v).trim() ? v : "–"; }
 function esc(s){ return (s||'').replace(/[&<>\"']/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[m])); }
+function telLink(num){ const n=(num||"").replace(/\s+/g,''); return n ? `tel:${encodeURIComponent(n)}` : ""; }
+function mailLink(m){ return m ? `mailto:${encodeURIComponent(m)}` : ""; }
 
 (async function(){
   const id = getParam('id');
-  const q  = getParam('q'); // fallback (alter Index ohne id)
+  const q  = getParam('q');
   const res = await fetch('/api/entries');
   const data = await res.json();
 
@@ -92,12 +103,12 @@ function esc(s){ return (s||'').replace(/[&<>\"']/g, m=>({"&":"&amp;","<":"&lt;"
   if (id) item = data.find(x => x.id === id);
   if (!item && q) item = data.find(x => (x.titel||'').toLowerCase().includes(q.toLowerCase()));
 
+  const detail = document.getElementById('detail');
   if (!item) {
-    document.getElementById('detail').innerHTML = '<p class="muted">Eintrag nicht gefunden.</p>';
+    detail.innerHTML = '<p class="muted">Eintrag nicht gefunden.</p>';
     return;
   }
 
-  // Hero
   const ort = item.stadt || item?.adresse?.stadt || '';
   document.getElementById('titel').textContent = item.titel || 'Ohne Titel';
   document.getElementById('kategorie').textContent = item.kategorie || '';
@@ -107,25 +118,20 @@ function esc(s){ return (s||'').replace(/[&<>\"']/g, m=>({"&":"&amp;","<":"&lt;"
   img.src = item.bild || `icons/${item.kategorie||'restaurant'}.png`;
   img.alt = (item.titel||'') + ' Bild';
 
-  // Badges
   const badges = [];
   if (item?.optionen?.abholung) badges.push('Abholung');
   if (item?.optionen?.lieferung) badges.push('Lieferung');
   if (item?.info?.preisklasse) badges.push(item.info.preisklasse);
   document.getElementById('badges').innerHTML = badges.map(t=>`<span class="badge">${esc(t)}</span>`).join('');
 
-  // Öffnungszeiten/Schließtage
   document.getElementById('oeffnungszeiten').textContent = textOrDash(item?.info?.oeffnungszeiten);
   document.getElementById('schliesstage').textContent   = textOrDash(item?.info?.schliesstage);
 
-  // Adresse/Kontakt
   const adr = item?.adresse || {};
   const adrStr = [adr.strasse, adr.plz, adr.stadt].filter(Boolean).join(', ');
   document.getElementById('adresse').textContent = textOrDash(adrStr);
   document.getElementById('telefon').textContent = textOrDash(item?.kontakt?.telefon);
   document.getElementById('email').textContent   = textOrDash(item?.kontakt?.email);
-
-  // Beschreibung
   document.getElementById('beschreibung').textContent = textOrDash(item?.info?.beschreibung);
 
   // Links
@@ -138,6 +144,18 @@ function esc(s){ return (s||'').replace(/[&<>\"']/g, m=>({"&":"&amp;","<":"&lt;"
   if (item?.web?.facebook) out.push(`<a href="${esc(item.web.facebook)}" target="_blank" rel="noopener">Facebook</a>`);
   if (item?.web?.tiktok) out.push(`<a href="${esc(item.web.tiktok)}" target="_blank" rel="noopener">TikTok</a>`);
   links.innerHTML = out.join(' ');
+
+  // Handy-CTA: Anrufen & E-Mail
+  const cta = document.getElementById('ctaBar');
+  const tel = item?.kontakt?.telefon || "";
+  const mail = item?.kontakt?.email || "";
+  const telHref = telLink(tel);
+  const mailHref = mailLink(mail);
+  const ctas = [];
+  if (telHref) ctas.push(`<a href="${telHref}">📞 Anrufen</a>`);
+  if (mailHref) ctas.push(`<a href="${mailHref}">✉️ E-Mail</a>`);
+  if (item.url) ctas.push(`<a href="${esc(item.url)}" target="_blank" rel="noopener">🛒 Bestellen</a>`);
+  cta.innerHTML = ctas.join("");
 })();
 </script>
 </body>
