@@ -1,5 +1,5 @@
-// /netlify/functions/entries.js  (CommonJS)
-const { createClient } = require("@netlify/blobs");
+// /netlify/functions/entries.js
+const { blobsClient } = require("@netlify/blobs");
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -13,12 +13,11 @@ function mkStore() {
   if (!siteID || !token) {
     throw new Error("Blobs not configured: missing NETLIFY_SITE_ID or NETLIFY_AUTH_TOKEN");
   }
-  const client = createClient({ siteID, token });
-  return client.store("seiten");            // Store-Name frei wählbar
+  const client = blobsClient({ siteID, token }); // << HIER
+  return client.store("seiten");                  // Store-Name frei wählbar
 }
 
 const KEY = "data";
-
 const ok  = (b) => ({ statusCode: 200, headers: { ...CORS, "Content-Type":"application/json" }, body: JSON.stringify(b) });
 const bad = (c,m) => ({ statusCode: c, headers: CORS, body: JSON.stringify({ error: m }) });
 
