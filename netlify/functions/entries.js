@@ -75,6 +75,11 @@ function resolveStore() {
   throw new Error("No compatible Blobs API found in @netlify/blobs for this runtime");
 }
 
+// kleine ID-Funktion (stabil & URL-freundlich)
+function makeId() {
+  return (Date.now().toString(36) + Math.random().toString(36).slice(2,8)).toLowerCase();
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod === "OPTIONS") return { statusCode: 204, headers: CORS };
 
@@ -116,9 +121,13 @@ exports.handler = async (event) => {
       const raw = await store.get(KEY);
       const arr = raw ? JSON.parse(raw) : [];
 
+      // ID vergeben, falls fehlt
+      const id = payload.id && typeof payload.id === "string" ? payload.id : makeId();
+
       // ALLES speichern (1:1), plus sichere Defaults/Systemfelder
       const full = {
         ...payload,
+        id,
         kategorie: payload.kategorie || "restaurant",
         stadt: payload.stadt || payload?.adresse?.stadt || "",
         createdAt: new Date().toISOString()
