@@ -1,30 +1,6 @@
 <!doctype html>
 <html lang="de">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Ortenau-Wall · Admin</title>
-<style>
-  :root{ --accent:#e7e7e7; --text:#4f4f4f; --bg:#f6f6f6; --card:#fff;
-         --muted:#70798C; --radius:12px; --shadow:0 4px 12px rgba(0,0,0,.08);
-         --shadowHover:0 6px 18px rgba(0,0,0,.12); }
-  *{box-sizing:border-box}
-  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;background:var(--bg);color:var(--text);}
-  header{position:sticky;top:0;z-index:10;background:var(--accent);border-bottom:1px solid #b0b0b0}
-  .head{max-width:1160px;margin:0 auto;display:flex;gap:8px;align-items:center;justify-content:space-between;padding:12px 16px;}
-  .btn{padding:8px 12px;border-radius:10px;border:1px solid #d0d0d0;background:#fff;cursor:pointer;box-shadow:var(--shadow)}
-  .btn:hover{box-shadow:var(--shadowHover)}
-  .pill{padding:7px 12px;border:1px solid #d0d0d0;border-radius:999px;background:#fff;cursor:pointer}
-  .pill.active{background:#e9e9e9;font-weight:700}
-  .wrap{max-width:1160px;margin:16px auto;padding:0 16px}
-  .card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow)}
-  .muted{color:var(--muted)}
-  table{width:100%;border-collapse:collapse}
-  th,td{border-bottom:1px solid #eee;padding:10px;text-align:left;font-size:.95rem}
-  th{background:#fafafa}
-  #toast{position:fixed;right:16px;bottom:56px;background:#2d7a3e;color:#fff;padding:12px 14px;border-radius:10px;box-shadow:var(--shadow);
-         opacity:0;transform:translateY(8px);transition:all .25s;z-index:9999}
-</style>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Ortenau-Wall · Admin</title>
@@ -62,19 +38,6 @@
   </style>
 </head>
 <body>
-
-<header>
-  <div class="head">
-    <div style="display:flex;gap:8px;align-items:center">
-      <strong>Ortenau-Wall · Admin</strong>
-      <span class="muted" data-admin-email></span>
-    </div>
-    <div style="display:flex;gap:8px;align-items:center">
-      <button class="pill" id="tabPending"  data-tab="pending">Pending</button>
-      <button class="pill" id="tabApproved" data-tab="approved">Approved</button>
-      <button class="btn" id="refreshBtn">🔄 Aktualisieren</button>
-      <button class="btn" id="loginBtn"  data-login>🔐 Login</button>
-      <button class="btn" id="logoutBtn" data-logout>🚪 Logout</button>
   <div class="topbar">
     <div class="wrap row">
       <div class="row" style="gap:10px">
@@ -88,26 +51,7 @@
       </div>
     </div>
   </div>
-</header>
 
-<main class="wrap">
-  <div class="card">
-    <div style="overflow:auto">
-      <table aria-label="Einträge">
-        <thead>
-          <tr>
-            <th style="width:80px">Bild</th>
-            <th>Name &amp; Adresse</th>
-            <th>Ort</th>
-            <th>Kat.</th>
-            <th>Eingereicht</th>
-            <th style="width:220px">Aktion</th>
-          </tr>
-        </thead>
-        <tbody id="adminTableBody">
-          <tr><td colspan="6" class="muted" style="padding:14px 12px">Lade…</td></tr>
-        </tbody>
-      </table>
   <div class="wrap">
     <div class="card">
       <div style="padding:14px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center">
@@ -139,149 +83,44 @@
       </div>
     </div>
   </div>
-</main>
 
-<div id="toast" role="status" aria-live="polite"></div>
   <div class="toast" id="toast">Gespeichert</div>
 
-<!-- Netlify Identity Widget -->
-<script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <!-- Netlify Identity -->
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   <script>
+    /* -------- Helpers -------- */
     const $ = (s,r=document)=>r.querySelector(s);
     const fmt = iso => iso ? new Date(iso).toLocaleString('de-DE') : '';
-    const toast = (m)=>{ const t=$('#toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2000); };
+    const toast = (m)=>{
+      const t=$('#toast');
+      t.textContent=m;
+      t.classList.add('show');
+      setTimeout(()=>t.classList.remove('show'),2000);
+    };
     const esc = s => (s||'').replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
 
-<script>
-/* =========================
-   Endpunkte (Functions-Pfad)
-   ========================= */
-const API_LIST   = (status) => `/.netlify/functions/entries-list?status=${encodeURIComponent(status)}&t=${Date.now()}`;
-const API_UPDATE = (id)     => `/.netlify/functions/entries-update?id=${encodeURIComponent(id)}&t=${Date.now()}`;
-
-/* =============
-   UI-Helferlein
-   ============= */
-function $(s, r=document){ return r.querySelector(s); }
-function toast(msg, color = '#2d7a3e') {
-  const el = $('#toast');
-  el.textContent = msg;
-  el.style.background = color;
-  el.style.opacity = '1';
-  el.style.transform = 'translateY(0)';
-  clearTimeout(el._t);
-  el._t = setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translateY(8px)'; }, 3500);
-}
     function blobImageUrl(item) {
       if (item?.thumbUrl && /^https?:\/\//.test(item.thumbUrl)) return item.thumbUrl;
       if (item?.imageUrl && /^https?:\/\//.test(item.imageUrl)) return item.imageUrl;
       if (Array.isArray(item?.imageUrls) && item.imageUrls.length && /^https?:\/\//.test(item.imageUrls[0])) {
         return item.imageUrls[0];
       }
-      if (item?.thumbKey) return `/.netlify/blobs/images/${item.thumbKey}`;
-      if (item?.imageKey) return `/.netlify/blobs/images/${item.imageKey}`;
-      if (Array.isArray(item?.imageKeys) && item.imageKeys.length) {
-        return `/.netlify/blobs/images/${item.imageKeys[0]}`;
-      }
+      if (item?.thumbUrl) return item.thumbUrl;
+      if (Array.isArray(item?.images) && item.images.length) return item.images[0];
       return "";
     }
 
-/* =========================
-   Netlify Identity / Token
-   ========================= */
-function identityReady() {
-  // explizit initialisieren (manchmal wichtig nach Hard-Refresh)
-  try { window.netlifyIdentity && window.netlifyIdentity.init(); } catch {}
-}
-async function getAuthHeader() {
-  const id = window.netlifyIdentity;
-  if (!id) return null;
-  const user = id.currentUser();
-  if (!user) return null;
-  try {
-    // 1. normal probieren
-    let token = await user.jwt();
-    if (!token) throw new Error('no token');
-    return { 'Authorization': `Bearer ${token}` };
-  } catch {
-    try {
-      // 2. hartes Refresh erzwingen
-      const token = await user.jwt(true);
-      if (!token) throw new Error('no token refreshed');
-      return { 'Authorization': `Bearer ${token}` };
-    } catch {
-      return null;
     async function authedFetch(url,opt={}) {
       const u = netlifyIdentity.currentUser();
       const tok = u && await u.jwt();
       return fetch(url,{...opt,headers:{...(opt.headers||{}),Authorization: tok?`Bearer ${tok}`:''}});
     }
-  }
-}
-function setEmailUI() {
-  const email = window.netlifyIdentity?.currentUser()?.email || '';
-  $('[data-admin-email]').textContent = email;
-}
 
-/* =======================================
-   Rendering der Tabellenzeilen
-   ======================================= */
-function renderRows(items) {
-  const body = $('#adminTableBody');
-  body.innerHTML = '';
-  if (!items?.length) {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td colspan="6" style="padding:12px;color:#a33">${window._lastErrorMsg || 'Keine Einträge.'}</td>`;
-    window._lastErrorMsg = '';
-    body.appendChild(tr);
-    return;
-  }
-  for (const it of items) {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${it.thumbUrl ? `<img src="${it.thumbUrl}" alt="" style="width:64px;height:40px;object-fit:cover;border-radius:6px">` : ''}</td>
-      <td><strong>${it.name || ''}</strong><br><span class="muted">${it.address || ''}</span></td>
-      <td>${it.city || ''}</td>
-      <td>${it.category || ''}</td>
-      <td>${it.createdAt ? new Date(it.createdAt).toLocaleString('de-DE') : ''}</td>
-      <td style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn" data-act="approve" data-id="${it.id}">Freigeben</button>
-        <button class="btn" data-act="reject"  data-id="${it.id}">Ablehnen</button>
-      </td>`;
-    body.appendChild(tr);
-  }
-  body.onclick = (e) => {
-    const btn = e.target.closest('button[data-act]');
-    if (!btn) return;
-    updateEntry(btn.dataset.id, btn.dataset.act);
-  };
-}
     const cache = new Map();
     let currentView = 'pending';
 
-/* =========================
-   Laden (Pending/Approved)
-   ========================= */
-let currentTab = 'pending';
-async function load(status = 'pending') {
-  currentTab = status;
-  try {
-    const headers = { 'Accept': 'application/json' };
-    if (status !== 'approved') {
-      const auth = await getAuthHeader();
-      if (auth) Object.assign(headers, auth);
-    }
-    const res = await fetch(API_LIST(status), { headers });
-    if (!res.ok) {
-      if (res.status === 401) {
-        window._lastErrorMsg = '401: Nicht eingeloggt oder Session abgelaufen. Bitte Login.';
-        toast(window._lastErrorMsg, '#c0392b');
-        // Login-Dialog automatisch öffnen
-        if (window.netlifyIdentity) window.netlifyIdentity.open('login');
-      } else {
-        window._lastErrorMsg = `Fehler: HTTP ${res.status}`;
-        toast(window._lastErrorMsg, '#c0392b');
+    /* -------- Identity Init -------- */
     (function(){
       const who = $('#who'), btnLogin=$('#btnLogin'), btnLogout=$('#btnLogout');
       function setUser(u){ who.textContent = u ? (u.user_metadata?.full_name || u.email) : 'nicht eingeloggt'; }
@@ -297,13 +136,11 @@ async function load(status = 'pending') {
         netlifyIdentity.close();
         load(currentView);
       });
-      netlifyIdentity.on('logout', ()=>{
-        setUser(null);
-        load('approved');
-      });
+      netlifyIdentity.on('logout', ()=>{ setUser(null); load('approved'); });
       netlifyIdentity.init();
     })();
 
+    /* -------- UI Events -------- */
     $('#btnRefresh').addEventListener('click', ()=> load(currentView));
     $('#btnShowPending').addEventListener('click', ()=> load('pending'));
     $('#btnShowApproved').addEventListener('click', ()=> load('approved'));
@@ -318,6 +155,7 @@ async function load(status = 'pending') {
       if(act==='cancel') toggleEditor(id, false);
     });
 
+    /* -------- Daten laden -------- */
     async function load(view='pending'){
       currentView = view;
       const tbody = $('#rows');
@@ -325,41 +163,27 @@ async function load(status = 'pending') {
       try{
         const url = `/.netlify/functions/entries-list?status=${encodeURIComponent(view)}`;
         const res = (view==='approved') ? await fetch(url) : await authedFetch(url);
-        if(!res.ok) throw new Error(`HTTP ${res.status}`);
+        if(!res.ok){
+          if(res.status===401) tbody.innerHTML = `<tr><td colspan="6" class="empty">Nicht eingeloggt. Bitte „Login“.</td></tr>`;
+          else tbody.innerHTML = `<tr><td colspan="6" class="empty">Fehler: HTTP ${res.status}</td></tr>`;
+          return;
+        }
         const items = await res.json();
         cache.clear();
         tbody.innerHTML = items.length? '' : `<tr><td colspan="6" class="empty">Keine Einträge gefunden.</td></tr>`;
         items.forEach(it=>{ cache.set(it.id, it); tbody.appendChild(row(it, view==='pending')); });
       }catch(err){
-        tbody.innerHTML = `<tr><td colspan="6" class="empty">Fehler beim Laden (${esc(err.message)}).</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="empty">Netzwerkfehler: ${esc(err.message)}</td></tr>`;
       }
-      renderRows([]);
-      return;
     }
-    renderRows(await res.json());
-  } catch (err) {
-    console.error(err);
-    window._lastErrorMsg = 'Netzwerkfehler beim Laden.';
-    toast(window._lastErrorMsg, '#c0392b');
-    renderRows([]);
-  }
-}
 
-/* =========================
-   Approve / Reject
-   ========================= */
-async function updateEntry(id, action) {
-  try {
-    const auth = await getAuthHeader();
-    if (!auth) {
-      toast('Nicht eingeloggt. Bitte „Login“ klicken.', '#c0392b');
-      if (window.netlifyIdentity) window.netlifyIdentity.open('login');
-      return;
+    /* -------- Tabellenzeile -------- */
     function row(item, showApprove){
       const tr = document.createElement('tr');
       tr.id = `row_${item.id}`;
       const imgSrc = blobImageUrl(item);
-      const adr = [item.street, item.zip && item.city ? `${item.zip}, ${item.city}` : item.city].filter(Boolean).join(', ');
+      const adr = item.address || ''; // wir speichern die komplette Adresse als String
+
       tr.innerHTML = `
         <td><img class="thumb" src="${esc(imgSrc)}" alt=""></td>
         <td><b>${esc(item.name||'')}</b><div class="muted">${esc(adr||'')}</div></td>
@@ -392,39 +216,13 @@ async function updateEntry(id, action) {
         </td>`;
       return tr;
     }
-    const res = await fetch(API_UPDATE(id), {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', ...auth },
-      body: JSON.stringify({ action })
-    });
-    if (!res.ok) {
-      if (res.status === 401) {
-        toast('Session abgelaufen. Bitte erneut einloggen.', '#c0392b');
-        if (window.netlifyIdentity) window.netlifyIdentity.open('login');
-      } else {
-        toast(`Update fehlgeschlagen: ${res.status}`, '#c0392b');
-      }
-      return;
 
     function toggleEditor(id, show){
       const box = document.querySelector(`#edit_${CSS.escape(id)}`);
       if(box) box.style.display = show? 'grid' : 'none';
     }
-    toast(action === 'approve' ? 'Freigegeben ✅' : 'Abgelehnt ❌');
-    load(currentTab);
-  } catch (err) {
-    console.error(err);
-    toast('Netzwerkfehler beim Aktualisieren.', '#c0392b');
-  }
-}
 
-/* =========================
-   UI – Tabs, Login/Logout
-   ========================= */
-function wireUI(){
-  $('#tabPending').onclick  = () => { setActiveTab('pending');  load('pending');  };
-  $('#tabApproved').onclick = () => { setActiveTab('approved'); load('approved'); };
-  $('#refreshBtn').onclick  = () => load(currentTab);
+    /* -------- Aktionen -------- */
     async function save(id){
       const menuText = document.querySelector(`#m_${CSS.escape(id)}`)?.value || '';
       const featured = (document.querySelector(`#f_${CSS.escape(id)}`)?.value === 'true');
@@ -441,8 +239,6 @@ function wireUI(){
       }catch(e){ toast('Speichern fehlgeschlagen'); }
     }
 
-  $('#loginBtn').onclick  = () => { window.netlifyIdentity && netlifyIdentity.open('login'); };
-  $('#logoutBtn').onclick = async () => { if (window.netlifyIdentity){ await netlifyIdentity.logout(); setEmailUI(); load(currentTab); } };
     async function approve(id){
       try{
         const res = await authedFetch(`/.netlify/functions/entries-update?id=${encodeURIComponent(id)}`,{
@@ -456,18 +252,6 @@ function wireUI(){
       }catch(e){ toast('Freigabe fehlgeschlagen'); }
     }
 
-  if (window.netlifyIdentity) {
-    netlifyIdentity.on('init',   () => { setEmailUI(); });
-    netlifyIdentity.on('login',  () => { setEmailUI(); load(currentTab); netlifyIdentity.close(); });
-    netlifyIdentity.on('logout', () => { setEmailUI(); load(currentTab); });
-  }
-  setActiveTab('pending');
-}
-function setActiveTab(tab){
-  currentTab = tab;
-  $('#tabPending').classList.toggle('active', tab==='pending');
-  $('#tabApproved').classList.toggle('active', tab==='approved');
-}
     async function rejectEntry(id){
       if(!confirm('Diesen Eintrag wirklich ablehnen?')) return;
       try{
@@ -482,14 +266,7 @@ function setActiveTab(tab){
       }catch(e){ toast('Ablehnen fehlgeschlagen'); }
     }
 
-/* Start */
-document.addEventListener('DOMContentLoaded', () => {
-  identityReady();
-  wireUI();
-  setEmailUI();
-  load('pending');
-});
-</script>
+    /* Default: Approved anzeigen (öffentlich), nach Login Pending */
     document.addEventListener('DOMContentLoaded', ()=> load('approved'));
   </script>
 </body>
