@@ -5,68 +5,81 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Ortenau liefert · Lokale Angebote</title>
 <style>
-  :root{ --accent:#e7e7e7; --text:#4f4f4f; --bg:#f6f6f6; --card:#fff; --muted:#70798C; --radius:12px; --shadow:0 4px 12px rgba(0,0,0,.08); --shadowHover:0 6px 18px rgba(0,0,0,.12); }
+  :root{
+    --accent:#e7e7e7; --text:#4f4f4f; --bg:#f6f6f6; --card:#fff;
+    --muted:#70798C; --radius:12px; --shadow:0 4px 12px rgba(0,0,0,.08);
+    --shadowHover:0 6px 18px rgba(0,0,0,.12); --border:#d0d0d0;
+    --badge:#f2f2f2;
+  }
   *{box-sizing:border-box}
-  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;background:var(--bg);color:var(--text);padding-bottom:40px}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;background:var(--bg);color:var(--text);padding-bottom:40px;}
   .visually-hidden{position:absolute!important;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 
-  /* Header */
-  header.site{position:sticky;top:0;z-index:10;background:var(--accent);border-bottom:1px solid #b0b0b0}
-  .head{max-width:1360px;margin:0 auto;display:flex;align-items:center;gap:16px;justify-content:space-between;padding:10px 16px}
-  .search-wrap{flex:1;display:flex;align-items:center;max-width:520px;position:relative}
-  .search-wrap input{width:100%;padding:8px 12px 8px 36px;border:1px solid #ccc;border-radius:8px;background:#fff;color:var(--text);box-shadow:var(--shadow);transition:box-shadow .2s}
-  .search-wrap input:focus{outline:none;box-shadow:var(--shadowHover)}
-  .search-wrap svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);fill:#9a9a9a}
-  .admin-link{margin-left:auto;font-size:.9rem;text-decoration:none;color:#333;border:1px solid #d0d0d0;padding:6px 10px;border-radius:8px;background:#fff;box-shadow:var(--shadow)}
+  /* Header + Toolbar */
+  header.site{position:sticky;top:0;z-index:10;background:var(--accent);border-bottom:1px solid #b0b0b0;}
+  .head{max-width:1360px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:10px 16px;}
+  .toolbar{max-width:1360px;margin:8px auto 0;display:flex;align-items:center;gap:12px;padding:0 16px;justify-content:space-between;}
+  .search-wrap{position:relative;display:flex;align-items:center;flex:1 1 420px; max-width:720px;}
+  .search-wrap svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);pointer-events:none}
+  #search{width:100%;padding:10px 38px 10px 36px;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--text);}
+  #clearBtn{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:28px;height:28px;border:0;border-radius:50%;cursor:pointer;background:#f6f6f6;}
+  #clearBtn:hover{background:#eaeaea}
+  .cta{flex:0 0 auto;display:inline-flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;background:#fff;border:1px solid var(--border); text-decoration:none; color:var(--text);box-shadow:var(--shadow); transition:transform .15s, box-shadow .15s, background .15s;}
+  .cta:hover{transform:translateY(-1px); box-shadow:var(--shadowHover); background:#f9f9f9;}
+  .cta .plus{width:22px;height:22px;display:inline-block;background:#4f4f4f;border-radius:6px;
+    -webkit-mask:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"/></svg>') no-repeat center / contain;
+            mask:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"/></svg>') no-repeat center / contain;}
+  @media (max-width:480px){ .cta .txt{display:none;} }
 
-  /* Featured */
-  .featured-wrap{max-width:1360px;margin:14px auto 10px;padding:0 16px}
-  .featured-grid{display:grid;gap:16px;grid-template-columns:1fr}
-  @media(min-width:768px){ .featured-grid{grid-template-columns:repeat(3,1fr)} }
+  /* Featured + Grid */
+  .featured-wrap{max-width:1360px;margin:14px auto 10px;padding:0 16px;}
+  .featured-grid{display:grid;gap:16px;grid-template-columns:1fr;}
+  @media(min-width:768px){ .featured-grid{grid-template-columns:repeat(3,1fr);} }
 
-  /* Cards Grid */
-  .grid{display:grid;gap:16px}
-  @media(min-width:640px){.grid{grid-template-columns:repeat(auto-fill,minmax(220px,1fr));max-width:1360px;margin:14px auto 20px;padding:0 16px}}
-  @media(max-width:639px){.grid{grid-template-columns:repeat(2,1fr);margin:12px}}
+  .grid{display:grid;gap:16px;}
+  @media(min-width:640px){.grid{grid-template-columns:repeat(auto-fill,minmax(220px,1fr));max-width:1360px;margin:14px auto 20px;padding:0 16px;}}
+  @media(max-width:639px){.grid{grid-template-columns:repeat(2,1fr);margin:12px;}}
 
-  /* Card */
-  .card{background:var(--card);border-radius:var(--radius);overflow:hidden;text-decoration:none;color:inherit;box-shadow:var(--shadow);transition:transform .2s,box-shadow .2s;display:grid;grid-template-rows:auto auto;min-height:220px;position:relative}
-  .card:hover{transform:translateY(-2px);box-shadow:var(--shadowHover)}
-  .icon-wrap{display:flex;align-items:center;justify-content:center;background:var(--cat-color, #fff);overflow:hidden;aspect-ratio:16/9;padding:12px}
-  .icon{width:100%;height:100%;object-fit:contain}
-  .content{background:#fff;padding:12px 14px}
-  .title{font-weight:700}
-  .muted{color:var(--muted)}
-  .card.featured{min-height:300px}
-  .card.featured .star{position:absolute;top:8px;right:8px;width:28px;height:28px;background:#FFD700; -webkit-mask:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 .587l3.668 7.429L24 9.753l-6 5.847L19.335 24 12 19.897 4.665 24 6 15.6 0 9.753l8.332-1.737z"/></svg>') no-repeat center; -webkit-mask-size:contain; mask:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 .587l3.668 7.429L24 9.753l-6 5.847L19.335 24 12 19.897 4.665 24 6 15.6 0 9.753l8.332-1.737z"/></svg>') no-repeat center; mask-size:contain}
-
-  /* Admin Panel (optional, nur mit #admin sichtbar) */
-  .page{max-width:1040px;margin:16px auto;padding:0 16px}
-  .admin{display:none}
-  .admin .card{padding:16px}
-  .row{display:grid;gap:12px;grid-template-columns:1fr 1fr}
-  input, select{width:100%;padding:10px 12px;border:1px solid #d0d0d0;border-radius:10px;background:#fff}
-  button{padding:10px 14px;border:0;border-radius:10px;background:#222;color:#fff;cursor:pointer}
-  .help{font-size:.9rem;color:var(--muted)}
-
-  /* Footer */
-  footer{position:fixed;bottom:0;left:0;width:100%;height:40px;background:var(--accent);color:#595959;border-top:1px solid #b0b0b0;font-size:.9rem}
+  .card{background:var(--card);border-radius:var(--radius);overflow:hidden;text-decoration:none;color:inherit;box-shadow:var(--shadow);transition:transform .2s, box-shadow .2s;display:grid;grid-template-rows:auto auto;min-height:260px;position:relative;border:1px solid var(--border);}
+  .card:hover{transform:translateY(-2px);box-shadow:var(--shadowHover);}
+  .icon-wrap{display:flex;align-items:center;justify-content:center;background:var(--cat-color, #fff);overflow:hidden;aspect-ratio:16/9;padding:12px;}
+  .icon{width:100%;height:100%;object-fit:contain;}
+  .content{background:#fff;padding:12px 14px;}
+  .title{font-weight:700;}
+  .muted{color:var(--muted);}
+  .badge{display:inline-block; background:var(--badge); border:1px solid var(--border); border-radius:999px; padding:2px 8px; font-size:.82rem; margin-right:6px}
+  .badges{margin-top:6px}
+  .card.featured{min-height:320px;}
+  .card.featured .title{font-size:1.05rem;}
+  .card.featured .star{position:absolute; top:8px; right:8px; width:28px; height:28px; background:#FFD700;
+    -webkit-mask:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 .587l3.668 7.429L24 9.753l-6 5.847L19.335 24 12 19.897 4.665 24 6 15.6 0 9.753l8.332-1.737z"/></svg>') no-repeat center; -webkit-mask-size:contain;
+            mask:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 .587l3.668 7.429L24 9.753l-6 5.847L19.335 24 12 19.897 4.665 24 6 15.6 0 9.753l8.332-1.737z"/></svg>') no-repeat center; mask-size:contain;}
+  .footer{position:fixed;bottom:0;left:0;width:100%;height:40px;background:var(--accent);color:#595959;border-top:1px solid #b0b0b0;font-size:.9rem}
   .footer-inner{max-width:1360px;margin:0 auto;height:100%;display:flex;justify-content:center;align-items:center;padding:0 12px}
 </style>
 </head>
 <body>
 <header class="site">
   <div class="head">
-    <a href="#" aria-label="Zur Startseite von Ortenau liefert">
-      <img src="header.png" alt="Ortenau liefert Logo" height="48">
+    <a href="index.html" aria-label="Zur Startseite von Ortenau liefert">
+      <img src="header.png" alt="Ortenau liefert Logo" height="68">
     </a>
-    <div class="search-wrap" role="search">
-      <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 14h-.79l-.28-.27a6.471 6.471 0 0 0 1.57-4.23C16 6.01 13.99 4 11.5 4S7 6.01 7 9.5 9.01 15 11.5 15c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l4.25 4.25c.41.41 1.08.41 1.49 0 .41-.41.41-1.08 0-1.49L15.5 14zm-4 0C9.01 14 7 11.99 7 9.5S9.01 5 11.5 5 16 7.01 16 9.5 13.99 14 11.5 14z"/></svg>
-      <input id="search" type="search" placeholder="Suche…" aria-label="Suche">
-    </div>
-    <a class="admin-link" href="#admin" title="Admin">Admin</a>
+    <h1 class="visually-hidden">Ortenau liefert – Lokale Angebote</h1>
   </div>
 </header>
+
+<div class="toolbar">
+  <div class="search-wrap" role="search">
+    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="#9a9a9a" d="M15.5 14h-.79l-.28-.27a6.471 6.471 0 0 0 1.57-4.23C16 6.01 13.99 4 11.5 4S7 6.01 7 9.5 9.01 15 11.5 15c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l4.25 4.25c.41.41 1.08.41 1.49 0 .41-.41.41-1.08 0-1.49L15.5 14zm-4 0C9.01 14 7 11.99 7 9.5S9.01 5 11.5 5 16 7.01 16 9.5 13.99 14 11.5 14z"/></svg>
+    <input id="search" type="search" placeholder="Suche z. B. „Pizzeria Offenburg“" aria-label="Suche">
+    <button id="clearBtn" type="button" aria-label="Suche leeren">×</button>
+  </div>
+
+  <a class="cta" href="admin.html">
+    <span class="plus" aria-hidden="true"></span>
+    <span class="txt">Eintrag hinzufügen</span>
+  </a>
+</div>
 
 <main>
   <section class="featured-wrap" aria-labelledby="top-today">
@@ -75,101 +88,148 @@
   </section>
 
   <div class="grid" id="cardGrid"></div>
-
-  <!-- Admin-Panel: erscheint, wenn URL-Hash #admin ist -->
-  <section class="page admin" id="adminPanel">
-    <div class="card">
-      <h2 style="margin-top:0">Eintrag hinzufügen</h2>
-      <div class="row">
-        <div>
-          <label for="titel"><b>Titel</b></label>
-          <input id="titel" placeholder="z. B. Bella Pizza · Achern">
-        </div>
-        <div>
-          <label for="url"><b>URL</b></label>
-          <input id="url" placeholder="bella-pizza.html">
-        </div>
-      </div>
-      <div class="row">
-        <div>
-          <label for="kat"><b>Kategorie</b></label>
-          <select id="kat">
-            <option value="restaurant">Restaurant</option>
-            <option value="doener">Döner</option>
-            <option value="pizza">Pizza</option>
-            <option value="pizzeria">Pizzeria</option>
-          </select>
-        </div>
-        <div>
-          <label for="stadt"><b>Ort (optional)</b></label>
-          <input id="stadt" placeholder="Offenburg">
-        </div>
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
-        <button id="saveBtn">Speichern</button>
-        <button id="clearBtn" style="background:#8b0000">Alle löschen</button>
-        <span class="help">Daten werden im <code>localStorage</code> deines Browsers gespeichert.</span>
-      </div>
-    </div>
-  </section>
 </main>
 
-<footer><div class="footer-inner">© Ortenau liefert</div></footer>
+<footer class="footer"><div class="footer-inner">© <span id="jahr"></span> Ortenau liefert</div></footer>
 
-<script>
-const CAT_COLORS = { doener:"#CC5F34", restaurant:"#6A865F", pizza:"#FDF1DF", pizzeria:"#FDF1DF" };
-
-async function loadEntries(){
-  const r = await fetch("/api/entries");
-  const items = await r.json();
-  render(items);
-}
-
-function label(cat){
-  if(cat==='doener') return 'Döner';
-  if(cat==='pizzeria'||cat==='pizza') return 'Pizza';
-  return 'Restaurant';
-}
-
-function card(item, featured=false){
-  const a = document.createElement('a');
-  a.className = 'card' + (featured?' featured':'');
-  a.href = item.url || "#";
-  if(item.url) { a.target="_blank"; a.rel="noopener"; }
-  a.style.setProperty('--cat-color', CAT_COLORS[item.kategorie]||'#fff');
-  a.innerHTML = `
-    ${featured ? '<span class="star"></span>' : ''}
+<template id="cardTpl">
+  <a class="card" href="#" data-category="" target="_blank" rel="noopener">
+    <span class="star"></span>
     <div class="icon-wrap">
-      <img class="icon" src="icons/${item.kategorie||'restaurant'}.png" alt="" width="96" height="96" loading="lazy" decoding="async">
+      <img class="icon" alt="" width="96" height="96" loading="lazy" decoding="async">
     </div>
     <div class="content">
-      <b class="title">${(item.titel||'Ohne Titel')}</b><br>
-      <span class="muted tag">${label(item.kategorie||'')}</span>
-    </div>`;
-  return a;
-}
+      <b class="title"></b><br>
+      <span class="muted tag"></span>
+      <div class="badges"></div>
+    </div>
+  </a>
+</template>
 
-function render(items){
-  const featured = document.getElementById('featuredGrid') || document.createElement('div');
-  const grid = document.getElementById('cardGrid') || document.body;
-  featured.innerHTML = ''; grid.innerHTML = '';
-  if(!items.length){
-    grid.insertAdjacentHTML('beforeend','<p class="muted" style="grid-column:1/-1;text-align:center;padding:16px">Noch keine Einträge.</p>');
-    return;
+<script>
+  // Jahr in Footer
+  document.getElementById("jahr").textContent = new Date().getFullYear();
+
+  // Kategorie-Farben
+  const CAT_COLORS = {
+    doener:"#CC5F34", restaurant:"#6A865F", pizza:"#FDF1DF", pizzeria:"#FDF1DF",
+    cafe:"#E6F7FF", imbiss:"#FFF3E0", "bäckerei":"#FFF8E1"
+  };
+
+  // Hilfsfunktionen
+  const $ = s => document.querySelector(s);
+  function normalize(s){
+    try { return s.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu,''); }
+    catch { return (s||'').toLowerCase(); }
   }
-  items.slice(0,3).forEach(i => featured.appendChild(card(i, true)));
-  items.slice(3).forEach(i => grid.appendChild(card(i, false)));
-}
+  function pickUrl(item){
+    return item.url || item?.web?.website || item?.web?.speisekarte || "#";
+  }
+  function buildTooltip(item){
+    const p = [];
+    if (item?.info?.oeffnungszeiten) p.push("Öffnungszeiten: " + item.info.oeffnungszeiten);
+    if (item?.info?.schliesstage)   p.push("Hinweis: " + item.info.schliesstage);
+    if (item?.beschreibung)         p.push(item.beschreibung);
+    return p.join(" · ");
+  }
 
-// simple Suchfunktion (optional)
-document.getElementById('search')?.addEventListener('input', (e)=>{
-  const q = e.target.value.trim().toLowerCase();
-  document.querySelectorAll('.card').forEach(c=>{
-    c.style.display = (q==='' || c.textContent.toLowerCase().includes(q)) ? '' : 'none';
-  });
-});
+  // Render Cards
+  function render(items){
+    const featuredWrap = $("#featuredGrid");
+    const grid = $("#cardGrid");
+    const tpl = $("#cardTpl");
 
-loadEntries();
+    featuredWrap.innerHTML = "";
+    grid.innerHTML = "";
+
+    if (!items.length){
+      const p = document.createElement("p");
+      p.className = "muted";
+      p.style.textAlign="center"; p.style.padding="16px";
+      p.textContent = "Noch keine Einträge. Lege den ersten in der Admin-Seite an.";
+      grid.appendChild(p);
+      return;
+    }
+
+    // Featured zuerst, dann Rest alphabetisch
+    const list = [...items].sort((a,b)=>{
+      const fa = !!(a.optionen && a.optionen.featured), fb = !!(b.optionen && b.optionen.featured);
+      if (fa!==fb) return fa? -1 : 1;
+      return (a.titel||"").localeCompare(b.titel||"");
+    });
+
+    list.forEach((place, idx)=>{
+      const node = tpl.content.cloneNode(true);
+      const card = node.querySelector(".card");
+      const color = CAT_COLORS[place.kategorie] || "#ffffff";
+      card.style.setProperty("--cat-color", color);
+
+      const href = pickUrl(place);
+      card.href = href || "#";
+      if (href==="#") { card.removeAttribute("target"); card.removeAttribute("rel"); }
+
+      // featured?
+      const isFeatured = !!(place.optionen && place.optionen.featured);
+      if (isFeatured) {
+        card.classList.add("featured");
+      } else {
+        node.querySelector(".star").remove();
+      }
+
+      // Bild/Icon
+      const img = node.querySelector(".icon");
+      const label = place.kategorie ? place.kategorie.charAt(0).toUpperCase()+place.kategorie.slice(1) : "Restaurant";
+      img.src = `icons/${place.kategorie||"restaurant"}.png`;
+      img.alt = `${label}-Icon`;
+
+      // Titel & Tag
+      const title = node.querySelector(".title");
+      const tag = node.querySelector(".tag");
+      const ort = place.stadt || place?.adresse?.stadt || "";
+      title.textContent = ort ? `${place.titel} · ${ort}` : place.titel;
+      tag.textContent = label;
+
+      // Badges
+      const badges = node.querySelector(".badges");
+      const have = [];
+      if (place?.optionen?.abholung) have.push("Abholung");
+      if (place?.optionen?.lieferung) have.push("Lieferung");
+      if (place?.info?.preisklasse) have.push(place.info.preisklasse);
+      if (have.length) {
+        badges.innerHTML = have.map(t=>`<span class="badge">${t}</span>`).join("");
+      }
+
+      // Tooltip mit Öffnungszeiten / Hinweis / Kurzbeschreibung
+      const tip = buildTooltip(place);
+      if (tip) card.title = tip;
+
+      // Einhängen
+      (isFeatured ? featuredWrap : grid).appendChild(node);
+    });
+  }
+
+  // Daten holen + Suche
+  async function loadAndRender(){
+    const res = await fetch("/api/entries");
+    const all = await res.json();
+
+    const input = $("#search");
+    const clear = $("#clearBtn");
+
+    function apply(){
+      const q = normalize(input.value.trim());
+      const filtered = !q ? all : all.filter(item=>{
+        const hay = normalize(JSON.stringify(item));
+        return q.split(/\s+/).filter(Boolean).every(t=>hay.includes(t));
+      });
+      render(filtered);
+    }
+    input.oninput = apply;
+    clear.onclick = ()=>{ input.value=""; apply(); input.focus(); };
+    apply();
+  }
+
+  loadAndRender();
 </script>
 </body>
 </html>
