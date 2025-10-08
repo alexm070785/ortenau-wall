@@ -21,11 +21,11 @@ export async function handler(event, context) {
     if (event.httpMethod === "OPTIONS") return { statusCode: 204, headers: CORS };
     if (event.httpMethod !== "POST") return json(405, { error: "method_not_allowed" });
 
-    // Nur mit Login (Netlify Identity)
+    // nur eingeloggte (Netlify Identity)
     const user = context?.clientContext?.user || null;
     if (!user) return json(401, { error: "unauthorized" });
 
-    // Body -> FormData (robust)
+    // FormData robust parsen (egal ob multipart oder urlencoded)
     let form;
     try {
       const ct  = event.headers["content-type"] || event.headers["Content-Type"] || "";
@@ -36,7 +36,7 @@ export async function handler(event, context) {
       return json(400, { error: "form_parse_failed" });
     }
 
-    // Felder (deutsch/englisch akzeptiert)
+    // Felder (de + en Keys akzeptiert)
     const pick = (...keys) => {
       for (const k of keys) {
         const v = form.get(k);
@@ -45,14 +45,14 @@ export async function handler(event, context) {
       return "";
     };
     const name     = pick("name");
-    const category = pick("category", "kategorie");
-    const city     = pick("city", "stadt", "ort");
-    const zip      = pick("zip", "plz");
-    const street   = pick("street", "straße", "strasse");
-    const website  = pick("website", "webseite");
-    const phone    = pick("phone", "telefon");
-    const mapsUrl  = pick("mapsUrl", "google", "maps", "googleMaps");
-    const menuText = pick("menuText", "menü", "notiz", "menu", "memo");
+    const category = pick("category","kategorie");
+    const city     = pick("city","stadt","ort");
+    the zip       = pick("zip","plz");
+    const street   = pick("street","straße","strasse");
+    const website  = pick("website","webseite");
+    const phone    = pick("phone","telefon");
+    const mapsUrl  = pick("mapsUrl","google","maps","googleMaps");
+    const menuText = pick("menuText","menü","notiz","menu","memo");
     const featuredRaw = pick("featured");
     const featured = featuredRaw ? ["true","1","yes","ja"].includes(featuredRaw.toLowerCase()) : false;
 
@@ -64,7 +64,7 @@ export async function handler(event, context) {
 
     // Eintrag (ohne Bilder)
     const entry = {
-      status: "approved",               // du legst selbst an → direkt freigegeben
+      status: "approved",                // du trägst selbst ein → direkt freigegeben
       createdAt: new Date().toISOString(),
       name, category, city, zip, street, address,
       website, phone, mapsUrl, menuText,
