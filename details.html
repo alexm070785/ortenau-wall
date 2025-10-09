@@ -28,7 +28,8 @@
   @media (max-width:560px){ .kv{grid-template-columns:1fr} .kv div:first-child{font-weight:600} }
   .links a{display:inline-flex;align-items:center;justify-content:center;min-height:var(--tap);margin:6px 6px 0 0;text-decoration:none;border:1px solid var(--border);border-radius:999px;padding:8px 12px;background:#fff}
   .hero{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
-  .hero img{width:140px;height:140px;object-fit:cover;border-radius:12px;border:1px solid var(--border)}
+  .emoji-hero{font-size:64px;line-height:1;display:flex;align-items:center;justify-content:center;width:120px;height:120px;border-radius:16px;border:1px solid var(--border);background:#fff}
+  @media (max-width:480px){ .emoji-hero{font-size:56px;width:100px;height:100px} }
   .cta-bar{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
   .cta-bar a{display:inline-flex;align-items:center;justify-content:center;min-height:var(--tap);padding:10px 14px;border-radius:12px;text-decoration:none;border:1px solid var(--border);background:#fff}
 
@@ -39,7 +40,7 @@
   .menu-body{margin-top:10px}
   .menu-item{background:#fff;border:1px solid #eee;border-radius:10px;padding:8px 10px;margin-bottom:6px}
   .menu-head{font-weight:700;margin:10px 0 6px}
-  .menu-text{white-space:pre-wrap}
+  .menu-text{white-space:pre-wrap;font-family:var(--mono)}
   .note{font-size:.95rem;color:var(--muted);margin-top:8px}
 </style>
 </head>
@@ -54,7 +55,7 @@
 <main>
   <article class="card" id="detail">
     <div class="hero">
-      <img id="bild" alt="" src="icons/restaurant.png" loading="eager" decoding="async">
+      <div id="emoji" class="emoji-hero" aria-hidden="true">🍽️</div>
       <div>
         <h1 id="titel">Lokal</h1>
         <div id="kategorie" class="badge">Kategorie</div>
@@ -102,20 +103,30 @@
 
 <script>
 function getParam(name){ const u = new URL(location.href); return u.searchParams.get(name); }
-function textOrDash(v){ return v && String(v).trim() ? v : ""; }
-function esc(s){ return (s||'').replace(/[&<>\"']/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[m])); }
+function textOrEmpty(v){ return v && String(v).trim() ? v : ""; }
+function esc(s){ return (s||'').replace(/[&<>\"']/g, m=>({"&":"&amp;","<":"&lt;"," >":"&gt;","\"":"&quot;"}[m] || m)); }
 function telLink(num){ const n=(num||"").replace(/\s+/g,''); return n ? `tel:${encodeURIComponent(n)}` : ""; }
 function mailLink(m){ return m ? `mailto:${encodeURIComponent(m)}` : ""; }
 
-// Parser: teilt Speisekarten-Text in Blöcke (Abschnitts-Überschriften + Items)
+function catEmoji(cat){
+  const c = (cat||'').toLowerCase();
+  if (c.includes('doener') || c.includes('döner') || c.includes('kebab')) return '🥙';
+  if (c.includes('salat')) return '🥗';
+  if (c.includes('pizza') || c.includes('pizzeria')) return '🍕';
+  if (c.includes('getränk') || c.includes('drinks') || c.includes('trinken')) return '🥤';
+  if (c.includes('cafe') || c.includes('café')) return '☕️';
+  return '🍽️';
+}
+
+// Speisekarte zu Blöcken
 function renderMenuBlocks(raw){
   const body = document.getElementById('menuBody');
   body.innerHTML = '';
   if(!raw || !raw.trim()){ document.getElementById('sec-menu').style.display = 'none'; return; }
 
   const lines = raw.replace(/\r\n/g,"\n").split("\n");
-  const headRe = /^[\u{1F300}-\u{1FAFF}]/u; // Emoji am Anfang → Abschnitt
-  let curHead = null;
+  const headRe = /^[\u{1F300}-\u{1FAFF}]/u;
+  let buffer = [], haveAny = false;
 
   function addHead(t){
     const h = document.createElement('div');
@@ -128,36 +139,22 @@ function renderMenuBlocks(raw){
     d.className = 'menu-item';
     d.innerHTML = `<div class="menu-text">${esc(text)}</div>`;
     body.appendChild(d);
+    haveAny = true;
   }
-
-  let buffer = [];
-  function flushBuffer(){
-    const txt = buffer.join("\n").trim();
-    if (txt) addItem(txt);
-    buffer = [];
-  }
+  function flush(){ const t = buffer.join("\n").trim(); if(t) addItem(t); buffer = []; }
 
   for(let i=0;i<lines.length;i++){
     const l = lines[i].trim();
-    if(!l){ flushBuffer(); continue; }
+    if(!l){ flush(); continue; }
     const isHead = headRe.test(l) || (!/[0-9€]/.test(l) && l.length < 60 && buffer.length===0);
-    if(isHead){
-      flushBuffer();
-      curHead = l;
-      addHead(curHead);
-    } else {
-      buffer.push(l);
-      // wenn die nächste Zeile ein Preis ist, gleich zusammen halten
-      const nx = lines[i+1]?.trim() || "";
-      const looksPrice = /€|\d,\d{2}/.test(nx);
-      if(looksPrice){ buffer.push(nx); i++; }
-      flushBuffer();
-    }
+    if(isHead){ flush(); addHead(l); continue; }
+    const nx = lines[i+1]?.trim() || "";
+    const looksPrice = /€|\d,\d{2}/.test(nx);
+    if(!/€|\d,\d{2}/.test(l) && looksPrice){ buffer.push(l); buffer.push(nx); i++; flush(); }
+    else { buffer.push(l); flush(); }
   }
-  flushBuffer();
-
-  // Preis-Hinweis einblenden (immer)
-  document.getElementById('priceNote').style.display = 'block';
+  flush();
+  if (haveAny) document.getElementById('priceNote').style.display = 'block';
 }
 
 (async function(){
@@ -171,80 +168,9 @@ function renderMenuBlocks(raw){
   if (!item && q) item = data.find(x => (x.titel||'').toLowerCase().includes(q.toLowerCase()));
   if (!item) { document.getElementById('detail').innerHTML = '<p class="muted">Eintrag nicht gefunden.</p>'; return; }
 
-  // Kopf
+  // Emoji-Hero
+  document.getElementById('emoji').textContent = catEmoji(item.kategorie);
+
   const ort = item.stadt || item?.adresse?.stadt || '';
-  const catRaw = (item.kategorie||'').toLowerCase();
-  let catLabel = catRaw;
-  if (catRaw.includes('doener') || catRaw.includes('döner') || catRaw.includes('kebab')) catLabel = 'Döner/Kebab';
-  else if (catRaw.includes('pizza')) catLabel = 'Pizza/Pizzeria';
-  else if (!catLabel) catLabel = 'Restaurant';
-
-  document.getElementById('titel').textContent = item.titel || 'Ohne Titel';
-  document.getElementById('kategorie').textContent = catLabel;
-  document.getElementById('ort').textContent = ort || '';
-
-  const img = document.getElementById('bild');
-  img.src = item.bild || `icons/${item.kategorie||'restaurant'}.png`;
-  img.alt = (item.titel||'') + ' Bild';
-
-  // Badges
-  const badges = [];
-  if (item?.optionen?.abholung) badges.push('Abholung');
-  if (item?.optionen?.lieferung) badges.push('Lieferung');
-  if (item?.info?.preisklasse) badges.push(item.info.preisklasse);
-  document.getElementById('badges').innerHTML = badges.map(t=>`<span class="badge">${esc(t)}</span>`).join('');
-
-  // Öffnungszeiten/Schließtage (ausblenden wenn leer)
-  const hasHours = !!(item?.info?.oeffnungszeiten && item.info.oeffnungszeiten.trim());
-  const hasClosed = !!(item?.info?.schliesstage && item.info.schliesstage.trim());
-  if (!hasHours && !hasClosed) document.getElementById('sec-hours').style.display = 'none';
-  else {
-    document.getElementById('oeffnungszeiten').textContent = textOrDash(item?.info?.oeffnungszeiten) || '–';
-    document.getElementById('schliesstage').textContent   = textOrDash(item?.info?.schliesstage) || '–';
-  }
-
-  // Kontakt (nur vorhandenes zeigen)
-  const adr = item?.adresse || {};
-  const adrStr = [adr.strasse, adr.plz, adr.stadt].filter(Boolean).join(', ');
-  const tel = item?.kontakt?.telefon || "";
-  const mail = item?.kontakt?.email || "";
-
-  let hasAnyContact = false;
-  const kv = document.getElementById('kv-contact');
-  if (adrStr) { document.getElementById('adresse').textContent = adrStr; hasAnyContact = true; } else { kv.children[0].style.display="none"; kv.children[1].style.display="none"; }
-  if (tel)    { document.getElementById('telefon').innerHTML = `<a href="${telLink(tel)}">${esc(tel)}</a>`; hasAnyContact = true; } else { kv.children[2].style.display="none"; kv.children[3].style.display="none"; }
-  if (mail)   { document.getElementById('email').innerHTML   = `<a href="${mailLink(mail)}">${esc(mail)}</a>`; hasAnyContact = true; } else { kv.children[4].style.display="none"; kv.children[5].style.display="none"; }
-  if (!hasAnyContact) document.getElementById('sec-contact').style.display = 'none';
-
-  // Beschreibung
-  if (item?.info?.beschreibung && item.info.beschreibung.trim()) {
-    document.getElementById('beschreibung').textContent = item.info.beschreibung;
-  } else {
-    document.getElementById('sec-desc').style.display = 'none';
-  }
-
-  // Links (nur vorhandenes)
-  const links = document.getElementById('links');
-  const out = [];
-  if (item.url) out.push(`<a href="${esc(item.url)}" target="_blank" rel="noopener">Bestellen / Seite</a>`);
-  if (item?.web?.website) out.push(`<a href="${esc(item.web.website)}" target="_blank" rel="noopener">Website</a>`);
-  if (item?.web?.speisekarte) out.push(`<a href="${esc(item.web.speisekarte)}" target="_blank" rel="noopener">Speisekarte (PDF)</a>`);
-  if (item?.web?.instagram) out.push(`<a href="${esc(item.web.instagram)}" target="_blank" rel="noopener">Instagram</a>`);
-  if (item?.web?.facebook) out.push(`<a href="${esc(item.web.facebook)}" target="_blank" rel="noopener">Facebook</a>`);
-  if (item?.web?.tiktok) out.push(`<a href="${esc(item.web.tiktok)}" target="_blank" rel="noopener">TikTok</a>`);
-  if (out.length) { links.innerHTML = out.join(' '); } else { document.getElementById('sec-links').style.display = 'none'; }
-
-  // Handy-CTA
-  const cta = document.getElementById('ctaBar');
-  const ctas = [];
-  if (tel) ctas.push(`<a href="${telLink(tel)}">📞 Anrufen</a>`);
-  if (mail) ctas.push(`<a href="${mailLink(mail)}">✉️ E-Mail</a>`);
-  if (item.url) ctas.push(`<a href="${esc(item.url)}" target="_blank" rel="noopener">🛒 Bestellen</a>`);
-  cta.innerHTML = ctas.join("");
-
-  // Speisekarte (kompakt, mit Item-Trenner)
-  renderMenuBlocks(item?.menu?.text || "");
-})();
-</script>
-</body>
-</html>
+  let catLabel = (item.kategorie||'').toLowerCase();
+  if (c
