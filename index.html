@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#e7e7e7">
 <title>Ortenau liefert · Lokale Angebote</title>
+
+<link rel="icon" href="favicon.png">
+<link rel="manifest" href="manifest.webmanifest">
+
 <style>
   :root{ --accent:#e7e7e7; --text:#333; --bg:#f6f6f6; --card:#fff; --muted:#70798C; --radius:12px; --shadow:0 4px 12px rgba(0,0,0,.08); --border:#d0d0d0; --tap:48px; }
   *{box-sizing:border-box}
@@ -35,6 +39,9 @@
   #search{width:100%;height:var(--tap);padding:0 46px 0 40px;border:1px solid var(--border);border-radius:12px;background:#fff;color:var(--text)}
   #clearBtn{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:36px;height:36px;border:0;border-radius:50%;cursor:pointer;background:#f6f6f6;font-size:1.2rem}
 
+  .install{height:var(--tap);padding:0 14px;border:1px solid var(--border);border-radius:12px;background:#fff;cursor:pointer;box-shadow:var(--shadow)}
+  @media (max-width:640px){ .install{width:100%;} }
+
   .list{max-width:900px;margin:0 auto 12px;padding:0 16px;display:flex;flex-direction:column;gap:10px}
   .item{display:grid;grid-template-columns:42px 1fr;gap:12px;align-items:center;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:10px 12px;text-decoration:none;color:inherit;box-shadow:var(--shadow)}
   .item:active{transform:scale(.99)}
@@ -42,7 +49,6 @@
   .meta{min-width:0}
   .name{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .sub{font-size:.95rem;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;margin-top:2px}
-  .status{font-weight:600}
   .badge{font-size:.85rem;border:1px solid #eee;background:#fafafa;border-radius:999px;padding:2px 8px}
 
   footer{position:fixed;bottom:0;left:0;width:100%;height:56px;background:var(--accent);color:#595959;border-top:1px solid #b0b0b0;font-size:.95rem}
@@ -77,6 +83,7 @@
     <input id="search" type="search" placeholder="Suche z. B. „Döner Offenburg“" aria-label="Suche" inputmode="search" autocomplete="off">
     <button id="clearBtn" type="button" aria-label="Suche leeren">×</button>
   </div>
+  <button id="installBtn" class="install" type="button" hidden>+ App installieren</button>
 </div>
 
 <main class="list" id="list"></main>
@@ -112,26 +119,6 @@ function catEmoji(cat){
 const $ = s => document.querySelector(s);
 function normalize(s){ try { return (s||'').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu,''); } catch { return (s||'').toLowerCase(); } }
 
-const DAYS = ['so','mo','di','mi','do','fr','sa'];
-function isOpenNow(text){
-  if(!text) return null;
-  const t = text.toLowerCase().replace(/\s+/g,' ');
-  const now = new Date();
-  const hh = now.getHours() + now.getMinutes()/60;
-  const reBlock = /((mo|di|mi|do|fr|sa|so)(?:\s*[–-]\s*(mo|di|mi|do|fr|sa|so))?)\s+(\d{1,2})(?::(\d{2}))?\s*[–-]\s*(\d{1,2})(?::(\d{2}))?/g;
-  let match, open = false, mentioned = false;
-  while ((match = reBlock.exec(t))){
-    mentioned = true;
-    const from = +match[4] + (match[5]? +match[5]/60 : 0);
-    const to   = +match[6] + (match[7]? +match[7]/60 : 0);
-    // vereinfachte Tagesprüfung: wenn irgendein Block passt, reicht uns das
-    if (from <= to) open = open || (hh>=from && hh<=to);
-    else open = open || (hh>=from || hh<=to);
-  }
-  if(!mentioned && t.includes('geschlossen')) return false;
-  return mentioned ? open : null;
-}
-
 function render(items){
   const el = $("#list");
   el.innerHTML = "";
@@ -162,11 +149,6 @@ function render(items){
     const sub = document.createElement('div');
     sub.className = 'sub';
     const city = item.stadt || item?.adresse?.stadt || '';
-    const status = isOpenNow(item?.info?.oeffnungszeiten);
-    let statusText = '';
-    if (status === true) statusText = 'Jetzt geöffnet';
-    else if (status === false) statusText = 'Geschlossen';
-    else statusText = 'Öffnungszeiten siehe Details';
 
     // Kategorie-Label vereinheitlicht
     const rawCat = (item.kategorie||'').toLowerCase();
@@ -175,10 +157,10 @@ function render(items){
     else if (rawCat.includes('pizza')) catLabel = 'Pizza/Pizzeria';
     else if (!catLabel) catLabel = 'Restaurant';
 
+    // KEIN Öffnungszeit-Text mehr, nur City + Kategorie
     sub.innerHTML = `
-      <span>${city? city : ''}</span>
+      <span>${city ? city : ''}</span>
       <span class="badge">${catLabel}</span>
-      <span class="status">${statusText}</span>
     `;
 
     meta.appendChild(name);
@@ -208,6 +190,30 @@ async function loadAndRender(){
   clear.onclick = ()=>{ input.value=""; apply(); input.focus(); };
   apply();
 }
+
+/* PWA: Installier-Button + Service Worker */
+let deferredPrompt = null;
+const installBtn = document.getElementById('installBtn');
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  installBtn.hidden = false;
+});
+
+installBtn?.addEventListener('click', async () => {
+  if (!deferredPrompt) return;
+  installBtn.disabled = true;
+  deferredPrompt.prompt();
+  await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  installBtn.hidden = true;
+});
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(()=>{});
+}
+
 loadAndRender();
 </script>
 </body>
