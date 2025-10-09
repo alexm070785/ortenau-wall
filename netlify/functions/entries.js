@@ -1,6 +1,6 @@
 // /netlify/functions/entries.js
 // CommonJS – robust gegenüber SDK-Unterschieden von @netlify/blobs,
-// speichert kompletter Payload, vergibt id, unterstützt GET/POST/PUT/DELETE.
+// speichert kompletten Payload, vergibt id, unterstützt GET/POST/PUT/DELETE.
 
 const blobs = require("@netlify/blobs");
 const { NETLIFY_SITE_ID: SITE_ID, NETLIFY_AUTH_TOKEN: AUTH_TOKEN } = process.env;
@@ -111,8 +111,24 @@ exports.handler = async (event) => {
 
     if (event.httpMethod === "DELETE") {
       if (!requireAdmin(event)) return bad(401, "Unauthorized");
-      await store.set(KEY, JSON.stringify([]));
-      return ok([]);
+
+      const idFromQS = event.queryStringParameters && event.queryStringParameters.id;
+      let idFromBody = null;
+      try { idFromBody = JSON.parse(event.body||"{}").id; } catch {}
+
+      const id = idFromQS || idFromBody;
+
+      const raw = await store.get(KEY);
+      const arr = raw ? JSON.parse(raw) : [];
+
+      if (id) {
+        const next = arr.filter(e => e.id !== id);
+        await store.set(KEY, JSON.stringify(next));
+        return ok(next);
+      } else {
+        await store.set(KEY, JSON.stringify([]));
+        return ok([]);
+      }
     }
 
     return bad(405, "Method Not Allowed");
