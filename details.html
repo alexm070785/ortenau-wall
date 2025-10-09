@@ -217,24 +217,35 @@ function renderMenuBlocks(raw){
   document.getElementById('schliesstage').textContent   = shut || '–';
   if(!open && !shut) document.getElementById('sec-hours').style.display='none';
 
-  /* Kontakt & Adresse */
-  const adr = [
-    textOrEmpty(item?.adresse?.strasse),
-    [ textOrEmpty(item?.adresse?.plz), textOrEmpty(item?.adresse?.stadt || item?.stadt) ].filter(Boolean).join(' ')
-  ].filter(Boolean).join(', ');
+    /* Kontakt & Adresse */
+  // Helfer: entfernt "Label + Wert"-Paar aus der 2-Spalten-Grid
+  function removePair(valueEl){
+    const label = valueEl?.previousElementSibling;
+    if (label) label.remove();
+    if (valueEl) valueEl.remove();
+  }
+
+  const adrStrasse = textOrEmpty(item?.adresse?.strasse);
+  const adrPlz     = textOrEmpty(item?.adresse?.plz);
+  const adrStadt   = textOrEmpty(item?.adresse?.stadt || item?.stadt);
+  const adr = [ adrStrasse, [adrPlz, adrStadt].filter(Boolean).join(' ') ].filter(Boolean).join(', ');
+
   const tel  = textOrEmpty(item?.kontakt?.telefon);
   const mail = textOrEmpty(item?.kontakt?.email);
 
+  const $kv  = document.getElementById('kv-contact');
   const $adr = document.getElementById('adresse');
   const $tel = document.getElementById('telefon');
   const $eml = document.getElementById('email');
 
-  if (adr) $adr.textContent = adr; else $adr.parentElement.previousElementSibling.remove(); $adr.parentElement.remove();
-  if (tel) $tel.innerHTML = `<a href="${telLink(tel)}">${esc(tel)}</a>`; else $tel.parentElement.previousElementSibling.remove(); $tel.parentElement.remove();
-  if (mail) $eml.innerHTML = `<a href="${mailLink(mail)}">${esc(mail)}</a>`; else $eml.parentElement.previousElementSibling.remove(); $eml.parentElement.remove();
+  if (adr) { $adr.textContent = adr; } else { removePair($adr); }
+  if (tel) { $tel.innerHTML   = `<a href="${telLink(tel)}">${esc(tel)}</a>`; } else { removePair($tel); }
+  if (mail){ $eml.innerHTML   = `<a href="${mailLink(mail)}">${esc(mail)}</a>`; } else { removePair($eml); }
 
-  // Wenn gar nichts übrig ist → Sektion verbergen
-  if (!adr && !tel && !mail) document.getElementById('sec-contact').style.display='none';
+  // Wenn gar nichts übrig ist → komplette Sektion verstecken
+  if ($kv.querySelectorAll('div').length === 0) {
+    document.getElementById('sec-contact').style.display='none';
+  }
 
   /* Beschreibung */
   const desc = textOrEmpty(item?.info?.beschreibung);
