@@ -36,16 +36,19 @@
   .cta-bar{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
   .cta-bar a{display:inline-flex;align-items:center;justify-content:center;min-height:var(--tap);padding:10px 14px;border-radius:12px;text-decoration:none;border:1px solid var(--border);background:#fff}
 
-  /* Social Icons */
+  /* Social Icons mit Markenfarben */
   .social-links{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
   .social-icon{
     display:inline-flex;align-items:center;justify-content:center;
-    width:42px;height:42px;background:#fff;border:1px solid var(--border);
-    border-radius:12px;box-shadow:var(--shadow);color:#333;text-decoration:none;
-    transition:background .2s, transform .15s
+    width:42px;height:42px;border-radius:12px;box-shadow:var(--shadow);
+    color:#fff;text-decoration:none;transition:transform .15s;
   }
-  .social-icon:hover{background:#f3f3f3;transform:scale(1.05)}
+  .social-icon:hover{transform:scale(1.05)}
   .social-icon svg{width:22px;height:22px;display:block}
+  .social-facebook{background:#1877F2;}
+  .social-instagram{background:radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%);}
+  .social-tiktok{background:#010101;}
+  .social-website{background:#555;}
 
   /* Speisekarte kompakt */
   details.menu{margin-top:14px}
@@ -101,7 +104,6 @@
       <div id="beschreibung">–</div>
     </section>
 
-    <!-- SPEISEKARTE -->
     <details class="menu section" id="sec-menu">
       <summary>🍽️ Speisekarte anzeigen / ausblenden</summary>
       <div class="menu-body" id="menuBody"></div>
@@ -120,7 +122,7 @@
 <script>
 function getParam(name){ const u = new URL(location.href); return u.searchParams.get(name); }
 function textOrEmpty(v){ return v && String(v).trim() ? v.trim() : ""; }
-function esc(s){ return (s||"").replace(/[&<>"]/g, m => ({ "&":"&amp;","<":"&lt;",">":"&gt;", "\"":"&quot;" }[m])); }
+function esc(s){ return (s||"").replace(/[&<>"]/g, m => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;" }[m])); }
 function telLink(num){ const n=(num||"").replace(/\s+/g,''); return n ? `tel:${encodeURIComponent(n)}` : ""; }
 function mailLink(m){ return m ? `mailto:${encodeURIComponent(m)}` : ""; }
 
@@ -134,205 +136,122 @@ function catEmoji(cat){
   return '🍽️';
 }
 
-/* Speisekarte-Renderer mit Bullet-Fix */
 function renderMenuBlocks(raw){
-  const $sec  = document.getElementById('sec-menu');
-  const body  = document.getElementById('menuBody');
-  const note  = document.getElementById('priceNote');
-  body.innerHTML = '';
-  note.style.display = 'none';
-
-  if(!raw || !raw.trim()){ $sec.style.display = 'none'; return; }
-  $sec.style.display = '';
-
-  const lines  = raw.replace(/\r\n/g, "\n").split("\n");
-  const headRe = /^[\u{1F300}-\u{1FAFF}]/u;   // Emoji am Anfang = Überschrift
-  const bulletRe = /^\s*[-*•]\s+/;           // Bullet-Point
-  let buffer = [], haveAny = false;
-
-  function addHead(t){
-    const h = document.createElement('div');
-    h.className = 'menu-head';
-    h.textContent = t;
-    body.appendChild(h);
-  }
-  function addItem(text){
-    const d = document.createElement('div');
-    d.className = 'menu-item';
-    d.innerHTML = `<div class="menu-text">${esc(text)}</div>`;
-    body.appendChild(d);
-    haveAny = true;
-  }
-  function flush(){
-    const t = buffer.join("\n").trim();
-    if(t) addItem(t);
-    buffer = [];
-  }
-
+  const $sec=document.getElementById('sec-menu');
+  const body=document.getElementById('menuBody');
+  const note=document.getElementById('priceNote');
+  body.innerHTML=''; note.style.display='none';
+  if(!raw||!raw.trim()){ $sec.style.display='none'; return;}
+  $sec.style.display='';
+  const lines=raw.replace(/\r\n/g,"\n").split("\n");
+  const headRe=/^[\u{1F300}-\u{1FAFF}]/u;
+  const bulletRe=/^\s*[-*•]\s+/;
+  let buffer=[],haveAny=false;
+  function addHead(t){const h=document.createElement('div');h.className='menu-head';h.textContent=t;body.appendChild(h);}
+  function addItem(text){const d=document.createElement('div');d.className='menu-item';d.innerHTML=`<div class="menu-text">${esc(text)}</div>`;body.appendChild(d);haveAny=true;}
+  function flush(){const t=buffer.join("\n").trim();if(t)addItem(t);buffer=[];}
   for(let i=0;i<lines.length;i++){
-    const rawLine = lines[i];
-    const l = rawLine.trim();
-    if(!l){ flush(); continue; }
-
-    // Bullet → immer Item
-    if (bulletRe.test(l)){
-      flush();
-      addItem(l.replace(bulletRe, ""));
-      continue;
-    }
-
-    // Überschrift?
-    const prev = (lines[i-1]||'').trim();
-    const isLikelyHead =
-      headRe.test(l) ||
-      (!/[0-9€]/.test(l) && l.length < 80 && !/^\d/.test(l) && (!prev || bulletRe.test(lines[i+1]||'')));
-
-    if (isLikelyHead){ flush(); addHead(l); continue; }
-
-    // Item + evtl. Preiszeile
-    const nx = (lines[i+1]||'').trim();
-    const looksPrice = /€|\d,\d{2}/.test(nx);
-    if(!/€|\d,\d{2}/.test(l) && looksPrice){
-      buffer.push(l); buffer.push(nx); i++; flush();
-    } else {
-      buffer.push(l); flush();
-    }
+    const l=lines[i].trim(); if(!l){flush();continue;}
+    if(bulletRe.test(l)){flush();addItem(l.replace(bulletRe,""));continue;}
+    const prev=(lines[i-1]||'').trim();
+    const isLikelyHead=headRe.test(l)||(!/[0-9€]/.test(l)&&l.length<80&&!/^\d/.test(l)&&(!prev||bulletRe.test(lines[i+1]||'')));
+    if(isLikelyHead){flush();addHead(l);continue;}
+    const nx=(lines[i+1]||'').trim();const looksPrice=/€|\d,\d{2}/.test(nx);
+    if(!/€|\d,\d{2}/.test(l)&&looksPrice){buffer.push(l);buffer.push(nx);i++;flush();}else{buffer.push(l);flush();}
   }
-
-  flush();
-  if (haveAny) note.style.display = 'block';
+  flush(); if(haveAny)note.style.display='block';
 }
 
-/* Hilfsfunktion: Label+Wert-Paar aus .kv entfernen */
 function removePair(valueEl){
-  const label = valueEl?.previousElementSibling;
-  if (label) label.remove();
-  if (valueEl) valueEl.remove();
+  const label=valueEl?.previousElementSibling;
+  if(label)label.remove(); if(valueEl)valueEl.remove();
 }
 
 (async function(){
-  const id = getParam('id');
-  const q  = getParam('q');
-  const res = await fetch('/api/entries', { cache:'no-store' });
-  const data = await res.json();
-
-  let item = null;
-  if (id) item = data.find(x => x.id === id);
-  if (!item && q) item = data.find(x => (x.titel||'').toLowerCase().includes(q.toLowerCase()));
-  if (!item) {
-    document.getElementById('detail').innerHTML = '<p class="muted">Eintrag nicht gefunden.</p>';
-    document.getElementById('sec-links').style.display = 'none';
-    return;
+  const id=getParam('id');
+  const q=getParam('q');
+  const res=await fetch('/api/entries',{cache:'no-store'});
+  const data=await res.json();
+  let item=null;
+  if(id)item=data.find(x=>x.id===id);
+  if(!item&&q)item=data.find(x=>(x.titel||'').toLowerCase().includes(q.toLowerCase()));
+  if(!item){
+    document.getElementById('detail').innerHTML='<p class="muted">Eintrag nicht gefunden.</p>';
+    document.getElementById('sec-links').style.display='none';return;
   }
 
-  // Emoji-Hero + Titel + Kategorie + Ort
-  document.getElementById('emoji').textContent = catEmoji(item.kategorie);
-  document.getElementById('titel').textContent = item.titel || 'Lokal';
+  document.getElementById('emoji').textContent=catEmoji(item.kategorie);
+  document.getElementById('titel').textContent=item.titel||'Lokal';
+  const rawCat=(item.kategorie||'').toLowerCase();
+  let catLabel=rawCat;
+  if(rawCat.includes('doener')||rawCat.includes('döner')||rawCat.includes('kebab'))catLabel='Döner/Kebab';
+  else if(rawCat.includes('pizza'))catLabel='Pizza/Pizzeria';
+  else if(!catLabel)catLabel='Restaurant';
+  document.getElementById('kategorie').textContent=catLabel;
 
-  // Kategorie-Label normalisieren
-  const rawCat = (item.kategorie||'').toLowerCase();
-  let catLabel = rawCat;
-  if (rawCat.includes('doener') || rawCat.includes('döner') || rawCat.includes('kebab')) catLabel = 'Döner/Kebab';
-  else if (rawCat.includes('pizza')) catLabel = 'Pizza/Pizzeria';
-  else if (!catLabel) catLabel = 'Restaurant';
-  document.getElementById('kategorie').textContent = catLabel;
+  const ort=item.stadt||item?.adresse?.stadt||'';
+  document.getElementById('ort').textContent=ort?ort:'';
 
-  const ort = item.stadt || item?.adresse?.stadt || '';
-  document.getElementById('ort').textContent = ort ? ort : '';
+  const $badges=document.getElementById('badges');
+  $badges.innerHTML='';
+  if(item?.optionen?.abholung){const b=document.createElement('span');b.className='badge';b.textContent='Abholung';$badges.appendChild(b);}
+  if(item?.optionen?.lieferung){const b=document.createElement('span');b.className='badge';b.textContent='Lieferung';$badges.appendChild(b);}
 
-  // Badges (Abholung/Lieferung)
-  const $badges = document.getElementById('badges');
-  $badges.innerHTML = '';
-  if (item?.optionen?.abholung){
-    const b = document.createElement('span'); b.className='badge'; b.textContent='Abholung'; $badges.appendChild(b);
-  }
-  if (item?.optionen?.lieferung){
-    const b = document.createElement('span'); b.className='badge'; b.textContent='Lieferung'; $badges.appendChild(b);
-  }
+  const open=textOrEmpty(item?.info?.oeffnungszeiten);
+  const shut=textOrEmpty(item?.info?.schliesstage);
+  document.getElementById('oeffnungszeiten').textContent=open||'–';
+  document.getElementById('schliesstage').textContent=shut||'–';
+  if(!open&&!shut)document.getElementById('sec-hours').style.display='none';
 
-  // Öffnungszeiten/Hinweise
-  const open = textOrEmpty(item?.info?.oeffnungszeiten);
-  const shut = textOrEmpty(item?.info?.schliesstage);
-  document.getElementById('oeffnungszeiten').textContent = open || '–';
-  document.getElementById('schliesstage').textContent   = shut || '–';
-  if(!open && !shut) document.getElementById('sec-hours').style.display='none';
+  const adrStrasse=textOrEmpty(item?.adresse?.strasse);
+  const adrPlz=textOrEmpty(item?.adresse?.plz);
+  const adrStadt=textOrEmpty(item?.adresse?.stadt||item?.stadt);
+  const adr=[adrStrasse,[adrPlz,adrStadt].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+  const tel=textOrEmpty(item?.kontakt?.telefon);
+  const mail=textOrEmpty(item?.kontakt?.email);
+  const $kv=document.getElementById('kv-contact');
+  const $adr=document.getElementById('adresse');
+  const $tel=document.getElementById('telefon');
+  const $eml=document.getElementById('email');
+  if(adr){$adr.textContent=adr;}else{removePair($adr);}
+  if(tel){$tel.innerHTML=`<a href="${telLink(tel)}">${esc(tel)}</a>`;}else{removePair($tel);}
+  if(mail){$eml.innerHTML=`<a href="${mailLink(mail)}">${esc(mail)}</a>`;}else{removePair($eml);}
+  if($kv.querySelectorAll('div').length===0){document.getElementById('sec-contact').style.display='none';}
 
-  // Kontakt & Adresse
-  const adrStrasse = textOrEmpty(item?.adresse?.strasse);
-  const adrPlz     = textOrEmpty(item?.adresse?.plz);
-  const adrStadt   = textOrEmpty(item?.adresse?.stadt || item?.stadt);
-  const adr = [ adrStrasse, [adrPlz, adrStadt].filter(Boolean).join(' ') ].filter(Boolean).join(', ');
-  const tel  = textOrEmpty(item?.kontakt?.telefon);
-  const mail = textOrEmpty(item?.kontakt?.email);
-
-  const $kv  = document.getElementById('kv-contact');
-  const $adr = document.getElementById('adresse');
-  const $tel = document.getElementById('telefon');
-  const $eml = document.getElementById('email');
-
-  if (adr) { $adr.textContent = adr; } else { removePair($adr); }
-  if (tel) { $tel.innerHTML   = `<a href="${telLink(tel)}">${esc(tel)}</a>`; } else { removePair($tel); }
-  if (mail){ $eml.innerHTML   = `<a href="${mailLink(mail)}">${esc(mail)}</a>`; } else { removePair($eml); }
-  if ($kv.querySelectorAll('div').length === 0) { document.getElementById('sec-contact').style.display='none'; }
-
-  // Beschreibung
-  const desc = textOrEmpty(item?.info?.beschreibung);
-  if (desc) document.getElementById('beschreibung').textContent = desc;
+  const desc=textOrEmpty(item?.info?.beschreibung);
+  if(desc)document.getElementById('beschreibung').textContent=desc;
   else document.getElementById('sec-desc').style.display='none';
 
-  // CTA-Button (externe Bestell-/Detailseite)
-  const $cta = document.getElementById('ctaBar');
-  $cta.innerHTML = '';
-  if (item.url){
-    const a = document.createElement('a');
-    a.href = item.url; a.target='_blank'; a.rel='noopener';
-    a.textContent = 'Zur Seite / Bestellen';
-    $cta.appendChild(a);
+  const $cta=document.getElementById('ctaBar');
+  $cta.innerHTML='';
+  if(item.url){
+    const a=document.createElement('a');
+    a.href=item.url;a.target='_blank';a.rel='noopener';a.textContent='Zur Seite / Bestellen';$cta.appendChild(a);
   }
 
-  // Social/Links: Icons statt Text
-  const links = [];
-  if (item?.web?.website)     links.push({label:'Website',     url:item.web.website,     icon:'website'});
-  if (item?.web?.speisekarte) links.push({label:'Speisekarte', url:item.web.speisekarte, icon:'website'});
-  if (item?.web?.instagram)   links.push({label:'Instagram',   url:item.web.instagram,   icon:'instagram'});
-  if (item?.web?.facebook)    links.push({label:'Facebook',    url:item.web.facebook,    icon:'facebook'});
-  if (item?.web?.tiktok)      links.push({label:'TikTok',      url:item.web.tiktok,      icon:'tiktok'});
+  const links=[];
+  if(item?.web?.website)links.push({label:'Website',url:item.web.website,cls:'social-website',svg:iconSvg('website')});
+  if(item?.web?.instagram)links.push({label:'Instagram',url:item.web.instagram,cls:'social-instagram',svg:iconSvg('instagram')});
+  if(item?.web?.facebook)links.push({label:'Facebook',url:item.web.facebook,cls:'social-facebook',svg:iconSvg('facebook')});
+  if(item?.web?.tiktok)links.push({label:'TikTok',url:item.web.tiktok,cls:'social-tiktok',svg:iconSvg('tiktok')});
 
-  const $links = document.getElementById('links');
-  $links.innerHTML = '';
-  if (!links.length){
-    document.getElementById('sec-links').style.display = 'none';
-  } else {
+  const $links=document.getElementById('links');
+  $links.innerHTML='';
+  if(!links.length){document.getElementById('sec-links').style.display='none';}
+  else{
     links.forEach(l=>{
-      const a = document.createElement('a');
-      a.href = l.url; a.target = '_blank'; a.rel='noopener';
-      a.className = 'social-icon';
-      a.setAttribute('title', l.label);
-      a.setAttribute('aria-label', l.label);
-      a.innerHTML = iconSvg(l.icon);
+      const a=document.createElement('a');
+      a.href=l.url;a.target='_blank';a.rel='noopener';
+      a.className='social-icon '+l.cls;
+      a.setAttribute('title',l.label);
+      a.innerHTML=l.svg;
       $links.appendChild(a);
     });
   }
 
-  // Speisekarte
-  renderMenuBlocks(item?.menu?.text || '');
+  renderMenuBlocks(item?.menu?.text||'');
 })();
 
-// kleine Inline-Iconbibliothek (SVG, einfarbig)
 function iconSvg(name){
   switch(name){
-    case 'facebook':
-      return `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M22 12.07C22 6.49 17.52 2 12 2S2 6.49 2 12.07c0 5 3.66 9.13 8.44 9.93v-7.03H8.1v-2.9h2.34V9.83c0-2.32 1.38-3.61 3.5-3.61 1.01 0 2.06.18 2.06.18v2.28h-1.16c-1.14 0-1.49.71-1.49 1.44v1.73h2.54l-.41 2.9h-2.13v7.03C18.34 21.2 22 17.07 22 12.07Z"/></svg>`;
-    case 'instagram':
-      return `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 2C4.2 2 2 4.2 2 7v10c0 2.8 2.2 5 5 5h10c2.8 0 5-2.2 5-5V7c0-2.8-2.2-5-5-5H7m10 2a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h10m-5 3a5 5 0 0 0-5 5 5 5 0 0 0 5 5 5 5 0 0 0 5-5 5 5 0 0 0-5-5m0 2a3 3 0 0 1 3 3 3 3 0 0 1-3 3 3 3 0 0 1-3-3 3 3 0 0 1 3-3m4.8-.9a1.1 1.1 0 0 1 1.1 1.1 1.1 1.1 0 0 1-1.1 1.1 1.1 1.1 0 0 1-1.1-1.1 1.1 1.1 0 0 1 1.1-1.1Z"/></svg>`;
-    case 'tiktok':
-      return `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M16 8.04c1.23.87 2.74 1.38 4.36 1.38V6.11c-.45.01-.9-.04-1.34-.13v3.45c-1.44-.25-2.8-.86-4.01-1.77V14c0 3.37-2.75 6.12-6.12 6.12A6.13 6.13 0 0 1 2.77 14c0-2.71 1.75-5.01 4.18-5.82v3.36a2.82 2.82 0 0 0-1.77 2.62 2.83 2.83 0 0 0 5.65.47c.03-.16.04-.32.04-.48V2h3.12v6.04Z"/></svg>`;
-    case 'website':
-      return `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M10.9 2A10 10 0 0 0 2 12a10 10 0 0 0 20 0A10 10 0 0 0 10.9 2m.1 2c.5 0 .9.1 1.4.2-2.8 2.2-4.8 5.4-5.3 9.1H4.1C4.6 7.4 7.9 4 11 4m0 16c-3.1 0-5.7-2.4-5.9-5.5h2.9c.5 3.7 2.5 6.9 5.3 9.1-.5.1-.9.2-1.4.2m1.9-.2c2.8-2.2 4.8-5.4 5.3-9.1h2.9C19.7 17.6 17.1 20 14 20m5.9-7.5h-2.9c-.5-3.7-2.5-6.9-5.3-9.1.5-.1.9-.2 1.4-.2 3.1 0 5.7 2.4 5.9 5.5Z"/></svg>`;
-    default:
-      return `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="currentColor"/></svg>`;
-  }
-}
-</script>
-</body>
-</html>
+    case 'facebook':return `<svg viewBox="0 0 24 24"><path fill="white" d="M22 12.07C22 6.49 17.52 2 12 2S2 6.49 2 12.07c0 5 3.66 9.13 8.44 9.93v-7.03H8.1v-2.9h2.34V9.83c0-2.32 1.38-3.61 3.5-3.61 1.01 0 2.06.18 2.06.18v2.28h-1.16c-1.14 0-1.49.71-1.49 1.44v1.73h2.54l-.41 2.9h-2.13v7.03C18.34 21.2 22 17.07 22 12
