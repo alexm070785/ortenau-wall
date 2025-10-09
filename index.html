@@ -6,21 +6,15 @@
 <meta name="theme-color" content="#e7e7e7">
 <title>Ortenau liefert · Lokale Angebote</title>
 <style>
-  :root{
-    --accent:#e7e7e7; --text:#333; --bg:#f6f6f6; --card:#fff;
-    --muted:#70798C; --radius:12px; --shadow:0 4px 12px rgba(0,0,0,.08);
-    --border:#d0d0d0; --tap:48px;
-  }
+  :root{ --accent:#e7e7e7; --text:#333; --bg:#f6f6f6; --card:#fff; --muted:#70798C; --radius:12px; --shadow:0 4px 12px rgba(0,0,0,.08); --border:#d0d0d0; --tap:48px; }
   *{box-sizing:border-box}
   html{font-size:16px}
   @media (max-width:480px){ html{font-size:17px} }
   body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;background:var(--bg);color:var(--text);padding-bottom:56px;line-height:1.45}
   .visually-hidden{position:absolute!important;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 
-  /* Header + Burger */
   header.site{position:sticky;top:0;z-index:20;background:var(--accent);border-bottom:1px solid #b0b0b0;}
   .head{max-width:1360px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:10px 16px;}
-  .logo{display:flex;align-items:center;gap:10px}
   .logo img{height:52px}
   .hamburger{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:10px;background:#fff;border:1px solid var(--border);cursor:pointer}
   .hamburger svg{width:24px;height:24px}
@@ -34,7 +28,6 @@
   .menu a{text-decoration:none;color:var(--text);padding:10px 12px;border-radius:10px;display:block;border:1px solid #eee;background:#fafafa}
   .menu a:hover{background:#f2f2f2}
 
-  /* Toolbar */
   .toolbar{max-width:1360px;margin:8px auto;display:flex;align-items:center;gap:12px;padding:0 16px;}
   @media (max-width:640px){ .toolbar{flex-direction:column;align-items:stretch} }
   .search-wrap{position:relative;display:flex;align-items:center;flex:1}
@@ -42,14 +35,13 @@
   #search{width:100%;height:var(--tap);padding:0 46px 0 40px;border:1px solid var(--border);border-radius:12px;background:#fff;color:var(--text)}
   #clearBtn{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:36px;height:36px;border:0;border-radius:50%;cursor:pointer;background:#f6f6f6;font-size:1.2rem}
 
-  /* Liste (kompakt) */
   .list{max-width:900px;margin:0 auto 12px;padding:0 16px;display:flex;flex-direction:column;gap:10px}
-  .item{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:10px 12px;text-decoration:none;color:inherit;box-shadow:var(--shadow)}
+  .item{display:grid;grid-template-columns:42px 1fr;gap:12px;align-items:center;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:10px 12px;text-decoration:none;color:inherit;box-shadow:var(--shadow)}
   .item:active{transform:scale(.99)}
-  .emoji{font-size:1.4rem;line-height:1.2;flex:0 0 auto}
-  .meta{flex:1;min-width:0}
+  .emoji{font-size:1.6rem;line-height:1;display:flex;align-items:center;justify-content:center}
+  .meta{min-width:0}
   .name{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .sub{font-size:.95rem;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap}
+  .sub{font-size:.95rem;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;margin-top:2px}
   .status{font-weight:600}
   .badge{font-size:.85rem;border:1px solid #eee;background:#fafafa;border-radius:999px;padding:2px 8px}
 
@@ -60,9 +52,7 @@
 <body>
 <header class="site">
   <div class="head">
-    <div class="logo">
-      <a href="index.html" aria-label="Zur Startseite"><img src="header.png" alt="Ortenau liefert"></a>
-    </div>
+    <div class="logo"><a href="index.html" aria-label="Zur Startseite"><img src="header.png" alt="Ortenau liefert"></a></div>
     <button class="hamburger" id="menuBtn" aria-label="Menü öffnen" aria-expanded="false" aria-controls="drawer">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#333" d="M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h18v2H3v-2z"/></svg>
     </button>
@@ -108,13 +98,13 @@ document.getElementById("jahr").textContent = new Date().getFullYear();
   window.addEventListener('keydown', e=>{ if(e.key==='Escape') close(); });
 })();
 
-// Emoji pro Kategorie (Döner/Kebab vereinheitlicht)
+// Emoji zu Kategorie
 function catEmoji(cat){
   const c = (cat||'').toLowerCase();
   if (c.includes('doener') || c.includes('döner') || c.includes('kebab')) return '🥙';
-  if (c.includes('salat') || c.includes('salate')) return '🥗';
+  if (c.includes('salat')) return '🥗';
   if (c.includes('pizza') || c.includes('pizzeria')) return '🍕';
-  if (c.includes('getränk') || c.includes('trinken') || c.includes('drinks')) return '🥤';
+  if (c.includes('getränk') || c.includes('drinks') || c.includes('trinken')) return '🥤';
   if (c.includes('cafe') || c.includes('café')) return '☕️';
   return '🍽️';
 }
@@ -122,31 +112,21 @@ function catEmoji(cat){
 const $ = s => document.querySelector(s);
 function normalize(s){ try { return (s||'').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu,''); } catch { return (s||'').toLowerCase(); } }
 
-// sehr einfache Öffnungs-Status-Heuristik (nur wenn Format grob passt)
 const DAYS = ['so','mo','di','mi','do','fr','sa'];
 function isOpenNow(text){
   if(!text) return null;
   const t = text.toLowerCase().replace(/\s+/g,' ');
   const now = new Date();
-  const day = DAYS[(now.getDay()+6)%7+1] || DAYS[now.getDay()]; // quick fix, fallback
   const hh = now.getHours() + now.getMinutes()/60;
-
-  // Beispiele: "mo–fr 11–22", "sa 12–23", "so geschlossen"
   const reBlock = /((mo|di|mi|do|fr|sa|so)(?:\s*[–-]\s*(mo|di|mi|do|fr|sa|so))?)\s+(\d{1,2})(?::(\d{2}))?\s*[–-]\s*(\d{1,2})(?::(\d{2}))?/g;
   let match, open = false, mentioned = false;
   while ((match = reBlock.exec(t))){
     mentioned = true;
-    const fromDay = match[2], toDay = match[3] || match[2];
     const from = +match[4] + (match[5]? +match[5]/60 : 0);
     const to   = +match[6] + (match[7]? +match[7]/60 : 0);
-
-    const idx = d => ({mo:1,di:2,mi:3,do:4,fr:5,sa:6,so:0}[d]);
-    const d0 = idx(fromDay), d1 = idx(toDay), today = now.getDay();
-    const inRange = d0<=d1 ? (today>=d0 && today<=d1) : (today>=d0 || today<=d1);
-    if(inRange){
-      if (from <= to) open = open || (hh>=from && hh<=to);
-      else open = open || (hh>=from || hh<=to); // über Mitternacht
-    }
+    // vereinfachte Tagesprüfung: wenn irgendein Block passt, reicht uns das
+    if (from <= to) open = open || (hh>=from && hh<=to);
+    else open = open || (hh>=from || hh<=to);
   }
   if(!mentioned && t.includes('geschlossen')) return false;
   return mentioned ? open : null;
@@ -177,13 +157,7 @@ function render(items){
 
     const name = document.createElement('div');
     name.className = 'name';
-    // Name immer mit "Döner/Kebab" statt doener
-    let catLabel = (item.kategorie||'').toLowerCase();
-    if (catLabel.includes('doener') || catLabel.includes('döner') || catLabel.includes('kebab')) catLabel = 'Döner/Kebab';
-    else if (catLabel.includes('pizza')) catLabel = 'Pizza/Pizzeria';
-    else if (!catLabel) catLabel = 'Restaurant';
-
-    name.textContent = `${emoji.textContent} ${item.titel||''}`;
+    name.textContent = item.titel || '';
 
     const sub = document.createElement('div');
     sub.className = 'sub';
@@ -193,6 +167,13 @@ function render(items){
     if (status === true) statusText = 'Jetzt geöffnet';
     else if (status === false) statusText = 'Geschlossen';
     else statusText = 'Öffnungszeiten siehe Details';
+
+    // Kategorie-Label vereinheitlicht
+    const rawCat = (item.kategorie||'').toLowerCase();
+    let catLabel = rawCat;
+    if (rawCat.includes('doener') || rawCat.includes('döner') || rawCat.includes('kebab')) catLabel = 'Döner/Kebab';
+    else if (rawCat.includes('pizza')) catLabel = 'Pizza/Pizzeria';
+    else if (!catLabel) catLabel = 'Restaurant';
 
     sub.innerHTML = `
       <span>${city? city : ''}</span>
