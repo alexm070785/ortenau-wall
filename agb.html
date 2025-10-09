@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#e7e7e7">
+<title>Allgemeine Geschäftsbedingungen · Ortenau liefert</title>
+
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/favicon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Ortenau liefert">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+
+<style>
+  :root{ --accent:#e7e7e7; --text:#333; --bg:#f6f6f6; --card:#fff; --muted:#70798C; --radius:12px; --shadow:0 4px 12px rgba(0,0,0,.08); --border:#d0d0d0; }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;background:var(--bg);color:var(--text);padding-bottom:56px;line-height:1.55}
+  header.site{position:sticky;top:0;z-index:20;background:var(--accent);border-bottom:1px solid #b0b0b0;}
+  .head{max-width:1360px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:10px 16px;}
+  .hamburger{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:10px;background:#fff;border:1px solid var(--border);cursor:pointer}
+  .hamburger svg{width:24px;height:24px}
+  .backdrop{position:fixed;inset:0;background:rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:opacity .2s;z-index:19}
+  .backdrop.show{opacity:1;pointer-events:auto}
+  .drawer{position:fixed;top:0;right:-280px;width:280px;height:100%;background:#fff;border-left:1px solid var(--border);box-shadow:-12px 0 24px rgba(0,0,0,.18);transition:right .25s;z-index:20;display:flex;flex-direction:column}
+  .drawer.show{right:0}
+  .drawer header{border-bottom:1px solid var(--border);padding:12px 14px;font-weight:700}
+  .menu{padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+  .menu a{text-decoration:none;color:var(--text);padding:10px 12px;border-radius:10px;border:1px solid #eee;background:#fafafa}
+  .menu a:hover{background:#f2f2f2}
+  main{max-width:900px;margin:18px auto;padding:0 16px}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}
+  h1{margin:0 0 10px;font-size:1.6rem}
+  h2{margin:18px 0 8px;font-size:1.1rem}
+  p{margin:8px 0}
+  ul{margin:8px 0 8px 20px;padding:0}
+  footer{position:fixed;bottom:0;left:0;width:100%;height:56px;background:var(--accent);color:#595959;border-top:1px solid #b0b0b0;font-size:.95rem}
+  .footer-inner{max-width:1360px;margin:0 auto;height:100%;display:flex;justify-content:center;align-items:center;padding:0 12px}
+</style>
+</head>
+<body>
+<header class="site">
+  <div class="head">
+    <a href="index.html" aria-label="Zur Startseite"><img src="header.png" alt="Ortenau liefert" height="52"></a>
+    <button class="hamburger" id="menuBtn" aria-label="Menü öffnen"><svg viewBox="0 0 24 24"><path fill="#333" d="M3 6h18v2H3v-2zm0 5h18v2H3v-2zm0 5h18v2H3v-2z"/></svg></button>
+  </div>
+</header>
+
+<div class="backdrop" id="backdrop" hidden></div>
+<aside class="drawer" id="drawer">
+  <header>Menü</header>
+  <nav class="menu">
+    <a href="index.html">Startseite</a>
+    <a href="kontakt.html">Kontakt</a>
+    <a href="impressum.html">Impressum</a>
+    <a href="agb.html" aria-current="page">AGB</a>
+    <a href="datenschutz.html">Datenschutz</a>
+  </nav>
+</aside>
+
+<main>
+  <article class="card">
+    <h1>Allgemeine Geschäftsbedingungen (AGB)</h1>
+    <p>Stand: <span id="lastUpdate"></span></p>
+
+    <h2>1. Geltungsbereich</h2>
+    <p>Diese Allgemeinen Geschäftsbedingungen (AGB) gelten für die Nutzung der Website „Ortenau liefert“ und aller dazugehörigen Unterseiten.</p>
+
+    <h2>2. Leistungen von Ortenau liefert</h2>
+    <p>„Ortenau liefert“ bietet eine Plattform, auf der lokale Betriebe aus der Region vorgestellt werden. Es handelt sich dabei ausschließlich um eine Informationsplattform. Wir selbst bieten keine Bestellungen, Lieferungen oder Verkäufe an. Verträge kommen ausschließlich zwischen den Besuchern der Website und den jeweiligen Betrieben zustande.</p>
+
+    <h2>3. Haftungsausschluss</h2>
+    <p>Alle Informationen, Öffnungszeiten und Kontaktdaten werden nach bestem Wissen bereitgestellt, ohne Gewähr auf Richtigkeit, Aktualität oder Vollständigkeit. Änderungen der Betriebe sind jederzeit möglich.</p>
+
+    <h2>4. Urheberrechte</h2>
+    <p>Texte, Bilder, Grafiken und Design-Elemente dieser Website unterliegen dem Urheberrecht. Eine Vervielfältigung oder Verbreitung ist ohne schriftliche Genehmigung des Betreibers nicht gestattet.</p>
+
+    <h2>5. Änderungen</h2>
+    <p>Der Betreiber behält sich vor, diese AGB jederzeit zu ändern. Maßgeblich ist die jeweils aktuelle Fassung, die auf dieser Seite veröffentlicht wird.</p>
+
+    <h2>6. Kontakt</h2>
+    <p>Bei Fragen zu diesen Bedingungen:<br>
+      Alexander Müller<br>
+      Straßburgerstr. 5<br>
+      77704 Oberkirch<br>
+      E-Mail: <a href="mailto:info@ortenau-liefert.de">info@ortenau-liefert.de</a>
+    </p>
+  </article>
+</main>
+
+<footer><div class="footer-inner">© <span id="jahr"></span> Ortenau liefert</div></footer>
+
+<script>
+document.getElementById('jahr').textContent = new Date().getFullYear();
+document.getElementById('lastUpdate').textContent = new Date().toLocaleDateString('de-DE');
+const btn=document.getElementById('menuBtn'),drawer=document.getElementById('drawer'),backdrop=document.getElementById('backdrop');
+btn.onclick=()=>{drawer.classList.add('show');backdrop.hidden=false;requestAnimationFrame(()=>backdrop.classList.add('show'));}
+backdrop.onclick=()=>{drawer.classList.remove('show');backdrop.classList.remove('show');setTimeout(()=>backdrop.hidden=true,200);}
+window.onkeydown=e=>{if(e.key==='Escape'){drawer.classList.remove('show');backdrop.classList.remove('show');setTimeout(()=>backdrop.hidden=true,200);}}
+</script>
+</body>
+</html>
