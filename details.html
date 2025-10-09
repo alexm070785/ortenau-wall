@@ -103,8 +103,8 @@
 
 <script>
 function getParam(name){ const u = new URL(location.href); return u.searchParams.get(name); }
-function textOrEmpty(v){ return v && String(v).trim() ? v : ""; }
-function esc(s){ return (s||'').replace(/[&<>\"']/g, m=>({"&":"&amp;","<":"&lt;"," >":"&gt;","\"":"&quot;"}[m] || m)); }
+function textOrEmpty(v){ return v && String(v).trim() ? v.trim() : ""; }
+function esc(s){ return (s||"").replace(/[&<>"]/g, m => ({ "&":"&amp;","<":"&lt;",">":"&gt;", "\"":"&quot;" }[m])); }
 function telLink(num){ const n=(num||"").replace(/\s+/g,''); return n ? `tel:${encodeURIComponent(n)}` : ""; }
 function mailLink(m){ return m ? `mailto:${encodeURIComponent(m)}` : ""; }
 
@@ -118,14 +118,19 @@ function catEmoji(cat){
   return '🍽️';
 }
 
-// Speisekarte zu Blöcken
+/* Speisekarte-Renderer: trennt Abschnitte + Items dezent */
 function renderMenuBlocks(raw){
+  const $sec = document.getElementById('sec-menu');
   const body = document.getElementById('menuBody');
+  const note = document.getElementById('priceNote');
   body.innerHTML = '';
-  if(!raw || !raw.trim()){ document.getElementById('sec-menu').style.display = 'none'; return; }
+  note.style.display = 'none';
+
+  if(!raw || !raw.trim()){ $sec.style.display = 'none'; return; }
+  $sec.style.display = '';
 
   const lines = raw.replace(/\r\n/g,"\n").split("\n");
-  const headRe = /^[\u{1F300}-\u{1FAFF}]/u;
+  const headRe = /^[\u{1F300}-\u{1FAFF}]/u; // Emoji am Zeilenanfang
   let buffer = [], haveAny = false;
 
   function addHead(t){
@@ -146,31 +151,128 @@ function renderMenuBlocks(raw){
   for(let i=0;i<lines.length;i++){
     const l = lines[i].trim();
     if(!l){ flush(); continue; }
+
+    // Überschrift, wenn Emoji oder (kurze Zeile ohne Preis + neuer Block)
     const isHead = headRe.test(l) || (!/[0-9€]/.test(l) && l.length < 60 && buffer.length===0);
     if(isHead){ flush(); addHead(l); continue; }
+
+    // Zeile + nächste Zeile Preis? -> zusammenfassen
     const nx = lines[i+1]?.trim() || "";
     const looksPrice = /€|\d,\d{2}/.test(nx);
     if(!/€|\d,\d{2}/.test(l) && looksPrice){ buffer.push(l); buffer.push(nx); i++; flush(); }
     else { buffer.push(l); flush(); }
   }
   flush();
-  if (haveAny) document.getElementById('priceNote').style.display = 'block';
+  if (haveAny) note.style.display = 'block';
 }
 
 (async function(){
+  // Daten laden
   const id = getParam('id');
   const q  = getParam('q');
-  const res = await fetch('/api/entries');
+  const res = await fetch('/api/entries', { cache:'no-store' });
   const data = await res.json();
 
+  // Eintrag finden
   let item = null;
   if (id) item = data.find(x => x.id === id);
   if (!item && q) item = data.find(x => (x.titel||'').toLowerCase().includes(q.toLowerCase()));
-  if (!item) { document.getElementById('detail').innerHTML = '<p class="muted">Eintrag nicht gefunden.</p>'; return; }
 
-  // Emoji-Hero
+  if (!item) {
+    document.getElementById('detail').innerHTML = '<p class="muted">Eintrag nicht gefunden.</p>';
+    document.getElementById('sec-links').style.display = 'none';
+    return;
+  }
+
+  /* Hero: Emoji + Titel + Kategorie + Badges + Ort */
   document.getElementById('emoji').textContent = catEmoji(item.kategorie);
+  document.getElementById('titel').textContent = item.titel || 'Lokal';
 
+  // Kategorie-Label vereinheitlichen
+  const rawCat = (item.kategorie||'').toLowerCase();
+  let catLabel = rawCat;
+  if (rawCat.includes('doener') || rawCat.includes('döner') || rawCat.includes('kebab')) catLabel = 'Döner/Kebab';
+  else if (rawCat.includes('pizza')) catLabel = 'Pizza/Pizzeria';
+  else if (!catLabel) catLabel = 'Restaurant';
+  document.getElementById('kategorie').textContent = catLabel;
+
+  // Ort
   const ort = item.stadt || item?.adresse?.stadt || '';
-  let catLabel = (item.kategorie||'').toLowerCase();
-  if (c
+  document.getElementById('ort').textContent = ort ? ort : '';
+
+  // Badges (Abholung/Lieferung)
+  const $badges = document.getElementById('badges');
+  $badges.innerHTML = '';
+  if (item?.optionen?.abholung){
+    const b = document.createElement('span'); b.className='badge'; b.textContent='Abholung'; $badges.appendChild(b);
+  }
+  if (item?.optionen?.lieferung){
+    const b = document.createElement('span'); b.className='badge'; b.textContent='Lieferung'; $badges.appendChild(b);
+  }
+
+  /* Öffnungszeiten / Hinweise */
+  const open = textOrEmpty(item?.info?.oeffnungszeiten);
+  const shut = textOrEmpty(item?.info?.schliesstage);
+  document.getElementById('oeffnungszeiten').textContent = open || '–';
+  document.getElementById('schliesstage').textContent   = shut || '–';
+  if(!open && !shut) document.getElementById('sec-hours').style.display='none';
+
+  /* Kontakt & Adresse */
+  const adr = [
+    textOrEmpty(item?.adresse?.strasse),
+    [ textOrEmpty(item?.adresse?.plz), textOrEmpty(item?.adresse?.stadt || item?.stadt) ].filter(Boolean).join(' ')
+  ].filter(Boolean).join(', ');
+  const tel  = textOrEmpty(item?.kontakt?.telefon);
+  const mail = textOrEmpty(item?.kontakt?.email);
+
+  const $adr = document.getElementById('adresse');
+  const $tel = document.getElementById('telefon');
+  const $eml = document.getElementById('email');
+
+  if (adr) $adr.textContent = adr; else $adr.parentElement.previousElementSibling.remove(); $adr.parentElement.remove();
+  if (tel) $tel.innerHTML = `<a href="${telLink(tel)}">${esc(tel)}</a>`; else $tel.parentElement.previousElementSibling.remove(); $tel.parentElement.remove();
+  if (mail) $eml.innerHTML = `<a href="${mailLink(mail)}">${esc(mail)}</a>`; else $eml.parentElement.previousElementSibling.remove(); $eml.parentElement.remove();
+
+  // Wenn gar nichts übrig ist → Sektion verbergen
+  if (!adr && !tel && !mail) document.getElementById('sec-contact').style.display='none';
+
+  /* Beschreibung */
+  const desc = textOrEmpty(item?.info?.beschreibung);
+  if (desc) document.getElementById('beschreibung').textContent = desc;
+  else document.getElementById('sec-desc').style.display='none';
+
+  /* CTA-Buttons (z. B. externe Seite) */
+  const $cta = document.getElementById('ctaBar');
+  $cta.innerHTML = '';
+  if (item.url){
+    const a = document.createElement('a');
+    a.href = item.url; a.target='_blank'; a.rel='noopener';
+    a.textContent = 'Zur Seite / Bestellen';
+    $cta.appendChild(a);
+  }
+
+  /* Links (Website, Speisekarte, Socials) */
+  const links = [];
+  if (item?.web?.website)     links.push({label:'Website',     url:item.web.website});
+  if (item?.web?.speisekarte) links.push({label:'Speisekarte', url:item.web.speisekarte});
+  if (item?.web?.instagram)   links.push({label:'Instagram',   url:item.web.instagram});
+  if (item?.web?.facebook)    links.push({label:'Facebook',    url:item.web.facebook});
+  if (item?.web?.tiktok)      links.push({label:'TikTok',      url:item.web.tiktok});
+
+  const $links = document.getElementById('links');
+  $links.innerHTML = '';
+  if (!links.length){
+    document.getElementById('sec-links').style.display = 'none';
+  } else {
+    links.forEach(l=>{
+      const a = document.createElement('a');
+      a.href = l.url; a.target = '_blank'; a.rel='noopener';
+      a.textContent = l.label;
+      $links.appendChild(a);
+    });
+  }
+
+  /* Speisekarte */
+  renderMenuBlocks(item?.menu?.text || '');
+})();
+</script>
