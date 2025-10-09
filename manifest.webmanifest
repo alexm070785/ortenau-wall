@@ -1,0 +1,13 @@
+{
+  "name": "Ortenau liefert",
+  "short_name": "Ortenau liefert",
+  "start_url": "index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6f6f6",
+  "theme_color": "#e7e7e7",
+  "icons": [
+    { "src": "favicon.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "favicon.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
