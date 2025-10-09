@@ -268,6 +268,7 @@ async function loadList(){
   const data = await r.json();
   renderTable(data);
 }
+
 function renderTable(items){
   const tb = $("#tbody");
   tb.innerHTML='';
@@ -289,10 +290,14 @@ function renderTable(items){
           ${i.web?.website ? ` · <a href="${i.web.website}" target="_blank" rel="noopener">Website</a>` : ''}
           ${i.web?.speisekarte ? ` · <a href="${i.web.speisekarte}" target="_blank" rel="noopener">Speisekarte</a>` : ''}
         </td>
-        <td class="right"><button data-id="${i.id||''}" class="editBtn">Bearbeiten</button></td>`;
+        <td class="right">
+          <button data-id="${i.id||''}" class="editBtn">Bearbeiten</button>
+          <button data-id="${i.id||''}" class="delBtn danger" style="margin-left:6px">Löschen</button>
+        </td>`;
       tb.appendChild(tr);
     });
 
+  // Bearbeiten
   tb.querySelectorAll('.editBtn').forEach(btn=>{
     btn.addEventListener('click', async ()=>{
       const id = btn.getAttribute('data-id');
@@ -325,6 +330,19 @@ function renderTable(items){
       $("#menuText").value = item.menu?.text || "";
       updateMenuUI();
       window.scrollTo({top:0,behavior:'smooth'});
+    });
+  });
+
+  // Löschen (einzeln)
+  tb.querySelectorAll('.delBtn').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const id = btn.getAttribute('data-id');
+      if(!id) return;
+      if(!confirm('Diesen Eintrag wirklich löschen?')) return;
+      const res = await fetch(`${API}?id=${encodeURIComponent(id)}`, { method:"DELETE", headers:hdrs() })
+                         .then(r=>r.json());
+      if(res.error){ alert('Fehler: ' + res.error); return; }
+      loadList();
     });
   });
 }
