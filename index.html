@@ -6,8 +6,13 @@
 <meta name="theme-color" content="#e7e7e7">
 <title>Ortenau liefert · Lokale Angebote</title>
 
-<link rel="icon" href="favicon.png">
-<link rel="manifest" href="manifest.webmanifest">
+<!-- PWA / Icons -->
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/favicon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Ortenau liefert">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
 <style>
   :root{ --accent:#e7e7e7; --text:#333; --bg:#f6f6f6; --card:#fff; --muted:#70798C; --radius:12px; --shadow:0 4px 12px rgba(0,0,0,.08); --border:#d0d0d0; --tap:48px; }
@@ -41,6 +46,29 @@
 
   .install{height:var(--tap);padding:0 14px;border:1px solid var(--border);border-radius:12px;background:#fff;cursor:pointer;box-shadow:var(--shadow)}
   @media (max-width:640px){ .install{width:100%;} }
+
+  /* iOS Install-Hinweis */
+  .ios-install-hint {
+    display: none;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    padding: 10px 12px;
+    gap: 8px;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.95rem;
+    margin: 8px 16px 0;
+  }
+  .ios-install-hint .close {
+    border: 0;
+    background: #f1f1f1;
+    border-radius: 10px;
+    padding: 6px 10px;
+    cursor: pointer;
+  }
+  .ios-share-emoji { font-size: 1.2rem }
 
   .list{max-width:900px;margin:0 auto 12px;padding:0 16px;display:flex;flex-direction:column;gap:10px}
   .item{display:grid;grid-template-columns:42px 1fr;gap:12px;align-items:center;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:10px 12px;text-decoration:none;color:inherit;box-shadow:var(--shadow)}
@@ -86,6 +114,13 @@
   <button id="installBtn" class="install" type="button" hidden>+ App installieren</button>
 </div>
 
+<!-- iOS-Hinweis -->
+<div id="iosHint" class="ios-install-hint">
+  <span class="ios-share-emoji">📱</span>
+  <span>Auf iPhone: <b>Teilen</b> → <b>Zum Home-Bildschirm</b> hinzufügen</span>
+  <button class="close" type="button" aria-label="Hinweis schließen">OK</button>
+</div>
+
 <main class="list" id="list"></main>
 
 <footer><div class="footer-inner">© <span id="jahr"></span> Ortenau liefert</div></footer>
@@ -122,7 +157,7 @@ function normalize(s){ try { return (s||'').toLowerCase().normalize('NFD').repla
 function render(items){
   const el = $("#list");
   el.innerHTML = "";
-  if(!items.length){ el.innerHTML = '<p class="muted">Noch keine Einträge vorhanden.</p>'; return; }
+  if(!items.length){ el.innerHTML = '<p class="muted" style="padding:12px">Noch keine Einträge vorhanden.</p>'; return; }
 
   const list = [...items].sort((a,b)=>{
     const fa = !!a?.optionen?.featured, fb = !!b?.optionen?.featured;
@@ -191,14 +226,17 @@ async function loadAndRender(){
   apply();
 }
 
-/* PWA: Installier-Button + Service Worker */
+/* PWA: Android-Install-Button */
 let deferredPrompt = null;
 const installBtn = document.getElementById('installBtn');
 
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   deferredPrompt = e;
-  installBtn.hidden = false;
+  // nur auf Nicht-iOS zeigen (iOS bekommt eigenen Hinweis)
+  if (!/iphone|ipad|ipod/i.test(navigator.userAgent)) {
+    installBtn.hidden = false;
+  }
 });
 
 installBtn?.addEventListener('click', async () => {
@@ -210,9 +248,26 @@ installBtn?.addEventListener('click', async () => {
   installBtn.hidden = true;
 });
 
+/* Service Worker registrieren */
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js').catch(()=>{});
 }
+
+/* iOS-Hinweis (Safari zeigt keinen Install-Dialog) */
+const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+const isInStandalone = window.navigator.standalone === true;
+const iosHint = document.getElementById('iosHint');
+
+if (isIos) {
+  if (!isInStandalone && !localStorage.getItem('iosHintClosed')) {
+    iosHint.style.display = 'flex';
+  }
+}
+
+iosHint?.querySelector('.close')?.addEventListener('click', () => {
+  iosHint.style.display = 'none';
+  localStorage.setItem('iosHintClosed', '1');
+});
 
 loadAndRender();
 </script>
