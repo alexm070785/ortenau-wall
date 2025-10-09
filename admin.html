@@ -45,16 +45,15 @@
   .menu-preview{background:#fff;border:1px dashed var(--border);border-radius:12px;padding:12px;margin-top:10px;white-space:pre-wrap;line-height:1.5}
   .menu-preview h3{margin:14px 0 6px;font-size:1.05rem}
   .menu-preview .price{opacity:.9}
-  .hint{font-size:.9rem}
 </style>
 
 <div class="wrap">
-  <h1>Admin – Eintrag hinzufügen</h1>
+  <h1>Admin – Eintrag hinzufügen / bearbeiten</h1>
 
   <div class="card grid g2" role="form">
     <div>
       <label for="titel">Name des Lokals *</label>
-      <input id="titel" required placeholder="Bella Pizza">
+      <input id="titel" required placeholder="Genc Döner & Pizza">
     </div>
     <div>
       <label for="kategorie">Kategorie *</label>
@@ -62,7 +61,8 @@
         <option value="restaurant">Restaurant</option>
         <option value="pizzeria">Pizzeria</option>
         <option value="pizza">Pizza</option>
-        <option value="doener">Döner</option>
+        <option value="döner">Döner/Kebab</option>
+        <option value="kebab">Kebab</option>
         <option value="cafe">Café</option>
         <option value="imbiss">Imbiss</option>
         <option value="bäckerei">Bäckerei</option>
@@ -102,15 +102,24 @@
       <input id="speisekarte" placeholder="https://…/speisekarte.pdf">
     </div>
 
+    <div>
+      <label for="oeffnungszeiten">Öffnungszeiten</label>
+      <textarea id="oeffnungszeiten" placeholder="Mo–Fr 11–22; Sa 12–23; So geschlossen"></textarea>
+    </div>
+    <div>
+      <label for="schliesstage">Schließtage / Hinweise</label>
+      <textarea id="schliesstage" placeholder="Feiertage geschlossen; Betriebsferien 1.–15. Aug."></textarea>
+    </div>
+
     <!-- SPEISEKARTE EDITOR -->
     <div class="menu-wrap">
       <label for="menuText">Speisekarte – Text (lang)</label>
       <textarea id="menuText" class="menu-editor" placeholder="Hier den kompletten Speisekarten-Text einfügen …"></textarea>
       <div class="menu-meta">
-        <div class="muted hint">Tipp: Einfach Text einfügen – Zeilenumbrüche bleiben erhalten. Emojis wie 🥙 🥗 🍕 werden später als Abschnittstitel erkannt.</div>
+        <div class="muted">Zeilenumbrüche bleiben erhalten. Emojis wie 🥙/🥗/🍕/🥤 als Überschriften möglich.</div>
         <div class="muted"><span id="menuCount">0</span> Zeichen</div>
       </div>
-      <div class="menu-preview" id="menuPreview" aria-live="polite"></div>
+      <div class="menu-preview" id="menuPreview" aria-live="polite">Vorschau erscheint hier …</div>
     </div>
 
     <div>
@@ -163,6 +172,7 @@
     <div style="grid-column:1/-1">
       <label for="token">Admin-Token (nur nötig, wenn in Netlify gesetzt)</label>
       <input id="token" placeholder="optional – NETLIFY_ADMIN_TOKEN">
+      <div class="muted">Falls du in Netlify die Variable <b>NETLIFY_ADMIN_TOKEN</b> gesetzt hast, trage hier denselben Wert ein. Sonst leer lassen.</div>
     </div>
 
     <div class="actions" style="grid-column:1/-1">
@@ -185,9 +195,9 @@
   <div class="card">
     <table>
       <thead><tr>
-        <th>Titel</th><th>Kategorie</th><th>Ort</th><th>Telefon</th><th class="right">Links</th>
+        <th>Titel</th><th>Kategorie</th><th>Ort</th><th>Telefon</th><th class="right">Links</th><th></th>
       </tr></thead>
-      <tbody id="tbody"><tr><td colspan="5" class="muted">Noch nichts geladen.</td></tr></tbody>
+      <tbody id="tbody"><tr><td colspan="6" class="muted">Noch nichts geladen.</td></tr></tbody>
     </table>
   </div>
 </div>
@@ -195,73 +205,31 @@
 <script>
 const API = "/api/entries";
 const $ = s => document.querySelector(s);
-let editingId = null; // ← merken, ob wir editieren
+let editingId = null;
 
-// ... (der Rest deines Scripts bleibt gleich bis renderTable)
-
-function renderTable(items){
-  const tb = $("#tbody");
-  tb.innerHTML='';
-  if(!items.length){ tb.innerHTML='<tr><td colspan="6" class="muted">Keine Einträge gespeichert.</td></tr>'; return; }
-  const q = $("#filter").value.trim().toLowerCase();
-  items
-    .filter(i => !q || JSON.stringify(i).toLowerCase().includes(q))
-    .forEach(i=>{
-      const tr = document.createElement('tr');
-      const ort = i.stadt || i?.adresse?.stadt || '';
-      const tel = i?.kontakt?.telefon || '';
-      tr.innerHTML = `
-        <td>${i.titel || ''}</td>
-        <td><span class="pill">${i.kategorie||''}</span></td>
-        <td>${ort}</td>
-        <td>${tel}</td>
-        <td class="right">
-          ${i.url ? `<a href="${i.url}" target="_blank" rel="noopener">Seite</a>` : ''}
-          ${i.web?.website ? ` · <a href="${i.web.website}" target="_blank" rel="noopener">Website</a>` : ''}
-          ${i.web?.speisekarte ? ` · <a href="${i.web.speisekarte}" target="_blank" rel="noopener">Speisekarte</a>` : ''}
-        </td>
-        <td class="right"><button data-id="${i.id||''}" class="editBtn">Bearbeiten</button></td>`;
-      tb.appendChild(tr);
-    });
-
-  // Edit-Buttons verdrahten
-  tb.querySelectorAll('.editBtn').forEach(btn=>{
-    btn.addEventListener('click', async ()=>{
-      const id = btn.getAttribute('data-id');
-      if(!id){ alert('Dieser Eintrag hat noch keine ID – bitte neu anlegen.'); return; }
-      const r = await fetch(API); const data = await r.json();
-      const item = data.find(x=>x.id===id);
-      if(!item){ alert('Eintrag nicht gefunden.'); return; }
-      // Felder füllen
-      editingId = id;
-      $("#titel").value = item.titel||"";
-      $("#kategorie").value = item.kategorie||"restaurant";
-      $("#strasse").value = item.adresse?.strasse||"";
-      $("#plz").value = item.adresse?.plz||"";
-      $("#stadt").value = item.stadt || item.adresse?.stadt || "";
-      $("#telefon").value = item.kontakt?.telefon||"";
-      $("#email").value = item.kontakt?.email||"";
-      $("#website").value = item.web?.website||"";
-      $("#speisekarte").value = item.web?.speisekarte||"";
-      $("#oeffnungszeiten").value = item.info?.oeffnungszeiten||"";
-      $("#schliesstage").value = item.info?.schliesstage||"";
-      $("#beschreibung").value = item.info?.beschreibung||"";
-      $("#preisklasse").value = item.info?.preisklasse||"";
-      $("#bild").value = item.bild||"";
-      $("#url").value = item.url||"";
-      $("#instagram").value = item.web?.instagram||"";
-      $("#facebook").value = item.web?.facebook||"";
-      $("#tiktok").value = item.web?.tiktok||"";
-      $("#abholung").checked = !!item.optionen?.abholung;
-      $("#lieferung").checked = !!item.optionen?.lieferung;
-      $("#featured").checked = !!item.optionen?.featured;
-      $("#menuText").value = item.menu?.text || "";
-      // UI refresh für Vorschau/Counter, falls vorhanden
-      if (typeof updateMenuUI === 'function') updateMenuUI();
-      window.scrollTo({top:0,behavior:'smooth'});
-    });
-  });
+// Live-Preview Menü
+function renderMenuPreview(txt){
+  const box = $("#menuPreview");
+  if(!txt.trim()){ box.textContent = "Vorschau erscheint hier …"; return; }
+  const lines = txt.replace(/\r\n/g,"\n").split("\n");
+  const parts = [];
+  function esc(s){ return s.replace(/[&<>\"']/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[m])); }
+  for(let i=0;i<lines.length;i++){
+    const l = lines[i].trim();
+    if(!l){ parts.push("<br>"); continue; }
+    const next = lines[i+1]?.trim() || "";
+    const looksPrice = /€|\d,\d{2}/.test(next);
+    if(!/€|\d,\d{2}/.test(l) && looksPrice){
+      parts.push(`<p>${esc(l)}<br><span class="price">${esc(next)}</span></p>`); i++; continue;
+    }
+    parts.push(`<p>${esc(l)}</p>`);
+  }
+  box.innerHTML = parts.join("\n");
 }
+const menuTA = $("#menuText"), menuCount = $("#menuCount");
+function autoResize(){ menuTA.style.height="auto"; menuTA.style.height=(menuTA.scrollHeight+4)+"px"; }
+function updateMenuUI(){ menuCount.textContent = menuTA.value.length; autoResize(); renderMenuPreview(menuTA.value); }
+menuTA.addEventListener("input", updateMenuUI); updateMenuUI();
 
 function hdrs(){
   const h = {"Content-Type":"application/json"};
@@ -295,18 +263,109 @@ function toPayload(){
   };
 }
 
+async function loadList(){
+  const r = await fetch(API);
+  const data = await r.json();
+  renderTable(data);
+}
+function renderTable(items){
+  const tb = $("#tbody");
+  tb.innerHTML='';
+  if(!items.length){ tb.innerHTML='<tr><td colspan="6" class="muted">Keine Einträge gespeichert.</td></tr>'; return; }
+  const q = $("#filter").value.trim().toLowerCase();
+  items
+    .filter(i => !q || JSON.stringify(i).toLowerCase().includes(q))
+    .forEach(i=>{
+      const tr = document.createElement('tr');
+      const ort = i.stadt || i?.adresse?.stadt || '';
+      const tel = i?.kontakt?.telefon || '';
+      tr.innerHTML = `
+        <td>${i.titel || ''}</td>
+        <td><span class="pill">${(i.kategorie||'').replace(/doener|döner|kebab/i,'Döner/Kebab')}</span></td>
+        <td>${ort}</td>
+        <td>${tel}</td>
+        <td class="right">
+          ${i.url ? `<a href="${i.url}" target="_blank" rel="noopener">Seite</a>` : ''}
+          ${i.web?.website ? ` · <a href="${i.web.website}" target="_blank" rel="noopener">Website</a>` : ''}
+          ${i.web?.speisekarte ? ` · <a href="${i.web.speisekarte}" target="_blank" rel="noopener">Speisekarte</a>` : ''}
+        </td>
+        <td class="right"><button data-id="${i.id||''}" class="editBtn">Bearbeiten</button></td>`;
+      tb.appendChild(tr);
+    });
+
+  tb.querySelectorAll('.editBtn').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      const id = btn.getAttribute('data-id');
+      if(!id){ alert('Dieser Eintrag hat noch keine ID – bitte neu anlegen.'); return; }
+      const r = await fetch(API); const data = await r.json();
+      const item = data.find(x=>x.id===id);
+      if(!item){ alert('Eintrag nicht gefunden.'); return; }
+      editingId = id;
+      $("#titel").value = item.titel||"";
+      $("#kategorie").value = item.kategorie||"restaurant";
+      $("#strasse").value = item.adresse?.strasse||"";
+      $("#plz").value = item.adresse?.plz||"";
+      $("#stadt").value = item.stadt || item.adresse?.stadt || "";
+      $("#telefon").value = item.kontakt?.telefon||"";
+      $("#email").value = item.kontakt?.email||"";
+      $("#website").value = item.web?.website||"";
+      $("#speisekarte").value = item.web?.speisekarte||"";
+      $("#oeffnungszeiten").value = item.info?.oeffnungszeiten||"";
+      $("#schliesstage").value = item.info?.schliesstage||"";
+      $("#beschreibung").value = item.info?.beschreibung||"";
+      $("#preisklasse").value = item.info?.preisklasse||"";
+      $("#bild").value = item.bild||"";
+      $("#url").value = item.url||"";
+      $("#instagram").value = item.web?.instagram||"";
+      $("#facebook").value = item.web?.facebook||"";
+      $("#tiktok").value = item.web?.tiktok||"";
+      $("#abholung").checked = !!item.optionen?.abholung;
+      $("#lieferung").checked = !!item.optionen?.lieferung;
+      $("#featured").checked = !!item.optionen?.featured;
+      $("#menuText").value = item.menu?.text || "";
+      updateMenuUI();
+      window.scrollTo({top:0,behavior:'smooth'});
+    });
+  });
+}
+
 $("#save").onclick = async (e)=>{
   e.preventDefault();
   const p = toPayload();
   if(!p.titel){ alert('Bitte einen Namen eingeben.'); return; }
   const method = editingId ? "PUT" : "POST";
-  const res = await fetch(API, { method, headers:hdrs(), body:JSON.stringify(p) });
-  const data = await res.json();
-  if(data.error){ alert('Fehler: ' + data.error); return; }
+  const res = await fetch(API, { method, headers:hdrs(), body:JSON.stringify(p) }).then(r=>r.json());
+  if(res.error){ alert('Fehler: ' + res.error + '\n\nHinweis: Wenn NETLIFY_ADMIN_TOKEN gesetzt ist, trage es oben in das Token-Feld ein.'); return; }
   alert(editingId ? 'Aktualisiert!' : 'Gespeichert!');
   editingId = null;
   loadList();
 };
+$("#fetch").onclick = loadList;
+$("#clear").onclick = async ()=>{
+  if(!confirm('WIRKLICH alle Einträge löschen?')) return;
+  const res = await fetch(API, { method:"DELETE", headers:hdrs() }).then(r=>r.json());
+  if(res.error){ alert('Fehler: ' + res.error); return; }
+  alert('Alles gelöscht.'); loadList();
+};
+$("#filter").addEventListener('input', loadList);
 
-// Rest: fetch/clear/filter/export/import/preview bleibt wie in deiner Version …
+// Export/Import
+$("#exportBtn").onclick = async ()=>{
+  const r = await fetch(API); const data = await r.json();
+  const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = Object.assign(document.createElement('a'), {href:url, download:'eintraege.json'});
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+};
+$("#importFile").onchange = async (ev)=>{
+  const file = ev.target.files[0]; if(!file) return;
+  const text = await file.text(); let arr;
+  try { arr = JSON.parse(text); } catch { alert('Ungültiges JSON.'); return; }
+  if(!Array.isArray(arr)){ alert('Erwarte ein Array von Einträgen.'); return; }
+  if(!confirm('Import fügt Einträge hinzu/überschreibt gleiche IDs. Fortfahren?')) return;
+  for(const it of arr){ await fetch(API, { method: it.id? "PUT":"POST", headers:hdrs(), body:JSON.stringify(it) }); }
+  alert('Import abgeschlossen.'); loadList();
+};
+
+loadList();
 </script>
