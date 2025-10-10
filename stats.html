@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Analytics · Ortenau liefert</title>
+<meta name="theme-color" content="#f6f6f6">
+<style>
+  :root{ --bg:#f6f6f6; --card:#fff; --text:#222; --muted:#6b7280; --border:#d0d0d0; --radius:12px; --shadow:0 4px 12px rgba(0,0,0,.08) }
+  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;padding:16px}
+  .wrap{max-width:1100px;margin:auto}
+  h1{margin:8px 0 16px}
+  .grid{display:grid;gap:12px}
+  .g3{grid-template-columns:repeat(3,1fr)}
+  @media (max-width:900px){ .g3{grid-template-columns:1fr} }
+  .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}
+  .muted{color:var(--muted)}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:8px;border-bottom:1px solid #eee;text-align:left}
+  th{background:#fafafa}
+  .bar{height:10px;background:#e5e7eb;border-radius:6px;overflow:hidden}
+  .bar > span{display:block;height:100%;background:#111827}
+  .row{display:flex;gap:8px;align-items:center}
+  .right{text-align:right}
+  .ctrl{display:flex;gap:8px;align-items:center;margin:8px 0 16px}
+  input,button{padding:10px 12px;border:1px solid var(--border);border-radius:10px}
+  button{cursor:pointer;background:#111827;color:#fff}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Analytics</h1>
+
+  <div class="ctrl">
+    <input id="token" placeholder="(optional) Admin-Token für /api/stats" style="min-width:260px">
+    <button id="loadBtn">Aktualisieren</button>
+    <span class="muted">Nur lesend. Keine personenbezogenen Daten.</span>
+  </div>
+
+  <div class="grid g3">
+    <div class="card">
+      <h3>Gesamt</h3>
+      <div id="totalBox" class="muted">–</div>
+    </div>
+    <div class="card">
+      <h3>Seitenaufrufe (letzte Tage)</h3>
+      <div id="pvDays">–</div>
+    </div>
+    <div class="card">
+      <h3>Suchvorgänge (letzte Tage)</h3>
+      <div id="sDays">–</div>
+    </div>
+  </div>
+
+  <div class="grid" style="margin-top:12px">
+    <div class="card">
+      <h3>Top-Suchbegriffe</h3>
+      <table id="tblSearch"><thead><tr><th>Begriff</th><th class="right">Anzahl</th><th>Relativ</th></tr></thead><tbody></tbody></table>
+    </div>
+    <div class="card">
+      <h3>Top-Seiten</h3>
+      <table id="tblPaths"><thead><tr><th>Pfad</th><th class="right">Views</th><th>Relativ</th></tr></thead><tbody></tbody></table>
+    </div>
+    <div class="card">
+      <h3>Top-Lokale (Klicks)</h3>
+      <table id="tblEntries"><thead><tr><th>Name</th><th class="right">Klicks</th><th>Relativ</th></tr></thead><tbody></tbody></table>
+    </div>
+    <div class="card">
+      <h3>Top-Anzeigen (Klicks)</h3>
+      <table id="tblAds"><thead><tr><th>Titel</th><th class="right">Klicks</th><th>Relativ</th></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+
+function barCell(val, max){
+  const p = max ? Math.round(val/max*100) : 0;
+  return `<div class="bar"><span style="width:${p}%"></span></div>`;
+}
+
+function td(n){ return `<td class="right">${n}</td>` }
+
+async function load(){
+  const h = {}; const t = $("#token").value.trim(); if (t) h["x-admin-token"] = t;
+  const r = await fetch("/api/stats", { headers:h });
+  const data = await r.json();
+  if (data.error){ alert(data.error); return; }
+
+  // Kopfzahlen
+  $("#totalBox").innerHTML = `
+    <div class="row"><strong>Seitenaufrufe:</strong> ${data?.totals?.pageViews||0}</div>
+    <div class="row"><strong>Suchen:</strong> ${data?.totals?.searches||0}</div>
+    <div class="row"><strong>Lokalklicks:</strong> ${data?.totals?.entryClicks||0}</div>
+    <div class="row"><strong>Anzeigenklicks:</strong> ${data?.totals?.adClicks||0}</div>
+  `;
+
+  // Per-Day simple Bars (letzte 14 Tage)
+  function renderDays(map, el){
+    const days = Object.entries(map||{}).sort((a,b)=>a[0].localeCompare(b[0])).slice(-14);
+    const max = days.reduce((m,[,v])=>Math.max(m,v),0);
+    el.innerHTML = days.map(([d,v])=>`
+      <div class="row" style="gap:10px"><div style="width:100px">${d}</div><div style="flex:1">${barCell(v,max)}</div><div style="width:60px;text-align:right">${v}</div></div>
+    `).join("") || "<span class='muted'>Keine Daten</span>";
+  }
+  renderDays(data?.perDay?.pageViews||{}, $("#pvDays"));
+  renderDays(data?.perDay?.searches||{}, $("#sDays"));
+
+  // Tabellen
+  function renderTable(map, bodyEl, label="Name"){
+    const arr = Object.entries(map||{}).map(([k,v])=>({ key:k, val: (v.clicks ?? v) , label: (v.title ?? k) }));
+    arr.sort((a,b)=>b.val-a.val);
+    const top = arr.slice(0,20);
+    const max = top.reduce((m,x)=>Math.max(m,x.val),0);
+    bodyEl.innerHTML = top.map(x=>`<tr><td>${x.label}</td>${td(x.val)}<td>${barCell(x.val,max)}</td></tr>`).join("") || `<tr><td colspan="3" class="muted">Keine Daten</td></tr>`;
+  }
+  renderTable(data.searches, $("#tblSearch tbody"), "Begriff");
+  renderTable(data.byPath, $("#tblPaths tbody"), "Pfad");
+  renderTable(data.entries, $("#tblEntries tbody"), "Name");
+  renderTable(data.ads, $("#tblAds tbody"), "Titel");
+}
+$("#loadBtn").onclick = load;
+load();
+</script>
+</body>
+</html>
