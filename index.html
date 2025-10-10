@@ -9,18 +9,24 @@
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/favicon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Ortenau liefert">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
 <style>
-  :root{ --accent:#e7e7e7; --text:#333; --bg:#f6f6f6; --card:#fff; --muted:#70798C; --radius:12px; --shadow:0 4px 12px rgba(0,0,0,.08); --border:#d0d0d0; --tap:48px; --featured:#fff8e6; --featured-b:#f7d37c; }
+  :root{
+    --accent:#e7e7e7; --text:#333; --bg:#f6f6f6; --card:#fff; --muted:#70798C;
+    --radius:12px; --shadow:0 4px 12px rgba(0,0,0,.08); --border:#d0d0d0; --tap:48px;
+    --featured:#fff9e6; /* gelbliche Betonung für Featured */
+    --featured-border:#ffd45c;
+  }
   *{box-sizing:border-box}
   html{font-size:16px}
   @media (max-width:480px){ html{font-size:17px} }
   body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;background:var(--bg);color:var(--text);padding-bottom:56px;line-height:1.45}
-  .visually-hidden{position:absolute!important;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 
   header.site{position:sticky;top:0;z-index:20;background:var(--accent);border-bottom:1px solid #b0b0b0;}
-  .head{max-width:1360px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:10px 16px;}
+  .head{max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:10px 16px;}
   .logo img{height:52px}
   .hamburger{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:10px;background:#fff;border:1px solid var(--border);cursor:pointer}
   .hamburger svg{width:24px;height:24px}
@@ -34,42 +40,32 @@
   .menu a{text-decoration:none;color:var(--text);padding:10px 12px;border-radius:10px;display:block;border:1px solid #eee;background:#fafafa}
   .menu a:hover{background:#f2f2f2}
 
-  .toolbar{max-width:1360px;margin:8px auto;display:flex;align-items:center;gap:12px;padding:0 16px;}
+  .toolbar{max-width:1200px;margin:8px auto;display:flex;align-items:center;gap:12px;padding:0 16px;}
   @media (max-width:640px){ .toolbar{flex-direction:column;align-items:stretch} }
   .search-wrap{position:relative;display:flex;align-items:center;flex:1}
   .search-wrap svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);pointer-events:none}
   #search{width:100%;height:var(--tap);padding:0 46px 0 40px;border:1px solid var(--border);border-radius:12px;background:#fff;color:var(--text)}
   #clearBtn{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:36px;height:36px;border:0;border-radius:50%;cursor:pointer;background:#f6f6f6;font-size:1.2rem}
 
-  /* GRID: 2 Spalten ab ~900px */
-  .list{max-width:1100px;margin:0 auto 12px;padding:0 16px;display:grid;grid-template-columns:1fr;gap:12px}
-  @media (min-width:900px){ .list{grid-template-columns:repeat(2, minmax(0, 1fr));} }
-  .item{display:grid;grid-template-columns:42px 1fr;gap:12px;align-items:center;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:10px 12px;text-decoration:none;color:inherit;box-shadow:var(--shadow)}
+  /* Karten-Grid: 2 Spalten Desktop, 1 Spalte Handy */
+  .list{max-width:1200px;margin:0 auto 16px;padding:0 16px;display:grid;gap:12px;
+        grid-template-columns:repeat(auto-fit, minmax(340px, 1fr));}
+  @media (max-width:700px){ .list{grid-template-columns:1fr} }
+
+  .item{display:grid;grid-template-columns:42px 1fr;gap:12px;align-items:center;background:var(--card);
+        border:1px solid var(--border);border-radius:12px;padding:10px 12px;text-decoration:none;color:inherit;box-shadow:var(--shadow)}
   .item:active{transform:scale(.99)}
+  .item.featured{background:var(--featured);border-color:var(--featured-border);box-shadow:0 6px 14px rgba(255,194,45,.25)}
+
   .emoji{font-size:1.6rem;line-height:1;display:flex;align-items:center;justify-content:center}
   .meta{min-width:0}
   .name{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .sub{font-size:.95rem;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;margin-top:2px}
   .badge{font-size:.85rem;border:1px solid #eee;background:#fafafa;border-radius:999px;padding:2px 8px}
-
-  /* Featured */
-  .featured{background:var(--featured);border-color:var(--featured-b)}
-  .featured .badge{border-color:var(--featured-b);background:#fff2cf}
-
-  /* Anzeige-Karte (spannt über 2 Spalten auf Desktop) */
-  .ad-card{position:relative;background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px;box-shadow:var(--shadow);display:flex;gap:14px;align-items:center}
-  .ad-card .ad-label{position:absolute;top:8px;right:8px;font-size:.8rem;background:#fee2e2;color:#991b1b;border:1px solid #fecaca;border-radius:999px;padding:2px 8px}
-  .ad-card .logo{width:56px;height:56px;border-radius:12px;border:1px solid #eee;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden}
-  .ad-card .logo img{max-width:100%;max-height:100%}
-  .ad-card .text{flex:1 1 auto;min-width:0}
-  .ad-card .title{font-weight:800;margin:0 0 4px}
-  .ad-card .desc{color:#60636b;margin:0;font-size:.95rem}
-  .ad-card .cta{white-space:nowrap}
-  .ad-card .btn{display:inline-block;padding:10px 14px;border:1px solid #111827;background:#111827;color:#fff;border-radius:10px;text-decoration:none}
-  @media (min-width:900px){ .ad-card{grid-column:1 / -1} } /* span beide */
+  .city{color:var(--muted)}
 
   footer{position:fixed;bottom:0;left:0;width:100%;height:56px;background:var(--accent);color:#595959;border-top:1px solid #b0b0b0;font-size:.95rem}
-  .footer-inner{max-width:1360px;margin:0 auto;height:100%;display:flex;justify-content:center;align-items:center;padding:0 12px}
+  .footer-inner{max-width:1200px;margin:0 auto;height:100%;display:flex;justify-content:center;align-items:center;padding:0 12px}
 </style>
 </head>
 <body>
@@ -77,7 +73,7 @@
   <div class="head">
     <div class="logo"><a href="index.html" aria-label="Zur Startseite"><img src="header.png" alt="Ortenau liefert"></a></div>
     <button class="hamburger" id="menuBtn" aria-label="Menü öffnen" aria-expanded="false" aria-controls="drawer">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#333" d="M3 6h18v2H3v-2zm0 5h18v2H3v-2zm0 5h18v2H3v-2z"/></svg>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#333" d="M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h18v2H3v-2z"/></svg>
     </button>
   </div>
 </header>
@@ -86,7 +82,7 @@
 <aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-hidden="true">
   <header>Menü</header>
   <nav class="menu">
-    <a href="index.html" aria-current="page">Startseite</a>
+    <a href="index.html">Startseite</a>
     <a href="kontakt.html">Kontakt</a>
     <a href="impressum.html">Impressum</a>
     <a href="agb.html">AGB</a>
@@ -108,6 +104,7 @@
 
 <script>
 document.getElementById("jahr").textContent = new Date().getFullYear();
+
 /* Drawer */
 (function(){
   const menuBtn = document.getElementById('menuBtn');
@@ -120,9 +117,7 @@ document.getElementById("jahr").textContent = new Date().getFullYear();
   window.addEventListener('keydown', e=>{ if(e.key==='Escape') close(); });
 })();
 
-/* Helpers */
-const $ = s => document.querySelector(s);
-function normalize(s){ try { return (s||'').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu,''); } catch { return (s||'').toLowerCase(); } }
+/* Emoji pro Kategorie */
 function catEmoji(cat){
   const c = (cat||'').toLowerCase();
   if (c.includes('doener') || c.includes('döner') || c.includes('kebab')) return '🥙';
@@ -132,85 +127,86 @@ function catEmoji(cat){
   if (c.includes('cafe') || c.includes('café')) return '☕️';
   return '🍽️';
 }
-function shuffle(a){ for (let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]] } return a; }
-function isActive(ad){
-  const today = new Date().toISOString().slice(0,10);
-  const s = ad.startDate||"0000-00-00", e = ad.endDate||"9999-12-31";
-  return today >= s && today <= e;
+
+const $ = s => document.querySelector(s);
+function normalize(s){ try { return (s||'').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu,''); } catch { return (s||'').toLowerCase(); } }
+
+/* Render-Liste – ohne Statuszeile, 2 Spalten Desktop, Featured hervorgehoben */
+function render(items){
+  const el = $("#list");
+  el.innerHTML = "";
+  if(!items || !items.length){ el.innerHTML = '<p style="color:#70798C">Noch keine Einträge vorhanden.</p>'; return; }
+
+  const list = [...items].sort((a,b)=>{
+    const fa = !!a?.optionen?.featured, fb = !!b?.optionen?.featured;
+    if (fa!==fb) return fa? -1 : 1;
+    return (a.titel||"").localeCompare(b.titel||"");
+  });
+
+  list.forEach(item=>{
+    const a = document.createElement('a');
+    a.className = 'item' + (item?.optionen?.featured ? ' featured' : '');
+    a.href = item.id ? `details.html?id=${encodeURIComponent(item.id)}` : `details.html?q=${encodeURIComponent((item.titel||'').toLowerCase())}`;
+
+    const emoji = document.createElement('div');
+    emoji.className = 'emoji';
+    emoji.textContent = catEmoji(item.kategorie);
+
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+
+    const name = document.createElement('div');
+    name.className = 'name';
+    name.textContent = item.titel || '';
+
+    const sub = document.createElement('div');
+    sub.className = 'sub';
+    const city = item.stadt || item?.adresse?.stadt || '';
+
+    // Kategorie-Label vereinheitlicht
+    const rawCat = (item.kategorie||'').toLowerCase();
+    let catLabel = rawCat;
+    if (rawCat.includes('doener') || rawCat.includes('döner') || rawCat.includes('kebab')) catLabel = 'Döner/Kebab';
+    else if (rawCat.includes('pizza')) catLabel = 'Pizza/Pizzeria';
+    else if (!catLabel) catLabel = 'Restaurant';
+
+    sub.innerHTML = `
+      <span class="city">${city? city : ''}</span>
+      <span class="badge">${catLabel}</span>
+    `;
+
+    meta.appendChild(name);
+    meta.appendChild(sub);
+
+    a.appendChild(emoji);
+    a.appendChild(meta);
+    el.appendChild(a);
+  });
 }
 
-/* Render */
-function card(item){
-  const a = document.createElement('a');
-  a.className = 'item' + (item?.optionen?.featured ? ' featured':'');
-  a.href = item.id ? `details.html?id=${encodeURIComponent(item.id)}` : `details.html?q=${encodeURIComponent((item.titel||'').toLowerCase())}`;
-  a.innerHTML = `
-    <div class="emoji">${catEmoji(item.kategorie)}</div>
-    <div class="meta">
-      <div class="name">${item.titel || ''}</div>
-      <div class="sub">
-        <span>${item.stadt || item?.adresse?.stadt || ''}</span>
-        <span class="badge">${(item.kategorie||'').toLowerCase().includes('pizza') ? 'Pizza/Pizzeria' :
-           ((item.kategorie||'').toLowerCase().match(/doener|döner|kebab/) ? 'Döner/Kebab':'Restaurant')}</span>
-        ${item?.optionen?.featured ? '<span class="badge">Featured</span>':''}
-      </div>
-    </div>`;
-  return a;
-}
-function adCard(ad){
-  const wrap = document.createElement('div');
-  wrap.className = 'ad-card';
-  if (ad.bg) wrap.style.background = ad.bg;
-  wrap.innerHTML = `
-    <span class="ad-label">Anzeige</span>
-    <div class="logo">${ad.logoUrl ? `<img src="${ad.logoUrl}" alt="">`:'📢'}</div>
-    <div class="text">
-      <div class="title">${ad.title || ''}${ad.company ? ` · <span style="font-weight:600;color:#6b7280">${ad.company}</span>`:''}</div>
-      ${ad.text ? `<p class="desc">${ad.text}</p>`:''}
-    </div>
-    <div class="cta"><a class="btn" href="${ad.ctaUrl}" target="_blank" rel="noopener">${ad.ctaText||'Mehr erfahren'}</a></div>
-  `;
-  return wrap;
-}
-
+/* Daten laden – robust mit Fallback */
 async function loadAndRender(){
-  const [rEntries, rAds] = await Promise.all([fetch("/api/entries"), fetch("/api/ads")]);
-  const all = await rEntries.json();
-  let ads = await rAds.json();
-
-  // Aktive Ads, zufällig mischen, nach Priority vorsortieren (höher zuerst), dann shuffle
-  ads = ads.filter(isActive).sort((a,b)=>(b.priority||0)-(a.priority||0));
-  shuffle(ads);
+  let all = [];
+  try{
+    const res = await fetch("/api/entries", {cache:"no-store"});
+    if(!res.ok) throw new Error(res.status);
+    all = await res.json();
+    if(!Array.isArray(all)) all = [];
+  }catch(e){
+    console.error("Einträge konnten nicht geladen werden:", e);
+    all = [];
+  }
 
   const input = $("#search");
   const clear = $("#clearBtn");
-
   function apply(){
     const q = normalize(input.value.trim());
-    const items = !q ? all : all.filter(item=>{
+    const filtered = !q ? all : all.filter(item=>{
       const hay = normalize(JSON.stringify(item));
       return q.split(/\s+/).filter(Boolean).every(t=>hay.includes(t));
     });
-
-    const el = $("#list");
-    el.innerHTML = "";
-
-    // Render items + Insert Ads at slots
-    const slots = [2,5,8]; // nach diesen Indexen
-    let adIndex = 0;
-    items.forEach((it, idx)=>{
-      el.appendChild(card(it));
-      if (slots.includes(idx+1) && adIndex < ads.length) {
-        el.appendChild(adCard(ads[adIndex++]));
-      }
-    });
-
-    // falls am Ende noch freie Ad-Slots sind
-    while (adIndex < Math.min(ads.length,3)) {
-      el.appendChild(adCard(ads[adIndex++]));
-    }
+    render(filtered);
   }
-
   input.oninput = apply;
   clear.onclick = ()=>{ input.value=""; apply(); input.focus(); };
   apply();
