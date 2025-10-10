@@ -55,40 +55,13 @@
   @media (max-width:640px){ .install{width:100%;} }
 
   /* iOS Install-Hinweis */
-  .ios-install-hint {
-    display: none;
-    background: #fff;
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    box-shadow: var(--shadow);
-    padding: 10px 12px;
-    gap: 8px;
-    align-items: center;
-    justify-content: space-between;
-    font-size: 0.95rem;
-    margin: 8px 16px 0;
-  }
-  .ios-install-hint .close {
-    border: 0;
-    background: #f1f1f1;
-    border-radius: 10px;
-    padding: 6px 10px;
-    cursor: pointer;
-  }
-  .ios-share-emoji { font-size: 1.2rem }
+  .ios-install-hint { display:none;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);padding:10px 12px;gap:8px;align-items:center;justify-content:space-between;font-size:.95rem;margin:8px 16px 0; }
+  .ios-install-hint .close { border:0;background:#f1f1f1;border-radius:10px;padding:6px 10px;cursor:pointer }
+  .ios-share-emoji { font-size:1.2rem }
 
   /* ======= LISTE ======= */
-  .list{
-    max-width:900px;
-    margin:0 auto 12px;
-    padding:0 16px;
-    display:grid;
-    grid-template-columns:1fr;
-    gap:12px;
-  }
-  @media (min-width:640px){
-    .list{ grid-template-columns:repeat(2, minmax(0, 1fr)); }
-  }
+  .list{ max-width:900px; margin:0 auto 12px; padding:0 16px; display:grid; grid-template-columns:1fr; gap:12px; }
+  @media (min-width:640px){ .list{ grid-template-columns:repeat(2, minmax(0, 1fr)); } }
 
   .item{
     display:grid;
@@ -120,11 +93,14 @@
     border:1px solid #e9d88c;
     background:linear-gradient(180deg,#fffdf4,#ffffff);
     min-height:96px;
+    cursor:pointer;              /* klickbar sichtbar machen */
   }
-  /* >>> WICHTIG: Anzeige über 2 Zeilen, damit links 2 kleine Karten bleiben */
+  /* Anzeige über 2 Zeilen, damit links 2 kleine Karten bleiben */
   @media (min-width:640px){
     .ad-card{ grid-row: span 2; min-height:150px; }
   }
+
+  /* einziges Badge oben rechts, blockiert keine Klicks */
   .ad-card::after{
     content:"WERBUNG";
     position:absolute;
@@ -135,13 +111,22 @@
     border:1px solid #ecd972;
     border-radius:999px;
     padding:2px 8px;
+    pointer-events:none; /* <<< Klicks nicht abfangen */
+  }
+
+  /* Bild oben links in der Ecke */
+  .ad-card{ grid-template-columns:1fr; }      /* Standard-Grid der .item überschreiben */
+  .ad-card .emoji{
+    position:absolute;
+    top:12px; left:12px;
+    width:44px; height:44px;
   }
   .ad-card .emoji img{
-    width:42px; height:42px; border-radius:8px; object-fit:cover;
+    width:44px; height:44px; border-radius:8px; object-fit:cover;
+    display:block;
   }
-  .ad-card .ad-text{
-    margin-top:6px; color:#555; font-size:.95rem; white-space:pre-wrap;
-  }
+  .ad-card .meta{ margin-left:60px; }         /* Platz fürs Bild schaffen */
+  .ad-card .ad-text{ margin-top:6px; color:#555; font-size:.95rem; white-space:pre-wrap; }
 </style>
 </head>
 <body>
@@ -258,16 +243,14 @@ function buildAdCard(ad){
   const name = document.createElement('div');
   name.className = 'name';
   name.textContent = title;
-  const sub = document.createElement('div');
-  sub.className = 'sub';
-  sub.innerHTML = `<span class="badge">Werbung</span>`;
+
   const txt = document.createElement('div');
   txt.className = 'ad-text';
   if (text && String(text).trim()) txt.innerHTML = String(text).replace(/\n/g,"<br>");
 
   meta.appendChild(name);
-  meta.appendChild(sub);
   if (txt.innerHTML) meta.appendChild(txt);
+
   a.appendChild(emoji);
   a.appendChild(meta);
   return a;
@@ -343,8 +326,7 @@ async function loadAndRender(){
       return q.split(/\s+/).filter(Boolean).every(t=>hay.includes(t));
     });
     render(filtered);
-    // Werbung nach Render der Liste einfügen
-    injectAds();
+    injectAds();    // Werbung nach Render der Liste einfügen
   }
   input.oninput = apply;
   clear.onclick = ()=>{ input.value=""; apply(); input.focus(); };
