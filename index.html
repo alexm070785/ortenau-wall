@@ -37,14 +37,7 @@
   .menu a{text-decoration:none;color:var(--text);padding:10px 12px;border-radius:10px;display:block;border:1px solid #eee;background:#fafafa}
   .menu a:hover{background:#f2f2f2}
 
-  .toolbar{
-    max-width:900px;
-    margin:8px auto;
-    display:flex;
-    align-items:center;
-    gap:12px;
-    padding:0 16px;
-  }
+  .toolbar{ max-width:900px; margin:8px auto; display:flex; align-items:center; gap:12px; padding:0 16px; }
   @media (max-width:640px){ .toolbar{flex-direction:column;align-items:stretch} }
   .search-wrap{position:relative;display:flex;align-items:center;flex:1}
   .search-wrap svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);pointer-events:none}
@@ -54,29 +47,14 @@
   .install{height:var(--tap);padding:0 14px;border:1px solid var(--border);border-radius:12px;background:#fff;cursor:pointer;box-shadow:var(--shadow)}
   @media (max-width:640px){ .install{width:100%;} }
 
-  /* iOS Install-Hinweis */
   .ios-install-hint { display:none;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);padding:10px 12px;gap:8px;align-items:center;justify-content:space-between;font-size:.95rem;margin:8px 16px 0; }
   .ios-install-hint .close { border:0;background:#f1f1f1;border-radius:10px;padding:6px 10px;cursor:pointer }
   .ios-share-emoji { font-size:1.2rem }
 
-  /* ======= LISTE ======= */
   .list{ max-width:900px; margin:0 auto 12px; padding:0 16px; display:grid; grid-template-columns:1fr; gap:12px; }
   @media (min-width:640px){ .list{ grid-template-columns:repeat(2, minmax(0, 1fr)); } }
 
-  .item{
-    display:grid;
-    grid-template-columns:42px 1fr;
-    gap:12px;
-    align-items:center;
-    background:var(--card);
-    border:1px solid var(--border);
-    border-radius:12px;
-    padding:12px;
-    text-decoration:none;
-    color:inherit;
-    box-shadow:var(--shadow);
-    min-height:64px;
-  }
+  .item{ display:grid; grid-template-columns:42px 1fr; gap:12px; align-items:center; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:12px; text-decoration:none; color:inherit; box-shadow:var(--shadow); min-height:64px; }
   .item:active{transform:scale(.99)}
   .emoji{font-size:1.6rem;line-height:1;display:flex;align-items:center;justify-content:center}
   .meta{min-width:0}
@@ -88,44 +66,21 @@
   .footer-inner{max-width:900px;margin:0 auto;height:100%;display:flex;justify-content:center;align-items:center;padding:0 12px}
 
   /* ===== Werbung (Karte) ===== */
-  .ad-card{
-    position:relative;
-    border:1px solid #e9d88c;
-    background:linear-gradient(180deg,#fffdf4,#ffffff);
-    min-height:96px;
-    cursor:pointer;              /* klickbar sichtbar machen */
-  }
-  /* Anzeige über 2 Zeilen, damit links 2 kleine Karten bleiben */
-  @media (min-width:640px){
-    .ad-card{ grid-row: span 2; min-height:150px; }
-  }
+  .ad-card{ position:relative; border:1px solid #e9d88c; background:linear-gradient(180deg,#fffdf4,#ffffff); min-height:96px; cursor:pointer; }
+  @media (min-width:640px){ .ad-card{ grid-row: span 2; min-height:150px; } }
 
-  /* einziges Badge oben rechts, blockiert keine Klicks */
   .ad-card::after{
     content:"WERBUNG";
-    position:absolute;
-    top:8px; right:10px;
-    font-size:.72rem;
-    color:#7a5d00;
-    background:#fff5bf;
-    border:1px solid #ecd972;
-    border-radius:999px;
-    padding:2px 8px;
-    pointer-events:none; /* <<< Klicks nicht abfangen */
+    position:absolute; top:8px; right:10px;
+    font-size:.72rem; color:#7a5d00;
+    background:#fff5bf; border:1px solid #ecd972; border-radius:999px; padding:2px 8px;
+    pointer-events:none; /* Klick nicht blockieren */
   }
 
-  /* Bild oben links in der Ecke */
-  .ad-card{ grid-template-columns:1fr; }      /* Standard-Grid der .item überschreiben */
-  .ad-card .emoji{
-    position:absolute;
-    top:12px; left:12px;
-    width:44px; height:44px;
-  }
-  .ad-card .emoji img{
-    width:44px; height:44px; border-radius:8px; object-fit:cover;
-    display:block;
-  }
-  .ad-card .meta{ margin-left:60px; }         /* Platz fürs Bild schaffen */
+  .ad-card{ grid-template-columns:1fr; }
+  .ad-card .emoji{ position:absolute; top:12px; left:12px; width:44px; height:44px; }
+  .ad-card .emoji img{ width:44px; height:44px; border-radius:8px; object-fit:cover; display:block; }
+  .ad-card .meta{ margin-left:60px; }
   .ad-card .ad-text{ margin-top:6px; color:#555; font-size:.95rem; white-space:pre-wrap; }
 </style>
 </head>
@@ -158,6 +113,13 @@
     <button id="clearBtn" type="button" aria-label="Suche leeren">×</button>
   </div>
   <button id="installBtn" class="install" type="button" hidden>+ App installieren</button>
+</div>
+
+<!-- iOS-Hinweis (optional eingerblendet) -->
+<div id="iosHint" class="ios-install-hint" hidden>
+  <span class="ios-share-emoji">📱</span>
+  <span>Auf iPhone: <b>Teilen</b> → <b>Zum Home-Bildschirm</b> hinzufügen</span>
+  <button class="close" type="button" aria-label="Hinweis schließen">OK</button>
 </div>
 
 <main class="list" id="list"></main>
@@ -193,45 +155,78 @@ function catEmoji(cat){
 const $ = s => document.querySelector(s);
 function normalize(s){ try { return (s||'').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu,''); } catch { return (s||'').toLowerCase(); } }
 
+/* ===== Helpers: robustes Datums-Parsing (auch TT.MM.JJJJ) ===== */
+function parseDateLoose(v){
+  if (!v) return null;
+  if (v instanceof Date) return isNaN(v)?null:v;
+  if (typeof v === 'number') { const d = new Date(v); return isNaN(d)?null:d; }
+  const s = String(v).trim();
+  if (!s) return null;
+
+  // 1) DD.MM.YYYY [HH:MM]
+  const m = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{2,4})(?:\s+(\d{1,2}):(\d{2}))?$/);
+  if (m){
+    const dd = parseInt(m[1],10);
+    const MM = parseInt(m[2],10)-1;
+    let yyyy = parseInt(m[3],10); if (yyyy<100) yyyy += 2000;
+    const hh = m[4]? parseInt(m[4],10):0;
+    const mi = m[5]? parseInt(m[5],10):0;
+    const d = new Date(yyyy,MM,dd,hh,mi,0,0);
+    return isNaN(d)?null:d;
+  }
+
+  // 2) ISO/sonstige – Browser versuchen
+  const d = new Date(s);
+  return isNaN(d)?null:d;
+}
+
 /* ========= Werbung ========= */
 async function fetchAds(){
   try{
     const r = await fetch("/api/ads", { cache:"no-store" });
     const j = await r.json();
-    console.log("[ads] response:", j);
     return Array.isArray(j) ? j : [];
   }catch(e){
     console.warn("[ads] fetch failed", e);
     return [];
   }
 }
+
 function isAdActiveLoose(ad){
+  // Status
   const status = String(ad.status ?? ad.Status ?? ad.state ?? "").toLowerCase();
   if (status && status !== "aktiv" && status !== "active") return false;
 
+  // Zeitraum
   const now = new Date();
-  const start = ad.start ?? ad.begin ?? ad.startDate ?? ad.von ?? ad.beginn;
-  const end   = ad.ende  ?? ad.end   ?? ad.endDate   ?? ad.bis  ?? ad.endeDatum;
+  const startVal = ad.start ?? ad.begin ?? ad.startDate ?? ad.von ?? ad.beginn;
+  const endVal   = ad.ende  ?? ad.end   ?? ad.endDate   ?? ad.bis  ?? ad.endeDatum;
 
-  if (start){
-    const ds = new Date(start);
-    if (!isNaN(ds) && ds > now) return false;
-  }
-  if (end){
-    const de = new Date(end);
-    if (!isNaN(de) && de < now) return false;
-  }
+  const ds = parseDateLoose(startVal);
+  const de = parseDateLoose(endVal);
+
+  if (ds && ds > now) return false;        // noch nicht gestartet
+  if (de && de < now) return false;        // bereits beendet
   return true;
 }
+
 function buildAdCard(ad){
   const title = ad.title ?? ad.titel ?? "Anzeige";
   const image = ad.image ?? ad.bild ?? ad.img ?? ad.imageUrl ?? ad.bildUrl ?? "";
-  const url   = ad.url   ?? ad.link ?? ad.clickUrl ?? "";
-  const text  = ad.text  ?? ad.beschreibung ?? "";
+  // URL: viele mögliche Feldnamen akzeptieren
+  const url   = ad.url ?? ad.link ?? ad.clickUrl ?? ad.target ?? ad.href ?? ad.ZielURL ?? ad.ziel ?? ad.targetUrl ?? "";
 
   const a = document.createElement('a');
   a.className = 'item ad-card';
-  if (url) { a.href = url; a.target="_blank"; a.rel="noopener"; }
+  if (url && typeof url === 'string' && url.trim()){
+    a.href = url.trim();
+    a.target = "_blank";
+    a.rel = "noopener";
+  } else {
+    // kein Link vorhanden – trotzdem semantisch Button-Style
+    a.setAttribute('role','button');
+    a.style.cursor = 'default';
+  }
 
   const emoji = document.createElement('div');
   emoji.className = 'emoji';
@@ -244,6 +239,7 @@ function buildAdCard(ad){
   name.className = 'name';
   name.textContent = title;
 
+  const text  = ad.text  ?? ad.beschreibung ?? "";
   const txt = document.createElement('div');
   txt.className = 'ad-text';
   if (text && String(text).trim()) txt.innerHTML = String(text).replace(/\n/g,"<br>");
@@ -255,17 +251,16 @@ function buildAdCard(ad){
   a.appendChild(meta);
   return a;
 }
+
 async function injectAds(){
   const listEl = document.getElementById("list");
   if (!listEl) return;
 
   const ads = (await fetchAds()).filter(isAdActiveLoose);
-  if (!ads.length) { console.log("[ads] no active ads"); return; }
+  if (!ads.length) return;
 
-  // Slot-Match, sonst erste passende Anzeige
   const want = "home_right_mid";
   const pick = ads.find(a => String(a.slot ?? a.slotKey ?? a.position ?? "").includes(want)) ?? ads[0];
-  console.log("[ads] chosen:", pick);
 
   const card = buildAdCard(pick);
   const insertIndex = Math.min(3, listEl.children.length); // nach 3 Karten
