@@ -23,7 +23,7 @@
   .visually-hidden{position:absolute!important;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 
   header.site{position:sticky;top:0;z-index:20;background:var(--accent);border-bottom:1px solid #b0b0b0;}
-  .head{max-width:1360px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:10px 16px;}
+  .head{max-width:900px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:10px 16px;}
   .logo img{height:52px}
   .hamburger{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:10px;background:#fff;border:1px solid var(--border);cursor:pointer}
   .hamburger svg{width:24px;height:24px}
@@ -37,7 +37,14 @@
   .menu a{text-decoration:none;color:var(--text);padding:10px 12px;border-radius:10px;display:block;border:1px solid #eee;background:#fafafa}
   .menu a:hover{background:#f2f2f2}
 
-  .toolbar{max-width:1360px;margin:8px auto;display:flex;align-items:center;gap:12px;padding:0 16px;}
+  .toolbar{
+    max-width:900px;
+    margin:8px auto;
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:0 16px;
+  }
   @media (max-width:640px){ .toolbar{flex-direction:column;align-items:stretch} }
   .search-wrap{position:relative;display:flex;align-items:center;flex:1}
   .search-wrap svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);pointer-events:none}
@@ -70,20 +77,19 @@
   }
   .ios-share-emoji { font-size: 1.2rem }
 
-  /* ======= LISTE → 1 Spalte mobil, 2 Spalten ab 640px ======= */
+  /* ======= LISTE (gleich breit wie Toolbar) ======= */
   .list{
-    max-width: 1100px;
-    margin: 0 auto 12px;
-    padding: 0 16px;
-    display: grid;
-    grid-template-columns: 1fr;      /* mobil */
-    gap: 12px;
+    max-width:900px;
+    margin:0 auto 12px;
+    padding:0 16px;
+    display:grid;
+    grid-template-columns:1fr;
+    gap:12px;
   }
-  @media (min-width: 640px){
-    .list{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  @media (min-width:640px){
+    .list{ grid-template-columns:repeat(2, minmax(0, 1fr)); }
   }
 
-  /* Karte */
   .item{
     display:grid;
     grid-template-columns:42px 1fr;
@@ -106,7 +112,7 @@
   .badge{font-size:.85rem;border:1px solid #eee;background:#fafafa;border-radius:999px;padding:2px 8px}
 
   footer{position:fixed;bottom:0;left:0;width:100%;height:56px;background:var(--accent);color:#595959;border-top:1px solid #b0b0b0;font-size:.95rem}
-  .footer-inner{max-width:1360px;margin:0 auto;height:100%;display:flex;justify-content:center;align-items:center;padding:0 12px}
+  .footer-inner{max-width:900px;margin:0 auto;height:100%;display:flex;justify-content:center;align-items:center;padding:0 12px}
 </style>
 </head>
 <body>
@@ -154,7 +160,7 @@
 <script>
 document.getElementById("jahr").textContent = new Date().getFullYear();
 
-/* Drawer */
+// Drawer
 (function(){
   const menuBtn = document.getElementById('menuBtn');
   const drawer = document.getElementById('drawer');
@@ -166,7 +172,7 @@ document.getElementById("jahr").textContent = new Date().getFullYear();
   window.addEventListener('keydown', e=>{ if(e.key==='Escape') close(); });
 })();
 
-/* Emoji zu Kategorie */
+// Kategorie-Emoji
 function catEmoji(cat){
   const c = (cat||'').toLowerCase();
   if (c.includes('doener') || c.includes('döner') || c.includes('kebab')) return '🥙';
@@ -180,7 +186,7 @@ function catEmoji(cat){
 const $ = s => document.querySelector(s);
 function normalize(s){ try { return (s||'').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu,''); } catch { return (s||'').toLowerCase(); } }
 
-/* Render */
+// Render-Funktion
 function render(items){
   const el = $("#list");
   el.innerHTML = "";
@@ -196,47 +202,35 @@ function render(items){
     const a = document.createElement('a');
     a.className = 'item';
     a.href = item.id ? `details.html?id=${encodeURIComponent(item.id)}` : `details.html?q=${encodeURIComponent((item.titel||'').toLowerCase())}`;
-
     const emoji = document.createElement('div');
     emoji.className = 'emoji';
     emoji.textContent = catEmoji(item.kategorie);
-
     const meta = document.createElement('div');
     meta.className = 'meta';
-
     const name = document.createElement('div');
     name.className = 'name';
     name.textContent = item.titel || '';
-
     const sub = document.createElement('div');
     sub.className = 'sub';
     const city = item.stadt || item?.adresse?.stadt || '';
-
     const rawCat = (item.kategorie||'').toLowerCase();
     let catLabel = rawCat;
     if (rawCat.includes('doener') || rawCat.includes('döner') || rawCat.includes('kebab')) catLabel = 'Döner/Kebab';
     else if (rawCat.includes('pizza')) catLabel = 'Pizza/Pizzeria';
     else if (!catLabel) catLabel = 'Restaurant';
-
-    sub.innerHTML = `
-      <span>${city ? city : ''}</span>
-      <span class="badge">${catLabel}</span>
-    `;
-
+    sub.innerHTML = `<span>${city ? city : ''}</span><span class="badge">${catLabel}</span>`;
     meta.appendChild(name);
     meta.appendChild(sub);
-
     a.appendChild(emoji);
     a.appendChild(meta);
     el.appendChild(a);
   });
 }
 
-/* Daten laden + Suche */
+// Daten laden + Suche
 async function loadAndRender(){
   const res = await fetch("/api/entries");
   const all = await res.json();
-
   const input = $("#search");
   const clear = $("#clearBtn");
   function apply(){
@@ -251,47 +245,6 @@ async function loadAndRender(){
   clear.onclick = ()=>{ input.value=""; apply(); input.focus(); };
   apply();
 }
-
-/* PWA: Android-Install-Button */
-let deferredPrompt = null;
-const installBtn = document.getElementById('installBtn');
-
-window.addEventListener('beforeinstallprompt', (e) => {
-  e.preventDefault();
-  deferredPrompt = e;
-  if (!/iphone|ipad|ipod/i.test(navigator.userAgent)) {
-    installBtn.hidden = false;
-  }
-});
-
-installBtn?.addEventListener('click', async () => {
-  if (!deferredPrompt) return;
-  installBtn.disabled = true;
-  deferredPrompt.prompt();
-  await deferredPrompt.userChoice;
-  deferredPrompt = null;
-  installBtn.hidden = true;
-});
-
-/* Service Worker registrieren */
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js').catch(()=>{});
-}
-
-/* iOS-Hinweis */
-const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
-const isInStandalone = window.navigator.standalone === true;
-const iosHint = document.getElementById('iosHint');
-
-if (isIos) {
-  if (!isInStandalone && !localStorage.getItem('iosHintClosed')) {
-    iosHint.style.display = 'flex';
-  }
-}
-iosHint?.querySelector('.close')?.addEventListener('click', () => {
-  iosHint.style.display = 'none';
-  localStorage.setItem('iosHintClosed', '1');
-});
 
 loadAndRender();
 </script>
