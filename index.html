@@ -5,52 +5,107 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#e7e7e7">
 <title>Ortenau liefert · Lokale Angebote</title>
+
+<link rel="icon" href="favicon.png">
+<link rel="manifest" href="manifest.webmanifest">
+
 <style>
-  :root{ --accent:#e7e7e7; --text:#333; --bg:#f6f6f6; --card:#fff; --muted:#70798C; --radius:12px; --shadow:0 4px 12px rgba(0,0,0,.08); --border:#d0d0d0; --tap:48px; --featured:#fff6f0 }
+  :root{ --accent:#e7e7e7; --text:#333; --bg:#f6f6f6; --card:#fff; --muted:#70798C; --radius:12px; --shadow:0 4px 12px rgba(0,0,0,.08); --border:#d0d0d0; --tap:48px; }
   *{box-sizing:border-box}
-  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;background:var(--bg);color:var(--text);line-height:1.45}
+  html{font-size:16px}
+  @media (max-width:480px){ html{font-size:17px} }
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;background:var(--bg);color:var(--text);padding-bottom:56px;line-height:1.45}
+  .visually-hidden{position:absolute!important;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
   header.site{position:sticky;top:0;z-index:20;background:var(--accent);border-bottom:1px solid #b0b0b0;}
-  .head{max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:10px 16px;}
+  .head{max-width:1360px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:10px 16px;}
   .logo img{height:52px}
-  .toolbar{max-width:1200px;margin:8px auto;display:flex;align-items:center;gap:12px;padding:0 16px;}
+  .hamburger{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:10px;background:#fff;border:1px solid var(--border);cursor:pointer}
+  .hamburger svg{width:24px;height:24px}
+
+  .backdrop{position:fixed;inset:0;background:rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:opacity .2s;z-index:19}
+  .backdrop.show{opacity:1;pointer-events:auto}
+  .drawer{position:fixed;top:0;right:-280px;width:280px;height:100%;background:#fff;border-left:1px solid var(--border);box-shadow:-12px 0 24px rgba(0,0,0,.18);transition:right .25s;z-index:20;display:flex;flex-direction:column}
+  .drawer.show{right:0}
+  .drawer header{border-bottom:1px solid var(--border);padding:12px 14px;font-weight:700}
+  .menu{padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+  .menu a{text-decoration:none;color:var(--text);padding:10px 12px;border-radius:10px;display:block;border:1px solid #eee;background:#fafafa}
+  .menu a:hover{background:#f2f2f2}
+
+  .toolbar{max-width:1360px;margin:8px auto;display:flex;align-items:center;gap:12px;padding:0 16px;}
   @media (max-width:640px){ .toolbar{flex-direction:column;align-items:stretch} }
   .search-wrap{position:relative;display:flex;align-items:center;flex:1}
-  #search{width:100%;height:var(--tap);padding:0 46px 0 12px;border:1px solid var(--border);border-radius:12px;background:#fff}
+  .search-wrap svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);pointer-events:none}
+  #search{width:100%;height:var(--tap);padding:0 46px 0 40px;border:1px solid var(--border);border-radius:12px;background:#fff;color:var(--text)}
   #clearBtn{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:36px;height:36px;border:0;border-radius:50%;cursor:pointer;background:#f6f6f6;font-size:1.2rem}
 
-  /* Karten – 2 Spalten Desktop, 1 Spalte mobil */
-  .grid{max-width:1200px;margin:0 auto 16px;padding:0 16px;display:grid;gap:10px;grid-template-columns:repeat(2,minmax(0,1fr))}
-  @media (max-width:720px){ .grid{grid-template-columns:1fr} }
+  .install{height:var(--tap);padding:0 14px;border:1px solid var(--border);border-radius:12px;background:#fff;cursor:pointer;box-shadow:var(--shadow)}
+  @media (max-width:640px){ .install{width:100%;} }
+
+  .list{max-width:900px;margin:0 auto 12px;padding:0 16px;display:flex;flex-direction:column;gap:10px}
   .item{display:grid;grid-template-columns:42px 1fr;gap:12px;align-items:center;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:10px 12px;text-decoration:none;color:inherit;box-shadow:var(--shadow)}
-  .item.featured{background:var(--featured)}
+  .item:active{transform:scale(.99)}
   .emoji{font-size:1.6rem;line-height:1;display:flex;align-items:center;justify-content:center}
+  .meta{min-width:0}
   .name{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .sub{font-size:.95rem;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;margin-top:2px}
   .badge{font-size:.85rem;border:1px solid #eee;background:#fafafa;border-radius:999px;padding:2px 8px}
-  footer{padding:14px 16px;background:var(--accent);border-top:1px solid #b0b0b0;color:#595959;text-align:center}
+
+  footer{position:fixed;bottom:0;left:0;width:100%;height:56px;background:var(--accent);color:#595959;border-top:1px solid #b0b0b0;font-size:.95rem}
+  .footer-inner{max-width:1360px;margin:0 auto;height:100%;display:flex;justify-content:center;align-items:center;padding:0 12px}
 </style>
 </head>
 <body>
 <header class="site">
   <div class="head">
     <div class="logo"><a href="index.html" aria-label="Zur Startseite"><img src="header.png" alt="Ortenau liefert"></a></div>
+    <button class="hamburger" id="menuBtn" aria-label="Menü öffnen" aria-expanded="false" aria-controls="drawer">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#333" d="M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h18v2H3v-2z"/></svg>
+    </button>
   </div>
 </header>
 
+<div class="backdrop" id="backdrop" hidden></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-hidden="true">
+  <header>Menü</header>
+  <nav class="menu">
+    <a href="index.html">Startseite</a>
+    <a href="kontakt.html">Kontakt</a>
+    <a href="impressum.html">Impressum</a>
+    <a href="agb.html">AGB</a>
+    <a href="datenschutz.html">Datenschutz</a>
+  </nav>
+</aside>
+
 <div class="toolbar">
   <div class="search-wrap" role="search">
+    <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path fill="#9a9a9a" d="M15.5 14h-.79l-.28-.27a6.471 6.471 0 0 0 1.57-4.23C16 6.01 13.99 4 11.5 4S7 6.01 7 9.5 9.01 15 11.5 15c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l4.25 4.25c.41.41 1.08.41 1.49 0 .41-.41.41-1.08 0-1.49L15.5 14zm-4 0C9.01 14 7 11.99 7 9.5S9.01 5 11.5 5 16 7.01 16 9.5 13.99 14 11.5 14z"/></svg>
     <input id="search" type="search" placeholder="Suche z. B. „Döner Offenburg“" aria-label="Suche" inputmode="search" autocomplete="off">
     <button id="clearBtn" type="button" aria-label="Suche leeren">×</button>
   </div>
+  <button id="installBtn" class="install" type="button" hidden>+ App installieren</button>
 </div>
 
-<main class="grid" id="grid"></main>
+<main class="list" id="list"></main>
 
-<footer>© <span id="jahr"></span> Ortenau liefert</footer>
+<footer><div class="footer-inner">© <span id="jahr"></span> Ortenau liefert</div></footer>
 
 <script>
 document.getElementById("jahr").textContent = new Date().getFullYear();
 
+// Drawer
+(function(){
+  const menuBtn = document.getElementById('menuBtn');
+  const drawer = document.getElementById('drawer');
+  const backdrop = document.getElementById('backdrop');
+  function open(){ drawer.classList.add('show'); drawer.setAttribute('aria-hidden','false'); backdrop.hidden=false; requestAnimationFrame(()=>backdrop.classList.add('show')); menuBtn.setAttribute('aria-expanded','true'); }
+  function close(){ drawer.classList.remove('show'); drawer.setAttribute('aria-hidden','true'); backdrop.classList.remove('show'); menuBtn.setAttribute('aria-expanded','false'); setTimeout(()=>backdrop.hidden=true,200); }
+  menuBtn.addEventListener('click', open);
+  backdrop.addEventListener('click', close);
+  window.addEventListener('keydown', e=>{ if(e.key==='Escape') close(); });
+})();
+
+// Emoji zu Kategorie
 function catEmoji(cat){
   const c = (cat||'').toLowerCase();
   if (c.includes('doener') || c.includes('döner') || c.includes('kebab')) return '🥙';
@@ -60,15 +115,15 @@ function catEmoji(cat){
   if (c.includes('cafe') || c.includes('café')) return '☕️';
   return '🍽️';
 }
+
 const $ = s => document.querySelector(s);
 function normalize(s){ try { return (s||'').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu,''); } catch { return (s||'').toLowerCase(); } }
 
 function render(items){
-  const el = $("#grid");
+  const el = $("#list");
   el.innerHTML = "";
-  if(!items.length){ el.innerHTML = '<p class="muted">Keine Einträge gefunden.</p>'; return; }
+  if(!items.length){ el.innerHTML = '<p class="muted">Noch keine Einträge vorhanden.</p>'; return; }
 
-  // sort: featured zuerst, dann alphabetisch
   const list = [...items].sort((a,b)=>{
     const fa = !!a?.optionen?.featured, fb = !!b?.optionen?.featured;
     if (fa!==fb) return fa? -1 : 1;
@@ -77,48 +132,88 @@ function render(items){
 
   list.forEach(item=>{
     const a = document.createElement('a');
-    a.className = 'item' + (item?.optionen?.featured ? ' featured' : '');
+    a.className = 'item';
     a.href = item.id ? `details.html?id=${encodeURIComponent(item.id)}` : `details.html?q=${encodeURIComponent((item.titel||'').toLowerCase())}`;
 
-    a.innerHTML = `
-      <div class="emoji">${catEmoji(item.kategorie)}</div>
-      <div>
-        <div class="name">${item.titel || ''}</div>
-        <div class="sub">
-          <span>${item.stadt || item?.adresse?.stadt || ''}</span>
-          <span class="badge">${
-            ((item.kategorie||'').toLowerCase().includes('doener')||
-             (item.kategorie||'').toLowerCase().includes('döner')||
-             (item.kategorie||'').toLowerCase().includes('kebab')) ? 'Döner/Kebab'
-             : ((item.kategorie||'').toLowerCase().includes('pizza') ? 'Pizza/Pizzeria' : (item.kategorie||'Restaurant'))
-          }</span>
-        </div>
-      </div>`;
+    const emoji = document.createElement('div');
+    emoji.className = 'emoji';
+    emoji.textContent = catEmoji(item.kategorie);
+
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+
+    const name = document.createElement('div');
+    name.className = 'name';
+    name.textContent = item.titel || '';
+
+    const sub = document.createElement('div');
+    sub.className = 'sub';
+    const city = item.stadt || item?.adresse?.stadt || '';
+
+    // Kategorie-Label vereinheitlicht
+    const rawCat = (item.kategorie||'').toLowerCase();
+    let catLabel = rawCat;
+    if (rawCat.includes('doener') || rawCat.includes('döner') || rawCat.includes('kebab')) catLabel = 'Döner/Kebab';
+    else if (rawCat.includes('pizza')) catLabel = 'Pizza/Pizzeria';
+    else if (!catLabel) catLabel = 'Restaurant';
+
+    // KEIN Öffnungszeit-Text mehr, nur City + Kategorie
+    sub.innerHTML = `
+      <span>${city ? city : ''}</span>
+      <span class="badge">${catLabel}</span>
+    `;
+
+    meta.appendChild(name);
+    meta.appendChild(sub);
+
+    a.appendChild(emoji);
+    a.appendChild(meta);
     el.appendChild(a);
   });
 }
 
 async function loadAndRender(){
-  try{
-    const res = await fetch("/api/entries",{cache:"no-store"});
-    const json = await res.json();
-    const all = Array.isArray(json) ? json : (Array.isArray(json?.data) ? json.data : []);
-    const input = $("#search"), clear = $("#clearBtn");
-    const apply = ()=>{
-      const q = normalize(input.value.trim());
-      const filtered = !q ? all : all.filter(item=>{
-        const hay = normalize(JSON.stringify(item));
-        return q.split(/\s+/).filter(Boolean).every(t=>hay.includes(t));
-      });
-      render(filtered);
-    };
-    input.oninput = apply; clear.onclick = ()=>{ input.value=""; apply(); input.focus(); };
-    apply();
-  }catch(e){
-    console.error(e);
-    render([]);
+  const res = await fetch("/api/entries");
+  const all = await res.json();
+
+  const input = $("#search");
+  const clear = $("#clearBtn");
+  function apply(){
+    const q = normalize(input.value.trim());
+    const filtered = !q ? all : all.filter(item=>{
+      const hay = normalize(JSON.stringify(item));
+      return q.split(/\s+/).filter(Boolean).every(t=>hay.includes(t));
+    });
+    render(filtered);
   }
+  input.oninput = apply;
+  clear.onclick = ()=>{ input.value=""; apply(); input.focus(); };
+  apply();
 }
+
+/* PWA: Installier-Button + Service Worker */
+let deferredPrompt = null;
+const installBtn = document.getElementById('installBtn');
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  installBtn.hidden = false;
+});
+
+installBtn?.addEventListener('click', async () => {
+  if (!deferredPrompt) return;
+  installBtn.disabled = true;
+  deferredPrompt.prompt();
+  await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  installBtn.hidden = true;
+});
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(()=>{});
+}
+
 loadAndRender();
 </script>
 </body>
