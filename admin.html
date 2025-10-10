@@ -328,22 +328,16 @@ function renderTable(items){
     });
   });
 
+  // 🔵 gezieltes Löschen (nicht mehr alles neu schreiben)
   tb.querySelectorAll('.delBtn').forEach(btn=>{
     btn.addEventListener('click', async ()=>{
       const id = btn.getAttribute('data-id');
       if(!id) return;
       if(!confirm('Diesen Eintrag wirklich löschen?')) return;
-      // einfache Strategie: komplette Liste holen, filtern, zurückschreiben
-      const r = await fetch(API); const data = await r.json();
-      const list = (Array.isArray(data)?data:[]).filter(x=>x.id!==id);
-
-      // Alles löschen:
-      await fetch(API, { method:"DELETE", headers:hdrs() }).catch(()=>{});
-
-      // Liste neu schreiben:
-      for(const it of list){
-        await fetch(API, { method: it.id ? "POST" : "POST", headers:hdrs(), body:JSON.stringify(it) });
-      }
+      await fetch(`${API}?id=${encodeURIComponent(id)}`, {
+        method:"DELETE",
+        headers: hdrs()
+      }).catch(()=>{});
       loadList();
     });
   });
@@ -380,60 +374,55 @@ $("#exportBtn").onclick = async ()=>{
   document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
 };
 
-/* >>> ROBUSTER IMPORT (BOM entfernen, Wrapper erkennen, PUT/POST korrekt) <<< */
-$("#importFile").onchange = async (ev)=>{
+/* 🔵 ROBUSTER BULK-IMPORT (PUT mit kompletter Liste) */
+document.getElementById("importFile").onchange = async (ev)=>{
   const file = ev.target.files[0];
   if(!file) return;
 
   let text = await file.text();
-  let data = null;
+  text = text.replace(/^\uFEFF/, '').trim(); // BOM entfernen
 
-  // 1) BOM entfernen + trimmen
-  text = text.replace(/^\uFEFF/, '').trim();
+  const tryParse = (t)=>{ try{ return JSON.parse(t); } catch { return null; } };
 
-  const tryParse = (t) => { try { return JSON.parse(t); } catch { return null; } };
+  let arr = tryParse(text);
 
-  // 2) direkt versuchen
-  data = tryParse(text);
-
-  // 3) Wrapper-Varianten (Object mit entries/items/data oder value als String)
-  if (!Array.isArray(data)) {
+  // Wrapper-Formate unterstützen
+  if (!Array.isArray(arr)) {
     const obj = tryParse(text);
     if (obj) {
-      if (Array.isArray(obj)) {
-        data = obj;
-      } else if (Array.isArray(obj.entries)) {
-        data = obj.entries;
-      } else if (Array.isArray(obj.items)) {
-        data = obj.items;
-      } else if (Array.isArray(obj.data)) {
-        data = obj.data;
-      } else if (typeof obj.value === "string") {
-        data = tryParse(obj.value);
+      if (Array.isArray(obj.entries)) arr = obj.entries;
+      else if (Array.isArray(obj.items)) arr = obj.items;
+      else if (Array.isArray(obj.data)) arr = obj.data;
+      else if (typeof obj.value === "string") {
+        const inner = tryParse(obj.value);
+        if (Array.isArray(inner)) arr = inner;
       } else if (typeof obj.data === "string") {
-        data = tryParse(obj.data);
+        const inner = tryParse(obj.data);
+        if (Array.isArray(inner)) arr = inner;
       }
     }
   }
 
-  // 4) Final prüfen
-  if (!Array.isArray(data)) {
+  if (!Array.isArray(arr)) {
     alert("Ungültiges JSON.\nErwartet wird eine JSON-Liste (Array) mit Einträgen.");
     return;
   }
 
-  if (!confirm(`Es werden ${data.length} Einträge importiert. Fortfahren?`)) return;
+  if (!confirm(`Es werden ${arr.length} Einträge importiert. Fortfahren?`)) return;
 
-  // 5) Import: vorhandene mit id -> PUT, neue -> POST
-  for (const it of data) {
-    await fetch(API, {
-      method: it && it.id ? "PUT" : "POST",
-      headers: hdrs(),
-      body: JSON.stringify(it)
-    });
+  const res = await fetch(API, {
+    method: "PUT",           // 🔥 Bulk-PUT (komplette Liste ersetzen)
+    headers: hdrs(),
+    body: JSON.stringify(arr)
+  });
+
+  if (!res.ok) {
+    const t = await res.text().catch(()=> "");
+    alert("Import fehlgeschlagen:\n" + t);
+    return;
   }
-
-  alert('Import abgeschlossen.');
+  const out = await res.json().catch(()=>({}));
+  alert(`Import abgeschlossen. (${out.count ?? arr.length} Einträge)`);
   loadList();
 };
 
