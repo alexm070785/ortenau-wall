@@ -1,8 +1,17 @@
+# netlify.toml – statische Seite ohne Build
+[build]
+  command = ""        # Wichtig: NICHT bauen
+  publish = "."       # Wir veröffentlichen das Repo-Root
+
 [functions]
+  directory = "netlify/functions"
   node_bundler = "esbuild"
 
-# Saubere API-URL: /api/entries
-[[redirects]]
-  from = "/api/entries"
-  to = "/.netlify/functions/entries"
-  status = 200
+[build.environment]
+  NODE_VERSION = "18"
+
+# Falls du die Basic-Auth lieber hier als in _headers pflegen willst:
+# [[headers]]
+#   for = "/admin.html"
+#   [headers.values]
+#     Basic-Auth = "admin:Z9pU3mR8qL6vH2wY5xC7Nd4"
