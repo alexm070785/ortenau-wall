@@ -1,9 +1,13 @@
+[build]
+  # falls dein Functions-Ordner anders heißt, hier anpassen
+  functions = "netlify/functions"
+
 [functions]
   node_bundler = "esbuild"
 
-# Proxy: /api/entries  ->  /.netlify/functions/entries
+# Alle /api/* Requests zu Netlify Functions weiterreichen
 [[redirects]]
-  from = "/api/entries"
-  to = "/.netlify/functions/entries"
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
   status = 200
   force = true
