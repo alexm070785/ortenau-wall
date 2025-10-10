@@ -165,7 +165,7 @@
       <div style="grid-column:1/-1">
         <label for="token">Admin-Token (nur nötig, wenn in Netlify gesetzt)</label>
         <input id="token" placeholder="optional – NETLIFY_ADMIN_TOKEN">
-        <div class="muted">Falls du in Netlify die Variable <b>NETLIFY_ADMIN_TOKEN</b> gesetzt hast, trage hier denselben Wert ein. Sonst leer lassen.</div>
+        <div class="muted">Falls in Netlify <b>NETLIFY_ADMIN_TOKEN</b> gesetzt ist, trage hier denselben Wert ein (wird lokal gespeichert).</div>
       </div>
 
       <div class="actions" style="grid-column:1/-1">
@@ -199,10 +199,9 @@
   <section id="tab-werbung" class="hidden">
     <div class="note" style="margin:8px 0 12px">
       Dies ist der Werbung-Tab. Dein bestehendes Formular bleibt – hier musst du nichts ändern.
-      (Die Logik in deiner Function für Werbung bauen wir im nächsten Schritt.)
     </div>
     <div class="card">
-      <p class="muted">Werbe-Formular – wie von dir bereits angelegt. (Kein Konflikt mit dem Lokale-Tab.)</p>
+      <p class="muted">Werbe-Formular – wie von dir bereits angelegt.</p>
     </div>
   </section>
 </div>
@@ -225,12 +224,32 @@ const API = "/api/entries";
 const $ = s => document.querySelector(s);
 let editingId = null;
 
+/* Token persistieren */
+const tokenInput = $("#token");
+tokenInput.value = localStorage.getItem("adminToken") || "";
+tokenInput.addEventListener("input", ()=> localStorage.setItem("adminToken", tokenInput.value.trim()) );
+
 function hdrs(){
   const h = {"Content-Type":"application/json"};
-  const t = $("#token").value.trim();
-  if(t) h["x-admin-token"]=t;
+  const t = tokenInput.value.trim();
+  if(t) h["x-admin-token"] = t;
   return h;
 }
+
+/* zentrale API-Funktion mit klaren Fehlermeldungen */
+async function api(method, body){
+  const res = await fetch(API, { method, headers: hdrs(), body: body ? JSON.stringify(body) : undefined });
+  if (!res.ok){
+    let msg = res.status + " " + res.statusText;
+    try {
+      const j = await res.json();
+      if (j && j.error) msg += " – " + j.error;
+    } catch {}
+    throw new Error(msg);
+  }
+  return res.json();
+}
+
 function toPayload(){
   const titel = $("#titel").value.trim();
   const stadt = $("#stadt").value.trim();
@@ -258,14 +277,14 @@ function toPayload(){
 
 async function loadList(){
   try{
-    const r = await fetch(API,{cache:"no-store"});
-    const data = await r.json();
+    const data = await api("GET");
     renderTable(Array.isArray(data)? data : []);
   }catch(e){
-    console.error(e);
+    alert("Laden fehlgeschlagen: " + e.message);
     renderTable([]);
   }
 }
+
 function renderTable(items){
   const tb = $("#tbody");
   tb.innerHTML='';
@@ -299,27 +318,21 @@ function renderTable(items){
     btn.addEventListener('click', async ()=>{
       const id = btn.getAttribute('data-id');
       if(!id){ alert('Dieser Eintrag hat noch keine ID – bitte neu anlegen.'); return; }
-      const r = await fetch(API); const data = await r.json();
+      const data = await api("GET");
       const item = data.find(x=>x.id===id);
       if(!item){ alert('Eintrag nicht gefunden.'); return; }
       editingId = id;
-      $("#titel").value = item.titel||"";
-      $("#kategorie").value = item.kategorie||"restaurant";
-      $("#strasse").value = item.adresse?.strasse||"";
-      $("#plz").value = item.adresse?.plz||"";
+      $("#titel").value = item.titel||"";               $("#kategorie").value = item.kategorie||"restaurant";
+      $("#strasse").value = item.adresse?.strasse||"";  $("#plz").value = item.adresse?.plz||"";
       $("#stadt").value = item.stadt || item.adresse?.stadt || "";
-      $("#telefon").value = item.kontakt?.telefon||"";
-      $("#email").value = item.kontakt?.email||"";
-      $("#website").value = item.web?.website||"";
-      $("#speisekarte").value = item.web?.speisekarte||"";
+      $("#telefon").value = item.kontakt?.telefon||"";  $("#email").value = item.kontakt?.email||"";
+      $("#website").value = item.web?.website||"";      $("#speisekarte").value = item.web?.speisekarte||"";
       $("#oeffnungszeiten").value = item.info?.oeffnungszeiten||"";
-      $("#schliesstage").value = item.info?.schliesstage||"";
-      $("#beschreibung").value = item.info?.beschreibung||"";
-      $("#preisklasse").value = item.info?.preisklasse||"";
-      $("#bild").value = item.bild||"";
-      $("#url").value = item.url||"";
-      $("#instagram").value = item.web?.instagram||"";
-      $("#facebook").value = item.web?.facebook||"";
+      $("#schliesstage").value   = item.info?.schliesstage||"";
+      $("#beschreibung").value   = item.info?.beschreibung||"";
+      $("#preisklasse").value    = item.info?.preisklasse||"";
+      $("#bild").value = item.bild||"";                 $("#url").value = item.url||"";
+      $("#instagram").value = item.web?.instagram||"";  $("#facebook").value = item.web?.facebook||"";
       $("#tiktok").value = item.web?.tiktok||"";
       $("#abholung").checked = !!item.optionen?.abholung;
       $("#lieferung").checked = !!item.optionen?.lieferung;
@@ -328,102 +341,95 @@ function renderTable(items){
     });
   });
 
-  // 🔵 gezieltes Löschen (nicht mehr alles neu schreiben)
   tb.querySelectorAll('.delBtn').forEach(btn=>{
     btn.addEventListener('click', async ()=>{
       const id = btn.getAttribute('data-id');
       if(!id) return;
       if(!confirm('Diesen Eintrag wirklich löschen?')) return;
-      await fetch(`${API}?id=${encodeURIComponent(id)}`, {
-        method:"DELETE",
-        headers: hdrs()
-      }).catch(()=>{});
-      loadList();
+      try{
+        // gezielt nur diesen löschen:
+        await fetch(API + "?id=" + encodeURIComponent(id), { method:"DELETE", headers: hdrs() })
+          .then(async r => { if(!r.ok){ let t=await r.text(); throw new Error(r.status+" "+r.statusText+" – "+t); }});
+        loadList();
+      }catch(e){ alert("Löschen fehlgeschlagen: " + e.message); }
     });
   });
 }
 
+/* Aktionen */
 $("#save").onclick = async (e)=>{
   e.preventDefault();
   const p = toPayload();
   if(!p.titel){ alert('Bitte einen Namen eingeben.'); return; }
   const method = editingId ? "PUT" : "POST";
   try{
-    const res = await fetch(API, { method, headers:hdrs(), body:JSON.stringify(p) });
-    const json = await res.json();
-    if(json.error){ alert('Fehler: ' + json.error + '\n\nHinweis: Wenn NETLIFY_ADMIN_TOKEN gesetzt ist, trage es oben in das Token-Feld ein.'); return; }
+    await api(method, p);
     alert(editingId ? 'Aktualisiert!' : 'Gespeichert!');
     editingId = null;
     loadList();
-  }catch(err){ alert('Fehler beim Speichern'); }
+  }catch(err){ alert('Fehler beim Speichern: ' + err.message); }
 };
 $("#fetch").onclick = loadList;
 $("#clear").onclick = async ()=>{
   if(!confirm('WIRKLICH alle Einträge löschen?')) return;
-  const res = await fetch(API, { method:"DELETE", headers:hdrs() }).then(r=>r.json()).catch(()=>null);
-  if(res && res.error){ alert('Fehler: ' + res.error); return; }
-  alert('Alles gelöscht.'); loadList();
+  try{
+    await api("DELETE"); // ohne id -> alles löschen
+    alert('Alles gelöscht.');
+    loadList();
+  }catch(e){ alert('Fehler: ' + e.message); }
 };
 $("#filter").addEventListener('input', loadList);
 
+/* Export */
 $("#exportBtn").onclick = async ()=>{
-  const r = await fetch(API,{cache:"no-store"}); const data = await r.json();
-  const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
-  const url = URL.createObjectURL(blob);
-  const a = Object.assign(document.createElement('a'), {href:url, download:'eintraege.json'});
-  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  try{
+    const data = await api("GET");
+    const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = Object.assign(document.createElement('a'), {href:url, download:'eintraege.json'});
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  }catch(e){ alert("Export fehlgeschlagen: " + e.message); }
 };
 
-/* 🔵 ROBUSTER BULK-IMPORT (PUT mit kompletter Liste) */
-document.getElementById("importFile").onchange = async (ev)=>{
+/* Import – tolerant: BOM entfernen, Wrapper erkennen */
+$("#importFile").onchange = async (ev)=>{
   const file = ev.target.files[0];
   if(!file) return;
 
   let text = await file.text();
-  text = text.replace(/^\uFEFF/, '').trim(); // BOM entfernen
+  text = text.replace(/^\uFEFF/,'').trim();
 
-  const tryParse = (t)=>{ try{ return JSON.parse(t); } catch { return null; } };
+  const tryParse = (t)=>{ try { return JSON.parse(t); } catch { return null; } };
+  let data = tryParse(text);
 
-  let arr = tryParse(text);
-
-  // Wrapper-Formate unterstützen
-  if (!Array.isArray(arr)) {
+  if (!Array.isArray(data)){
     const obj = tryParse(text);
-    if (obj) {
-      if (Array.isArray(obj.entries)) arr = obj.entries;
-      else if (Array.isArray(obj.items)) arr = obj.items;
-      else if (Array.isArray(obj.data)) arr = obj.data;
-      else if (typeof obj.value === "string") {
-        const inner = tryParse(obj.value);
-        if (Array.isArray(inner)) arr = inner;
-      } else if (typeof obj.data === "string") {
-        const inner = tryParse(obj.data);
-        if (Array.isArray(inner)) arr = inner;
-      }
+    if (obj){
+      if (Array.isArray(obj)) data = obj;
+      else if (Array.isArray(obj.entries)) data = obj.entries;
+      else if (Array.isArray(obj.items)) data = obj.items;
+      else if (Array.isArray(obj.data)) data = obj.data;
+      else if (typeof obj.value === "string") data = tryParse(obj.value);
+      else if (typeof obj.data  === "string") data = tryParse(obj.data);
     }
   }
 
-  if (!Array.isArray(arr)) {
-    alert("Ungültiges JSON.\nErwartet wird eine JSON-Liste (Array) mit Einträgen.");
+  if (!Array.isArray(data)){
+    alert("Ungültiges JSON.\nErwarte ein Array von Einträgen.");
     return;
   }
 
-  if (!confirm(`Es werden ${arr.length} Einträge importiert. Fortfahren?`)) return;
+  if (!confirm(`Es werden ${data.length} Einträge importiert. Fortfahren?`)) return;
 
-  const res = await fetch(API, {
-    method: "PUT",           // 🔥 Bulk-PUT (komplette Liste ersetzen)
-    headers: hdrs(),
-    body: JSON.stringify(arr)
-  });
-
-  if (!res.ok) {
-    const t = await res.text().catch(()=> "");
-    alert("Import fehlgeschlagen:\n" + t);
-    return;
+  try{
+    for (const it of data){
+      await api(it && it.id ? "PUT" : "POST", it);
+    }
+    alert('Import abgeschlossen.');
+    loadList();
+  }catch(e){
+    alert("Import fehlgeschlagen: " + e.message);
   }
-  const out = await res.json().catch(()=>({}));
-  alert(`Import abgeschlossen. (${out.count ?? arr.length} Einträge)`);
-  loadList();
 };
 
 loadList();
