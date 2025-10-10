@@ -90,6 +90,20 @@ exports.handler = async (event) => {
     if (event.httpMethod === "PUT") {
       if (!requireAdmin(event)) return bad(401, "Unauthorized");
       let payload; try { payload = JSON.parse(event.body || "{}"); } catch { return bad(400, "Invalid JSON"); }
+
+      // 🔵 BULK-IMPORT: Wenn ein Array kommt, komplette Liste ersetzen
+      if (Array.isArray(payload)) {
+        const withIds = payload.map(it => ({
+          ...it,
+          id: (it && typeof it.id === "string" && it.id.trim()) ? it.id : makeId(),
+          kategorie: it.kategorie || "restaurant",
+          stadt: it.stadt || it?.adresse?.stadt || ""
+        }));
+        await store.set(KEY, JSON.stringify(withIds));
+        return ok({ ok: true, count: withIds.length });
+      }
+
+      // 🔸 Sonst: normales Einzel-Update per id
       const id = payload.id;
       if (!id) return bad(400, "id fehlt");
       const raw = await store.get(KEY);
