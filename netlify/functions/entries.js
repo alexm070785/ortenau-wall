@@ -1,6 +1,6 @@
 // /netlify/functions/entries.js
-// CommonJS – robust gegenüber SDK-Unterschieden von @netlify/blobs,
-// speichert kompletten Payload, vergibt id, unterstützt GET/POST/PUT/DELETE.
+// CommonJS – robust gegenüber SDK-Unterschieden von @netlify/blobs
+// Speichert kompletten Payload, vergibt id, unterstützt GET/POST/PUT/DELETE.
 
 const blobs = require("@netlify/blobs");
 const { NETLIFY_SITE_ID: SITE_ID, NETLIFY_AUTH_TOKEN: AUTH_TOKEN } = process.env;
@@ -14,14 +14,21 @@ const CORS = {
 const STORE_NAME = "seiten";
 const KEY = "data";
 
-const ok = (b) => ({ statusCode: 200, headers: { ...CORS, "Content-Type":"application/json" }, body: JSON.stringify(b) });
+const ok  = (b) => ({ statusCode: 200, headers: { ...CORS, "Content-Type":"application/json" }, body: JSON.stringify(b) });
 const bad = (c,m) => ({ statusCode: c, headers: CORS, body: JSON.stringify({ error: m }) });
 
+function headersLower(event){
+  const h = {};
+  for (const [k,v] of Object.entries(event.headers || {})) h[String(k).toLowerCase()] = v;
+  return h;
+}
+
 function requireAdmin(event){
-  const need = !!process.env.NETLIFY_ADMIN_TOKEN; // wenn nicht gesetzt, ist POST/PUT/DELETE offen
-  if (!need) return true;
-  const got = event.headers["x-admin-token"];
-  return got && got === process.env.NETLIFY_ADMIN_TOKEN;
+  // Wenn kein NETLIFY_ADMIN_TOKEN gesetzt ist -> frei.
+  if (!process.env.NETLIFY_ADMIN_TOKEN) return true;
+  const h = headersLower(event);
+  const got = h["x-admin-token"];
+  return Boolean(got && got === process.env.NETLIFY_ADMIN_TOKEN);
 }
 
 function resolveStore() {
@@ -52,22 +59,32 @@ function makeId(){ return (Date.now().toString(36) + Math.random().toString(36).
 exports.handler = async (event) => {
   if (event.httpMethod === "OPTIONS") return { statusCode: 204, headers: CORS };
 
+  // Debug-Check
   if (event.queryStringParameters && event.queryStringParameters.debug === "1") {
     const exportsList = Object.keys(require("@netlify/blobs") || {});
-    return ok({ envPresent: { NETLIFY_SITE_ID: !!SITE_ID, NETLIFY_AUTH_TOKEN: !!AUTH_TOKEN, NETLIFY_ADMIN_TOKEN: !!process.env.NETLIFY_ADMIN_TOKEN }, exports: exportsList });
+    return ok({
+      envPresent: {
+        NETLIFY_SITE_ID: !!SITE_ID,
+        NETLIFY_AUTH_TOKEN: !!AUTH_TOKEN,
+        NETLIFY_ADMIN_TOKEN: !!process.env.NETLIFY_ADMIN_TOKEN
+      },
+      exports: exportsList
+    });
   }
 
   let store;
   try { store = resolveStore(); } catch (e) { return bad(500, e.message || String(e)); }
 
   try {
+    // --- GET: volle Liste ---
     if (event.httpMethod === "GET") {
       const raw = await store.get(KEY);
       return ok(raw ? JSON.parse(raw) : []);
     }
 
+    // --- POST: anlegen ---
     if (event.httpMethod === "POST") {
-      if (!requireAdmin(event)) return bad(401, "Unauthorized");
+      if (!requireAdmin(event)) return bad(401, "Unauthorized (x-admin-token fehlt oder falsch).");
       let payload; try { payload = JSON.parse(event.body || "{}"); } catch { return bad(400, "Invalid JSON"); }
       if (!payload.titel) return bad(400, "titel fehlt");
 
@@ -84,28 +101,16 @@ exports.handler = async (event) => {
       };
       arr.push(full);
       await store.set(KEY, JSON.stringify(arr));
-      return ok(arr);
+      return ok(full);
     }
 
+    // --- PUT: updaten (per id) ---
     if (event.httpMethod === "PUT") {
-      if (!requireAdmin(event)) return bad(401, "Unauthorized");
+      if (!requireAdmin(event)) return bad(401, "Unauthorized (x-admin-token fehlt oder falsch).");
       let payload; try { payload = JSON.parse(event.body || "{}"); } catch { return bad(400, "Invalid JSON"); }
-
-      // 🔵 BULK-IMPORT: Wenn ein Array kommt, komplette Liste ersetzen
-      if (Array.isArray(payload)) {
-        const withIds = payload.map(it => ({
-          ...it,
-          id: (it && typeof it.id === "string" && it.id.trim()) ? it.id : makeId(),
-          kategorie: it.kategorie || "restaurant",
-          stadt: it.stadt || it?.adresse?.stadt || ""
-        }));
-        await store.set(KEY, JSON.stringify(withIds));
-        return ok({ ok: true, count: withIds.length });
-      }
-
-      // 🔸 Sonst: normales Einzel-Update per id
       const id = payload.id;
       if (!id) return bad(400, "id fehlt");
+
       const raw = await store.get(KEY);
       const arr = raw ? JSON.parse(raw) : [];
       const idx = arr.findIndex(e => e.id === id);
@@ -114,23 +119,22 @@ exports.handler = async (event) => {
       const merged = {
         ...arr[idx],
         ...payload,
-        id, // id bleibt
+        id,
         stadt: payload.stadt || payload?.adresse?.stadt || arr[idx].stadt || "",
         updatedAt: new Date().toISOString()
       };
       arr[idx] = merged;
       await store.set(KEY, JSON.stringify(arr));
-      return ok(arr[idx]);
+      return ok(merged);
     }
 
+    // --- DELETE: einzelnes id=… oder alles ---
     if (event.httpMethod === "DELETE") {
-      if (!requireAdmin(event)) return bad(401, "Unauthorized");
+      if (!requireAdmin(event)) return bad(401, "Unauthorized (x-admin-token fehlt oder falsch).");
 
-      const idFromQS = event.queryStringParameters && event.queryStringParameters.id;
-      let idFromBody = null;
-      try { idFromBody = JSON.parse(event.body||"{}").id; } catch {}
-
-      const id = idFromQS || idFromBody;
+      const qsId = event.queryStringParameters && event.queryStringParameters.id;
+      let bodyId = null; try { bodyId = JSON.parse(event.body || "{}").id; } catch {}
+      const id = qsId || bodyId || null;
 
       const raw = await store.get(KEY);
       const arr = raw ? JSON.parse(raw) : [];
@@ -145,6 +149,7 @@ exports.handler = async (event) => {
       }
     }
 
+    // Andere Methoden -> 405
     return bad(405, "Method Not Allowed");
   } catch (err) {
     console.error(err);
