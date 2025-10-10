@@ -39,7 +39,6 @@
   .pill{display:inline-block;padding:4px 10px;border-radius:999px;border:1px solid #ddd;font-size:.9rem;background:#fafafa}
   .toolbar{display:flex;gap:12px;align-items:center;margin:10px 0}
   .hidden{display:none}
-  /* Mini Hinweisbox */
   .note{background:#fffef3;border:1px solid #f1e3a5;border-radius:10px;padding:8px 12px;color:#6b5b00}
 </style>
 
@@ -196,15 +195,12 @@
     </div>
   </section>
 
-  <!-- TAB: WERBUNG (dein bereits genutztes Formular-Layout bleibt – hier nur Stub) -->
+  <!-- TAB: WERBUNG (Stub – dein Formular bleibt) -->
   <section id="tab-werbung" class="hidden">
     <div class="note" style="margin:8px 0 12px">
       Dies ist der Werbung-Tab. Dein bestehendes Formular bleibt – hier musst du nichts ändern.
       (Die Logik in deiner Function für Werbung bauen wir im nächsten Schritt.)
     </div>
-
-    <!-- Platzhalter – falls du schon ein Formular drin hast, bleibt deins erhalten.
-         Du kannst diesen Platzhalter entfernen. -->
     <div class="card">
       <p class="muted">Werbe-Formular – wie von dir bereits angelegt. (Kein Konflikt mit dem Lokale-Tab.)</p>
     </div>
@@ -212,7 +208,7 @@
 </div>
 
 <script>
-/* Tab-Logik (stabil): Standard = „Lokale“ sichtbar */
+/* Tabs */
 const tabBtns = document.querySelectorAll('.tab');
 const tabLokale = document.getElementById('tab-lokale');
 const tabAds = document.getElementById('tab-werbung');
@@ -222,7 +218,7 @@ function activate(which){
   tabAds.classList.toggle('hidden', which!=='werbung');
 }
 tabBtns.forEach(b=>b.addEventListener('click', ()=>activate(b.dataset.tab)));
-activate('lokale'); // beim Laden sicher Lokale anzeigen
+activate('lokale');
 
 /* ===== Lokale: API & Liste ===== */
 const API = "/api/entries";
@@ -337,18 +333,17 @@ function renderTable(items){
       const id = btn.getAttribute('data-id');
       if(!id) return;
       if(!confirm('Diesen Eintrag wirklich löschen?')) return;
-      // laden, filtern, speichern
+      // einfache Strategie: komplette Liste holen, filtern, zurückschreiben
       const r = await fetch(API); const data = await r.json();
       const list = (Array.isArray(data)?data:[]).filter(x=>x.id!==id);
-      const res = await fetch(API, { method:"DELETE", headers:hdrs() }).then(r=>r.json()).catch(()=>null);
-      // wenn deine DELETE alles löscht, schreiben wir danach die gefilterte Liste wieder rein:
-      await fetch(API, { method:"POST", headers:hdrs(), body:JSON.stringify({titel:"__placeholder__"}) }).catch(()=>{});
-      // Das POST oben erzeugt min. 1 Eintrag. Jetzt ersetzen wir sauber:
-      await fetch(API, { method:"PUT", headers:hdrs(), body:JSON.stringify({ id:list[0]?.id || "reseed", titel:"__seed__" }) }).catch(()=>{});
-      // und final die Ziel-Liste schreiben:
+
+      // Alles löschen:
       await fetch(API, { method:"DELETE", headers:hdrs() }).catch(()=>{});
-      // Speichern neue Liste:
-      for(const it of list){ await fetch(API, { method: it.id? "POST":"POST", headers:hdrs(), body:JSON.stringify(it) }); }
+
+      // Liste neu schreiben:
+      for(const it of list){
+        await fetch(API, { method: it.id ? "POST" : "POST", headers:hdrs(), body:JSON.stringify(it) });
+      }
       loadList();
     });
   });
@@ -378,20 +373,68 @@ $("#clear").onclick = async ()=>{
 $("#filter").addEventListener('input', loadList);
 
 $("#exportBtn").onclick = async ()=>{
-  const r = await fetch(API); const data = await r.json();
+  const r = await fetch(API,{cache:"no-store"}); const data = await r.json();
   const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
   const url = URL.createObjectURL(blob);
   const a = Object.assign(document.createElement('a'), {href:url, download:'eintraege.json'});
   document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
 };
+
+/* >>> ROBUSTER IMPORT (BOM entfernen, Wrapper erkennen, PUT/POST korrekt) <<< */
 $("#importFile").onchange = async (ev)=>{
-  const file = ev.target.files[0]; if(!file) return;
-  const text = await file.text(); let arr;
-  try { arr = JSON.parse(text); } catch { alert('Ungültiges JSON.'); return; }
-  if(!Array.isArray(arr)){ alert('Erwarte ein Array von Einträgen.'); return; }
-  if(!confirm('Import fügt Einträge hinzu/überschreibt gleiche IDs. Fortfahren?')) return;
-  for(const it of arr){ await fetch(API, { method: it.id? "POST":"POST", headers:hdrs(), body:JSON.stringify(it) }); }
-  alert('Import abgeschlossen.'); loadList();
+  const file = ev.target.files[0];
+  if(!file) return;
+
+  let text = await file.text();
+  let data = null;
+
+  // 1) BOM entfernen + trimmen
+  text = text.replace(/^\uFEFF/, '').trim();
+
+  const tryParse = (t) => { try { return JSON.parse(t); } catch { return null; } };
+
+  // 2) direkt versuchen
+  data = tryParse(text);
+
+  // 3) Wrapper-Varianten (Object mit entries/items/data oder value als String)
+  if (!Array.isArray(data)) {
+    const obj = tryParse(text);
+    if (obj) {
+      if (Array.isArray(obj)) {
+        data = obj;
+      } else if (Array.isArray(obj.entries)) {
+        data = obj.entries;
+      } else if (Array.isArray(obj.items)) {
+        data = obj.items;
+      } else if (Array.isArray(obj.data)) {
+        data = obj.data;
+      } else if (typeof obj.value === "string") {
+        data = tryParse(obj.value);
+      } else if (typeof obj.data === "string") {
+        data = tryParse(obj.data);
+      }
+    }
+  }
+
+  // 4) Final prüfen
+  if (!Array.isArray(data)) {
+    alert("Ungültiges JSON.\nErwartet wird eine JSON-Liste (Array) mit Einträgen.");
+    return;
+  }
+
+  if (!confirm(`Es werden ${data.length} Einträge importiert. Fortfahren?`)) return;
+
+  // 5) Import: vorhandene mit id -> PUT, neue -> POST
+  for (const it of data) {
+    await fetch(API, {
+      method: it && it.id ? "PUT" : "POST",
+      headers: hdrs(),
+      body: JSON.stringify(it)
+    });
+  }
+
+  alert('Import abgeschlossen.');
+  loadList();
 };
 
 loadList();
