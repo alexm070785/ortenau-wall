@@ -6,7 +6,6 @@
 <meta name="theme-color" content="#e7e7e7">
 <title>Ortenau liefert · Lokale Angebote</title>
 
-<!-- PWA / Icons -->
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/favicon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -172,7 +171,6 @@ function parseDateLooseEnd(v){ // 23:59:59 bei reinen Datumswerten
     const d = new Date(yyyy,MM,dd,23,59,59,999);
     return isNaN(d)?null:d;
   }
-  // hat Uhrzeit -> normales Parsing
   return parseDateLoose(v);
 }
 
@@ -187,7 +185,6 @@ async function fetchAds(){
     return [];
   }
 }
-
 function isAdActiveLoose(ad){
   const status = String(ad.status ?? ad.Status ?? ad.state ?? "").toLowerCase();
   if (status && status !== "aktiv" && status !== "active") return false;
@@ -204,11 +201,19 @@ function isAdActiveLoose(ad){
   return true;
 }
 
+/* URL-Erkennung nochmal robuster */
 function pickUrl(ad){
-  let u = ad.url ?? ad.link ?? ad.clickUrl ?? ad.target ?? ad.href ?? ad.ZielURL ?? ad.ziel ?? ad.targetUrl ?? "";
-  u = String(u||"").trim();
-  if (!u) return "";
-  if (!/^https?:\/\//i.test(u)) u = "https://" + u; // normalisieren
+  const cands = [
+    'url','link','clickUrl','click','klick','klickUrl',
+    'target','targetUrl','target_url','href',
+    'ZielURL','ZielUrl','ziel','zielurl','ziel_url'
+  ];
+  let u = '';
+  for (const k of cands){
+    if (ad[k]) { u = String(ad[k]).trim(); break; }
+  }
+  if (!u) return '';
+  if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
   return u;
 }
 
@@ -216,6 +221,10 @@ function buildAdCard(ad){
   const title = ad.title ?? ad.titel ?? "Anzeige";
   const image = ad.image ?? ad.bild ?? ad.img ?? ad.imageUrl ?? ad.bildUrl ?? "";
   const url   = pickUrl(ad);
+
+  // Debug: zeige Rohdaten + gewählte URL
+  console.log("[ads] raw:", ad);
+  console.log("[ads] chosen:", {title, url});
 
   const a = document.createElement('a');
   a.className = 'item ad-card';
@@ -228,9 +237,6 @@ function buildAdCard(ad){
     a.setAttribute('role','button');
     a.style.cursor = 'default';
   }
-
-  // Debug in der Konsole: zeigt, welche URL verwendet wird
-  console.log("[ads] chosen:", {title, url});
 
   const emoji = document.createElement('div');
   emoji.className = 'emoji';
