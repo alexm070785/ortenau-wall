@@ -1,170 +1,189 @@
 <!doctype html>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#f6f6f6">
-<title>Admin – Einträge verwalten</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin – Orte verwalten</title>
 <style>
-  :root{
-    --bg:#f6f6f6; --card:#fff; --text:#222; --muted:#70798C; --radius:12px;
-    --border:#d0d0d0; --shadow:0 4px 12px rgba(0,0,0,.08); --tap:48px;
-    --mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+  body {
+    font-family: system-ui, sans-serif;
+    background: #f6f6f6;
+    margin: 0;
+    padding: 20px;
   }
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;padding:16px}
-  h1{margin:4px 0 16px}
-  .wrap{max-width:960px;margin:auto}
-  .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;margin-bottom:16px}
-  label{font-weight:600;display:block;margin:6px 0}
-  input,select,textarea{width:100%;padding:12px;border:1px solid var(--border);border-radius:12px;background:#fff;font-size:1rem;min-height:44px}
-  textarea{min-height:100px;resize:vertical}
-  .muted{color:var(--muted);font-size:.95rem}
-  .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
-  button{border:0;border-radius:12px;padding:12px 16px;cursor:pointer;background:#222;color:#fff;min-height:var(--tap)}
-  button.secondary{background:#efefef;color:#222;border:1px solid var(--border)}
-  button.danger{background:#8b0000}
-  table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-top:16px}
-  th,td{padding:10px;border-bottom:1px solid #eee;text-align:left}
-  th{background:#fafafa}
-  .right{text-align:right}
-  .pill{display:inline-block;padding:4px 10px;border-radius:999px;border:1px solid #ddd;font-size:.9rem;background:#fafafa}
-  /* Featured Style */
-  .pill--gold{display:inline-block;padding:4px 10px;border-radius:999px;font-size:.9rem;background:linear-gradient(180deg,#ffefb0,#f6d777);border:1px solid rgba(212,175,55,.65);color:#5b4b1a;box-shadow:0 2px 6px rgba(212,175,55,.15);}
-  .star{font-weight:700;color:#b9931b;}
-  button.ghost{background:#fff;color:#222;border:1px solid #ddd;border-radius:8px;padding:6px 10px;font-size:.85rem;cursor:pointer;}
-  button.ghost.active{border-color:#b9931b;box-shadow:0 0 0 2px rgba(212,175,55,.18) inset;}
+  .wrap {
+    max-width: 960px;
+    margin: auto;
+  }
+  h1 {
+    margin-bottom: 1rem;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  th, td {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+  }
+  th {
+    background: #fafafa;
+    text-align: left;
+  }
+  tr:hover {
+    background: #f9f9f9;
+  }
+  .muted {
+    color: #777;
+  }
+  button {
+    border: none;
+    border-radius: 8px;
+    padding: 8px 14px;
+    cursor: pointer;
+    background: #222;
+    color: #fff;
+  }
+  button.danger {
+    background: #a00;
+  }
+  button.secondary {
+    background: #eee;
+    color: #222;
+  }
+  input, select, textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    font-size: 1rem;
+  }
+  .actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+  }
+  /* === Featured Styles (NEU) === */
+  tr.featured-row {
+    background: linear-gradient(180deg, #fffef5, #fff8e1);
+    box-shadow: 0 0 10px rgba(212,175,55,0.25);
+  }
+  tr.featured-row td {
+    border-bottom: 1px solid rgba(212,175,55,0.25);
+  }
+  .featured-badge {
+    display:inline-block;
+    background:linear-gradient(90deg,#f6d777,#ffefb0);
+    color:#5b4b1a;
+    font-weight:600;
+    border-radius:999px;
+    padding:2px 10px;
+    font-size:.85rem;
+    margin-left:6px;
+    box-shadow:0 2px 4px rgba(212,175,55,0.2);
+  }
 </style>
 
 <div class="wrap">
-  <h1>Admin – Lokale verwalten</h1>
+  <h1>Admin – Orte verwalten</h1>
 
-  <!-- Formular zum Erstellen/Bearbeiten -->
-  <div class="card" id="formCard">
-    <label for="titel">Name *</label>
-    <input id="titel" placeholder="z. B. Genc Döner & Pizza">
-    <label for="kategorie">Kategorie *</label>
+  <div class="card">
+    <label for="titel">Titel</label>
+    <input id="titel" placeholder="z. B. Restaurant Roma">
+    <label for="kategorie">Kategorie</label>
     <select id="kategorie">
       <option value="restaurant">Restaurant</option>
       <option value="pizzeria">Pizzeria</option>
       <option value="pizza">Pizza</option>
-      <option value="döner">Döner/Kebab</option>
-      <option value="cafe">Café</option>
+      <option value="döner">Döner</option>
       <option value="imbiss">Imbiss</option>
+      <option value="cafe">Café</option>
       <option value="bäckerei">Bäckerei</option>
     </select>
-
-    <label for="stadt">Ort / Stadt</label>
+    <label for="stadt">Ort</label>
     <input id="stadt" placeholder="Offenburg">
-
     <label><input type="checkbox" id="featured"> Featured (Top)</label>
 
     <div class="actions">
       <button id="save">Speichern</button>
-      <button id="clearForm" class="secondary" type="button">Felder leeren</button>
+      <button id="reset" class="secondary">Felder leeren</button>
     </div>
   </div>
 
-  <!-- Werkzeuge -->
-  <div class="card actions">
+  <div class="actions">
     <button id="fetch">Liste laden</button>
     <button id="exportBtn" class="secondary">Export (JSON)</button>
     <label class="secondary" style="padding:0;display:inline-flex;align-items:center;">
       <input id="importFile" type="file" accept=".json" style="display:none">
-      <span style="padding:12px 16px;display:inline-block;cursor:pointer">Import (JSON)</span>
+      <span style="padding:10px 16px;display:inline-block;cursor:pointer;">Import (JSON)</span>
     </label>
     <button id="clear" class="danger">ALLE löschen</button>
   </div>
 
-  <!-- Tabelle -->
-  <div class="card">
-    <table>
-      <thead>
-        <tr>
-          <th>Titel</th>
-          <th>Kategorie</th>
-          <th>Ort</th>
-          <th>Featured</th>
-          <th class="right">Aktionen</th>
-        </tr>
-      </thead>
-      <tbody id="tbody"><tr><td colspan="5" class="muted">Noch nichts geladen.</td></tr></tbody>
-    </table>
-  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>Titel</th>
+        <th>Kategorie</th>
+        <th>Ort</th>
+        <th>Featured</th>
+        <th class="right">Aktionen</th>
+      </tr>
+    </thead>
+    <tbody id="tbody">
+      <tr><td colspan="5" class="muted">Noch nichts geladen.</td></tr>
+    </tbody>
+  </table>
 </div>
 
 <script>
-const API="/api/entries";
-const $=s=>document.querySelector(s);
-let editingId=null;
+const API = "/api/entries";
+const $ = s => document.querySelector(s);
+let editingId = null;
 
-function hdrs(){return {"Content-Type":"application/json"}}
-
-function toPayload(){
-  return {
-    id: editingId||undefined,
-    titel:$("#titel").value.trim(),
-    kategorie:$("#kategorie").value,
-    stadt:$("#stadt").value.trim(),
-    optionen:{featured:$("#featured").checked}
-  };
+function hdrs() {
+  return { "Content-Type": "application/json" };
 }
 
-async function loadList(){
-  const r=await fetch(API,{cache:"no-store"});
-  const data=await r.json().catch(()=>[]);
-  renderTable(Array.isArray(data)?data:[]);
+async function loadList() {
+  const r = await fetch(API, { cache: "no-store" });
+  const data = await r.json().catch(() => []);
+  renderTable(Array.isArray(data) ? data : []);
 }
 
-function renderTable(items){
-  const tb=$("#tbody"); tb.innerHTML="";
-  if(!items.length){tb.innerHTML='<tr><td colspan="5" class="muted">Keine Einträge gespeichert.</td></tr>';return;}
-  const sorted=[...items].sort((a,b)=>{
-    const fa=!!a?.optionen?.featured, fb=!!b?.optionen?.featured;
-    if(fa!==fb)return fa?-1:1;
+function renderTable(items) {
+  const tb = $("#tbody");
+  tb.innerHTML = "";
+
+  if (!items.length) {
+    tb.innerHTML = '<tr><td colspan="5" class="muted">Keine Einträge gespeichert.</td></tr>';
+    return;
+  }
+
+  const sorted = [...items].sort((a,b)=>{
+    const fa = !!a?.optionen?.featured, fb = !!b?.optionen?.featured;
+    if (fa !== fb) return fa ? -1 : 1;
     return (a.titel||"").localeCompare(b.titel||"");
   });
-  sorted.forEach(i=>{
-    const tr=document.createElement("tr");
-    const isFeatured=!!i?.optionen?.featured;
-    tr.innerHTML=`
-      <td>${i.titel||""}</td>
-      <td>${i.kategorie||""}</td>
-      <td>${i.stadt||""}</td>
+
+  sorted.forEach(i => {
+    const tr = document.createElement("tr");
+    if (i.optionen?.featured) tr.classList.add("featured-row"); // goldene Zeile
+    const isFeatured = !!i?.optionen?.featured;
+    tr.innerHTML = `
+      <td>${i.titel || ''}${isFeatured ? ' <span class="featured-badge">★ Featured</span>' : ''}</td>
+      <td>${i.kategorie || ''}</td>
+      <td>${i.stadt || ''}</td>
+      <td>${isFeatured ? 'Ja' : 'Nein'}</td>
       <td>
-        ${isFeatured?'<span class="pill--gold">Empfohlen</span>':'<span class="muted">–</span>'}
-        <div style="margin-top:6px">
-          <button class="ghost toggleFeat ${isFeatured?'active':''}" data-id="${i.id||''}">
-            <span class="star">${isFeatured?'★':'☆'}</span> ${isFeatured?'Entfeaturen':'Featuren'}
-          </button>
-        </div>
-      </td>
-      <td class="right">
         <button class="editBtn secondary" data-id="${i.id||''}">Bearbeiten</button>
         <button class="delBtn danger" data-id="${i.id||''}">Löschen</button>
       </td>`;
     tb.appendChild(tr);
-  });
-
-  tb.querySelectorAll(".delBtn").forEach(btn=>{
-    btn.onclick=async()=>{
-      const id=btn.dataset.id;
-      if(!id||!confirm("Wirklich löschen?"))return;
-      await fetch(`${API}?id=${encodeURIComponent(id)}`,{method:"DELETE",headers:hdrs()});
-      loadList();
-    };
-  });
-
-  tb.querySelectorAll(".toggleFeat").forEach(btn=>{
-    btn.onclick=async()=>{
-      const id=btn.dataset.id;
-      const r=await fetch(API,{cache:"no-store"});
-      const data=await r.json().catch(()=>[]);
-      const item=data.find(x=>x.id===id);
-      if(!item)return;
-      item.optionen=item.optionen||{};
-      item.optionen.featured=!item.optionen.featured;
-      await fetch(API,{method:"PUT",headers:hdrs(),body:JSON.stringify(item)});
-      loadList();
-    };
   });
 
   tb.querySelectorAll(".editBtn").forEach(btn=>{
@@ -182,47 +201,67 @@ function renderTable(items){
       window.scrollTo({top:0,behavior:"smooth"});
     };
   });
+
+  tb.querySelectorAll(".delBtn").forEach(btn=>{
+    btn.onclick=async()=>{
+      const id=btn.dataset.id;
+      if(!id||!confirm("Wirklich löschen?"))return;
+      await fetch(`${API}?id=${encodeURIComponent(id)}`,{method:"DELETE",headers:hdrs()});
+      loadList();
+    };
+  });
 }
 
-$("#save").onclick=async()=>{
-  const p=toPayload();
-  if(!p.titel){alert("Titel fehlt");return;}
-  const method=editingId?"PUT":"POST";
-  await fetch(API,{method,headers:hdrs(),body:JSON.stringify(p)});
-  alert(editingId?"Aktualisiert!":"Gespeichert!");
-  editingId=null;
-  $("#titel").value=$("#stadt").value="";
-  $("#featured").checked=false;
+$("#save").onclick = async () => {
+  const titel = $("#titel").value.trim();
+  if (!titel) return alert("Titel fehlt");
+  const p = {
+    id: editingId || undefined,
+    titel,
+    kategorie: $("#kategorie").value,
+    stadt: $("#stadt").value.trim(),
+    optionen: { featured: $("#featured").checked }
+  };
+  const method = editingId ? "PUT" : "POST";
+  await fetch(API, { method, headers: hdrs(), body: JSON.stringify(p) });
+  alert(editingId ? "Eintrag aktualisiert!" : "Eintrag gespeichert!");
+  editingId = null;
+  $("#titel").value = $("#stadt").value = "";
+  $("#featured").checked = false;
   loadList();
 };
 
-$("#clearForm").onclick=()=>{editingId=null;$("#titel").value=$("#stadt").value="";$("#featured").checked=false;};
-
-$("#fetch").onclick=loadList;
-
-$("#exportBtn").onclick=async()=>{
-  const r=await fetch(API,{cache:"no-store"});
-  const data=await r.json().catch(()=>[]);
-  const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
-  const a=Object.assign(document.createElement("a"),{href:URL.createObjectURL(blob),download:"eintraege.json"});
-  document.body.append(a);a.click();a.remove();
+$("#reset").onclick = () => {
+  editingId = null;
+  $("#titel").value = $("#stadt").value = "";
+  $("#featured").checked = false;
 };
 
-$("#importFile").onchange=async e=>{
-  const f=e.target.files[0];if(!f)return;
-  const text=await f.text();
-  const data=JSON.parse(text);
-  if(!confirm(`Importiere ${data.length} Einträge?`))return;
+$("#fetch").onclick = loadList;
+
+$("#exportBtn").onclick = async () => {
+  const r = await fetch(API, { cache: "no-store" });
+  const data = await r.json().catch(() => []);
+  const blob = new Blob([JSON.stringify(data,null,2)], { type:"application/json" });
+  const a = Object.assign(document.createElement("a"), { href:URL.createObjectURL(blob), download:"eintraege.json" });
+  document.body.append(a); a.click(); a.remove();
+};
+
+$("#importFile").onchange = async e => {
+  const f = e.target.files[0]; if(!f) return;
+  const text = await f.text();
+  const data = JSON.parse(text);
+  if(!confirm(`Importiere ${data.length} Einträge?`)) return;
   for(const it of data){
-    const method=it.id?"PUT":"POST";
+    const method = it.id ? "PUT" : "POST";
     await fetch(API,{method,headers:hdrs(),body:JSON.stringify(it)});
   }
   alert("Import abgeschlossen");
   loadList();
 };
 
-$("#clear").onclick=async()=>{
-  if(!confirm("ALLE löschen?"))return;
+$("#clear").onclick = async () => {
+  if(!confirm("ALLE löschen?")) return;
   await fetch(API,{method:"DELETE",headers:hdrs()});
   loadList();
 };
