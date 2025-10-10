@@ -111,39 +111,42 @@
   .sub{font-size:.95rem;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;margin-top:2px}
   .badge{font-size:.85rem;border:1px solid #eee;background:#fafafa;border-radius:999px;padding:2px 8px}
 
-  /* ======= WERBUNG (große Karte) ======= */
+  footer{position:fixed;bottom:0;left:0;width:100%;height:56px;background:var(--accent);color:#595959;border-top:1px solid #b0b0b0;font-size:.95rem}
+  .footer-inner{max-width:900px;margin:0 auto;height:100%;display:flex;justify-content:center;align-items:center;padding:0 12px}
+
+  /* ==== Anzeigen-Karte (groß) ==== */
   .ad-card{
-    display:flex;
+    display:grid;
+    grid-template-columns:64px 1fr;
     gap:12px;
-    background:var(--card);
-    border:1px solid var(--border);
+    align-items:center;
+    background:#fffdfa;
+    border:1px solid #f1e4b5;
     border-radius:12px;
-    padding:12px;
-    box-shadow:var(--shadow);
-    position:relative;
-    min-height:140px; /* deutlich größer als Item */
+    padding:14px;
+    box-shadow:0 4px 14px rgba(214,173,64,.25);
+    text-decoration:none;
+    color:inherit;
+    min-height:84px;
+  }
+  .ad-img{
+    width:64px;height:64px;object-fit:cover;border-radius:10px;border:1px solid #ead78d;background:#fff;
+  }
+  .ad-top{
+    display:flex;align-items:center;gap:8px;flex-wrap:wrap;
   }
   .ad-label{
-    position:absolute; top:8px; right:8px;
-    font-size:.75rem; letter-spacing:.02em;
-    background:#ffe8a6; border:1px solid #e7c76a; color:#5b4b1a;
-    padding:2px 8px; border-radius:999px;
+    font-size:.75rem;
+    letter-spacing:.06em;
+    padding:2px 8px;
+    border-radius:999px;
+    background:#ffe9a3;
+    color:#6b5210;
+    border:1px solid #f1d57e;
+    font-weight:700;
   }
-  .ad-image{
-    width:140px; height:116px; flex:0 0 140px; border-radius:10px; object-fit:cover; border:1px solid #eee;
-  }
-  .ad-meta{display:flex; flex-direction:column; gap:6px; min-width:0}
-  .ad-title{font-weight:800; font-size:1.05rem; line-height:1.15}
-  .ad-text{color:#444; font-size:.95rem}
-  .ad-cta{
-    align-self:flex-start; margin-top:6px;
-    border:0; border-radius:10px; padding:10px 12px; background:#111; color:#fff; cursor:pointer;
-    text-decoration:none; display:inline-block;
-  }
-  .ad-host{font-size:.85rem; color:#8c8c8c}
-
-  footer{position:fixed;bottom:0;left:0;width:100%;height:56px;background:var(--accent);color:#595959;border-top:1px solid #b0b0b-0;font-size:.95rem}
-  .footer-inner{max-width:900px;margin:0 auto;height:100%;display:flex;justify-content:center;align-items:center;padding:0 12px}
+  .ad-title{font-weight:800}
+  .ad-text{color:#5e5e5e;margin-top:2px}
 </style>
 </head>
 <body>
@@ -217,76 +220,43 @@ function catEmoji(cat){
 const $ = s => document.querySelector(s);
 function normalize(s){ try { return (s||'').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu,''); } catch { return (s||'').toLowerCase(); } }
 
-// ---------- ADS: laden & auswählen ----------
-let cachedAds = [];
+/* ---------- Anzeigen laden (minimal) ---------- */
 async function loadAds(){
   try{
-    const res = await fetch('/api/ads', {cache:'no-store'});
-    const all = await res.json();
+    const r = await fetch("/api/ads", {cache:"no-store"});
+    const all = await r.json();
     const now = Date.now();
-    // gültig: active, in Zeitfenster (wenn gesetzt), Position enthält "home_right_mid"
-    const valid = (Array.isArray(all)?all:[]).filter(a=>{
-      if (a.active === false) return false;
-      if (Array.isArray(a.positions)) {
-        if (!a.positions.includes('home_right_mid')) return false;
-      } else {
-        return false;
-      }
-      const startOk = !a.start || (new Date(a.start).getTime() <= now);
-      const endOk   = !a.end   || (new Date(a.end).getTime()   >= now);
-      return startOk && endOk;
-    });
-    // zufällig mischen
-    for (let i = valid.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [valid[i], valid[j]] = [valid[j], valid[i]];
-    }
-    cachedAds = valid;
-  }catch(e){
-    cachedAds = [];
+
+    // aktiv + (falls gesetzt) innerhalb Zeitraum
+    const active = (Array.isArray(all)?all:[])
+      .filter(a => (a.status||"").toLowerCase()==="aktiv")
+      .filter(a => {
+        const s = a.start ? Date.parse(a.start) : null;
+        const e = a.ende  ? Date.parse(a.ende)  : null;
+        return (!s || now>=s) && (!e || now<=e);
+      });
+
+    // Slot erkennen: maschinell ODER deutsch
+    const isRightMid = ad => {
+      const slot = (ad.slot||"").toLowerCase();
+      const label = (ad.slotLabel||"").toLowerCase();
+      return slot==="home_right_mid"
+          || /rechte.*spalte.*mitte/.test(slot)
+          || /rechte.*spalte.*mitte/.test(label);
+    };
+
+    // passende Anzeige wählen (oder null)
+    const candidates = active.filter(isRightMid);
+    if (!candidates.length) return null;
+    candidates.sort((a,b)=>(+a.prio||0) - (+b.prio||0));
+    return candidates[0];
+  }catch{
+    return null;
   }
 }
-function buildAdCard(ad){
-  const wrap = document.createElement('div');
-  wrap.className = 'ad-card';
-  // Bild
-  const img = document.createElement('img');
-  img.className = 'ad-image';
-  img.alt = ad.title || 'Anzeige';
-  img.src = ad.image || 'https://via.placeholder.com/280x180?text=Anzeige';
-  wrap.appendChild(img);
-  // Meta
-  const meta = document.createElement('div');
-  meta.className = 'ad-meta';
-  const h = document.createElement('div'); h.className='ad-title'; h.textContent = ad.title || 'Anzeige';
-  const p = document.createElement('div'); p.className='ad-text';  p.textContent = ad.text || '';
-  meta.appendChild(h); meta.appendChild(p);
-  // CTA
-  if (ad.link){
-    const a = document.createElement('a');
-    a.className = 'ad-cta';
-    a.href = ad.link;
-    a.target = '_blank';
-    a.rel = 'noopener nofollow sponsored';
-    a.textContent = ad.cta || 'Jetzt ansehen';
-    meta.appendChild(a);
-  }
-  // Hosthinweis dezent
-  const host = document.createElement('div'); host.className='ad-host'; host.textContent = 'Ortenau liefert – Anzeige';
-  meta.appendChild(host);
 
-  wrap.appendChild(meta);
-
-  const lab = document.createElement('span');
-  lab.className = 'ad-label';
-  lab.textContent = 'Werbung';
-  wrap.appendChild(lab);
-
-  return wrap;
-}
-
-// Render-Funktion
-function render(items){
+/* ---------- Render-Funktion (mit optionaler Anzeige) ---------- */
+function render(items, ad){
   const el = $("#list");
   el.innerHTML = "";
   if(!items.length){ el.innerHTML = '<p class="muted" style="padding:12px">Noch keine Einträge vorhanden.</p>'; return; }
@@ -297,14 +267,15 @@ function render(items){
     return (a.titel||"").localeCompare(b.titel||"");
   });
 
-  // Wir wählen EINE passende Anzeige (zufällig) für die Position
-  const adToShow = cachedAds.length ? cachedAds[0] : null;
+  // Index 3 = rechte Spalte, mittlere Reihe (bei 2 Spalten)
+  const adInsertIndex = Math.min(3, list.length);
+
+  const frag = document.createDocumentFragment();
 
   list.forEach((item, idx)=>{
-    // Nach dem 3. Eintrag (Index 2) fügen wir die Anzeige ein
-    if (adToShow && idx === 3){
-      const adEl = buildAdCard(adToShow);
-      el.appendChild(adEl);
+    // füge Anzeige an der gewünschten Stelle ein
+    if (ad && idx === adInsertIndex){
+      frag.appendChild(createAdCard(ad));
     }
 
     const a = document.createElement('a');
@@ -331,21 +302,63 @@ function render(items){
     meta.appendChild(sub);
     a.appendChild(emoji);
     a.appendChild(meta);
-    el.appendChild(a);
+    frag.appendChild(a);
   });
 
-  // Falls Liste < 4 Einträge hat, Anzeige ans Ende hängen
-  if (adToShow && list.length < 4){
-    const adEl = buildAdCard(adToShow);
-    el.appendChild(adEl);
+  // Falls sehr kurze Liste: Anzeige ans Ende hängen
+  if (ad && list.length < adInsertIndex){
+    frag.appendChild(createAdCard(ad));
   }
+
+  el.appendChild(frag);
 }
 
-// Daten laden + Suche
+/* ---------- Hilfsfunktion: Anzeige als Karte ---------- */
+function createAdCard(ad){
+  const a = document.createElement('a');
+  a.className = 'ad-card';
+  a.href = ad.url || '#';
+  a.target = '_blank';
+  a.rel = 'noopener sponsored';
+
+  const img = document.createElement('img');
+  img.className = 'ad-img';
+  img.src = ad.image || ad.img || '';
+  img.alt = ad.titel || 'Anzeige';
+
+  const meta = document.createElement('div');
+  const top = document.createElement('div');
+  top.className = 'ad-top';
+  const label = document.createElement('span');
+  label.className = 'ad-label';
+  label.textContent = 'WERBUNG';
+  const title = document.createElement('span');
+  title.className = 'ad-title';
+  title.textContent = ad.titel || '';
+
+  top.appendChild(label);
+  top.appendChild(title);
+
+  const text = document.createElement('div');
+  text.className = 'ad-text';
+  text.textContent = ad.text || ad.beschreibung || '';
+
+  meta.appendChild(top);
+  meta.appendChild(text);
+
+  a.appendChild(img);
+  a.appendChild(meta);
+  return a;
+}
+
+/* ---------- Daten laden + Suche + Anzeige ---------- */
 async function loadAndRender(){
-  await loadAds(); // erst Werbung holen
-  const res = await fetch("/api/entries", {cache:"no-store"});
-  const all = await res.json();
+  const [entriesRes, ad] = await Promise.all([
+    fetch("/api/entries",{cache:"no-store"}).then(r=>r.json()),
+    loadAds()
+  ]);
+  const all = Array.isArray(entriesRes) ? entriesRes : [];
+
   const input = $("#search");
   const clear = $("#clearBtn");
   function apply(){
@@ -354,7 +367,7 @@ async function loadAndRender(){
       const hay = normalize(JSON.stringify(item));
       return q.split(/\s+/).filter(Boolean).every(t=>hay.includes(t));
     });
-    render(filtered);
+    render(filtered, ad);
   }
   input.oninput = apply;
   clear.onclick = ()=>{ input.value=""; apply(); input.focus(); };
