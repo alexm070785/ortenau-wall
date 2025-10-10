@@ -114,39 +114,30 @@
   footer{position:fixed;bottom:0;left:0;width:100%;height:56px;background:var(--accent);color:#595959;border-top:1px solid #b0b0b0;font-size:.95rem}
   .footer-inner{max-width:900px;margin:0 auto;height:100%;display:flex;justify-content:center;align-items:center;padding:0 12px}
 
-  /* ==== Anzeigen-Karte (groß) ==== */
+  /* ===== Werbung (neues, minimales CSS) ===== */
   .ad-card{
-    display:grid;
-    grid-template-columns:64px 1fr;
-    gap:12px;
-    align-items:center;
-    background:#fffdfa;
-    border:1px solid #f1e4b5;
-    border-radius:12px;
-    padding:14px;
-    box-shadow:0 4px 14px rgba(214,173,64,.25);
-    text-decoration:none;
-    color:inherit;
-    min-height:84px;
+    position:relative;
+    min-height:96px;
+    border:1px solid #e9d88c;
+    background:linear-gradient(180deg,#fffdf4,#ffffff);
   }
-  .ad-img{
-    width:64px;height:64px;object-fit:cover;border-radius:10px;border:1px solid #ead78d;background:#fff;
-  }
-  .ad-top{
-    display:flex;align-items:center;gap:8px;flex-wrap:wrap;
-  }
-  .ad-label{
-    font-size:.75rem;
-    letter-spacing:.06em;
-    padding:2px 8px;
+  .ad-card::after{
+    content:"WERBUNG";
+    position:absolute;
+    top:8px; right:10px;
+    font-size:.72rem;
+    color:#7a5d00;
+    background:#fff5bf;
+    border:1px solid #ecd972;
     border-radius:999px;
-    background:#ffe9a3;
-    color:#6b5210;
-    border:1px solid #f1d57e;
-    font-weight:700;
+    padding:2px 8px;
   }
-  .ad-title{font-weight:800}
-  .ad-text{color:#5e5e5e;margin-top:2px}
+  .ad-card .emoji img{
+    width:42px; height:42px; border-radius:8px; object-fit:cover;
+  }
+  .ad-card .ad-text{
+    margin-top:6px; color:#555; font-size:.95rem; white-space:pre-wrap;
+  }
 </style>
 </head>
 <body>
@@ -220,43 +211,72 @@ function catEmoji(cat){
 const $ = s => document.querySelector(s);
 function normalize(s){ try { return (s||'').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu,''); } catch { return (s||'').toLowerCase(); } }
 
-/* ---------- Anzeigen laden (minimal) ---------- */
-async function loadAds(){
+// ---------- WERBUNG: Helfer ----------
+async function fetchAds(){
   try{
     const r = await fetch("/api/ads", {cache:"no-store"});
-    const all = await r.json();
-    const now = Date.now();
+    const j = await r.json();
+    return Array.isArray(j) ? j : [];
+  }catch{ return []; }
+}
+function isAdActive(ad){
+  const statusOk = String(ad.status||ad.Status||"").toLowerCase() === "aktiv";
+  if(!statusOk) return false;
+  const now = new Date();
+  const start = ad.start || ad.begin || ad.startDate;
+  const ende  = ad.ende  || ad.end   || ad.endDate;
+  if(start){ const d = new Date(start); if(!isNaN(d) && d > now) return false; }
+  if(ende){  const d = new Date(ende);  if(!isNaN(d) && d < now) return false; }
+  return true;
+}
+function buildAdCard(ad){
+  const a = document.createElement('a');
+  a.className = 'item ad-card';
+  if(ad.url){ a.href = ad.url; a.target="_blank"; a.rel="noopener"; }
 
-    // aktiv + (falls gesetzt) innerhalb Zeitraum
-    const active = (Array.isArray(all)?all:[])
-      .filter(a => (a.status||"").toLowerCase()==="aktiv")
-      .filter(a => {
-        const s = a.start ? Date.parse(a.start) : null;
-        const e = a.ende  ? Date.parse(a.ende)  : null;
-        return (!s || now>=s) && (!e || now<=e);
-      });
+  const emoji = document.createElement('div');
+  emoji.className = 'emoji';
+  if(ad.image){ emoji.innerHTML = `<img src="${ad.image}" alt="">`; }
+  else{ emoji.textContent = "⭐️"; }
 
-    // Slot erkennen: maschinell ODER deutsch
-    const isRightMid = ad => {
-      const slot = (ad.slot||"").toLowerCase();
-      const label = (ad.slotLabel||"").toLowerCase();
-      return slot==="home_right_mid"
-          || /rechte.*spalte.*mitte/.test(slot)
-          || /rechte.*spalte.*mitte/.test(label);
-    };
+  const meta = document.createElement('div');
+  meta.className = 'meta';
+  const name = document.createElement('div');
+  name.className = 'name';
+  name.textContent = ad.titel || ad.title || 'Anzeige';
+  const sub = document.createElement('div');
+  sub.className = 'sub';
+  sub.innerHTML = `<span class="badge">Werbung</span>${ad.city ? ` <span>${ad.city}</span>` : ''}`;
+  const text = document.createElement('div');
+  text.className = 'ad-text';
+  text.innerHTML = (ad.text||"").replace(/\n/g,"<br>");
 
-    // passende Anzeige wählen (oder null)
-    const candidates = active.filter(isRightMid);
-    if (!candidates.length) return null;
-    candidates.sort((a,b)=>(+a.prio||0) - (+b.prio||0));
-    return candidates[0];
-  }catch{
-    return null;
-  }
+  meta.appendChild(name);
+  meta.appendChild(sub);
+  if((ad.text||"").trim()) meta.appendChild(text);
+
+  a.appendChild(emoji);
+  a.appendChild(meta);
+  return a;
+}
+async function injectAds(currentItems){
+  const ads = (await fetchAds()).filter(isAdActive);
+  if(!ads.length) return;
+
+  // Slot-Auswahl: 'home_right_mid' bevorzugt, sonst erste aktive
+  const slotKey = "home_right_mid";
+  const chosen = ads.find(a => String(a.slot||a.slotKey||"").includes(slotKey)) || ads[0];
+
+  const listEl = $("#list");
+
+  // Position laut Screenshot: rechte Spalte, mittig -> nach dem 3. Element einfügen.
+  const insertIndex = Math.min(3, listEl.children.length);
+  const card = buildAdCard(chosen);
+  listEl.insertBefore(card, listEl.children[insertIndex] || null);
 }
 
-/* ---------- Render-Funktion (mit optionaler Anzeige) ---------- */
-function render(items, ad){
+// Render-Funktion
+function render(items){
   const el = $("#list");
   el.innerHTML = "";
   if(!items.length){ el.innerHTML = '<p class="muted" style="padding:12px">Noch keine Einträge vorhanden.</p>'; return; }
@@ -267,17 +287,7 @@ function render(items, ad){
     return (a.titel||"").localeCompare(b.titel||"");
   });
 
-  // Index 3 = rechte Spalte, mittlere Reihe (bei 2 Spalten)
-  const adInsertIndex = Math.min(3, list.length);
-
-  const frag = document.createDocumentFragment();
-
-  list.forEach((item, idx)=>{
-    // füge Anzeige an der gewünschten Stelle ein
-    if (ad && idx === adInsertIndex){
-      frag.appendChild(createAdCard(ad));
-    }
-
+  list.forEach(item=>{
     const a = document.createElement('a');
     a.className = 'item';
     a.href = item.id ? `details.html?id=${encodeURIComponent(item.id)}` : `details.html?q=${encodeURIComponent((item.titel||'').toLowerCase())}`;
@@ -302,72 +312,25 @@ function render(items, ad){
     meta.appendChild(sub);
     a.appendChild(emoji);
     a.appendChild(meta);
-    frag.appendChild(a);
+    el.appendChild(a);
   });
-
-  // Falls sehr kurze Liste: Anzeige ans Ende hängen
-  if (ad && list.length < adInsertIndex){
-    frag.appendChild(createAdCard(ad));
-  }
-
-  el.appendChild(frag);
 }
 
-/* ---------- Hilfsfunktion: Anzeige als Karte ---------- */
-function createAdCard(ad){
-  const a = document.createElement('a');
-  a.className = 'ad-card';
-  a.href = ad.url || '#';
-  a.target = '_blank';
-  a.rel = 'noopener sponsored';
-
-  const img = document.createElement('img');
-  img.className = 'ad-img';
-  img.src = ad.image || ad.img || '';
-  img.alt = ad.titel || 'Anzeige';
-
-  const meta = document.createElement('div');
-  const top = document.createElement('div');
-  top.className = 'ad-top';
-  const label = document.createElement('span');
-  label.className = 'ad-label';
-  label.textContent = 'WERBUNG';
-  const title = document.createElement('span');
-  title.className = 'ad-title';
-  title.textContent = ad.titel || '';
-
-  top.appendChild(label);
-  top.appendChild(title);
-
-  const text = document.createElement('div');
-  text.className = 'ad-text';
-  text.textContent = ad.text || ad.beschreibung || '';
-
-  meta.appendChild(top);
-  meta.appendChild(text);
-
-  a.appendChild(img);
-  a.appendChild(meta);
-  return a;
-}
-
-/* ---------- Daten laden + Suche + Anzeige ---------- */
+// Daten laden + Suche
 async function loadAndRender(){
-  const [entriesRes, ad] = await Promise.all([
-    fetch("/api/entries",{cache:"no-store"}).then(r=>r.json()),
-    loadAds()
-  ]);
-  const all = Array.isArray(entriesRes) ? entriesRes : [];
-
+  const res = await fetch("/api/entries");
+  const all = await res.json();
   const input = $("#search");
   const clear = $("#clearBtn");
-  function apply(){
+  async function apply(){
     const q = normalize(input.value.trim());
     const filtered = !q ? all : all.filter(item=>{
       const hay = normalize(JSON.stringify(item));
       return q.split(/\s+/).filter(Boolean).every(t=>hay.includes(t));
     });
-    render(filtered, ad);
+    render(filtered);
+    // >> HIER Werbung einfügen
+    injectAds(filtered);
   }
   input.oninput = apply;
   clear.onclick = ()=>{ input.value=""; apply(); input.focus(); };
