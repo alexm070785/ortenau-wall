@@ -70,8 +70,34 @@
   }
   .ios-share-emoji { font-size: 1.2rem }
 
-  .list{max-width:900px;margin:0 auto 12px;padding:0 16px;display:flex;flex-direction:column;gap:10px}
-  .item{display:grid;grid-template-columns:42px 1fr;gap:12px;align-items:center;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:10px 12px;text-decoration:none;color:inherit;box-shadow:var(--shadow)}
+  /* ======= LISTE → 1 Spalte mobil, 2 Spalten ab 640px ======= */
+  .list{
+    max-width: 1100px;
+    margin: 0 auto 12px;
+    padding: 0 16px;
+    display: grid;
+    grid-template-columns: 1fr;      /* mobil */
+    gap: 12px;
+  }
+  @media (min-width: 640px){
+    .list{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+
+  /* Karte */
+  .item{
+    display:grid;
+    grid-template-columns:42px 1fr;
+    gap:12px;
+    align-items:center;
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:12px;
+    text-decoration:none;
+    color:inherit;
+    box-shadow:var(--shadow);
+    min-height:64px;
+  }
   .item:active{transform:scale(.99)}
   .emoji{font-size:1.6rem;line-height:1;display:flex;align-items:center;justify-content:center}
   .meta{min-width:0}
@@ -128,7 +154,7 @@
 <script>
 document.getElementById("jahr").textContent = new Date().getFullYear();
 
-// Drawer
+/* Drawer */
 (function(){
   const menuBtn = document.getElementById('menuBtn');
   const drawer = document.getElementById('drawer');
@@ -140,7 +166,7 @@ document.getElementById("jahr").textContent = new Date().getFullYear();
   window.addEventListener('keydown', e=>{ if(e.key==='Escape') close(); });
 })();
 
-// Emoji zu Kategorie
+/* Emoji zu Kategorie */
 function catEmoji(cat){
   const c = (cat||'').toLowerCase();
   if (c.includes('doener') || c.includes('döner') || c.includes('kebab')) return '🥙';
@@ -154,6 +180,7 @@ function catEmoji(cat){
 const $ = s => document.querySelector(s);
 function normalize(s){ try { return (s||'').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu,''); } catch { return (s||'').toLowerCase(); } }
 
+/* Render */
 function render(items){
   const el = $("#list");
   el.innerHTML = "";
@@ -185,14 +212,12 @@ function render(items){
     sub.className = 'sub';
     const city = item.stadt || item?.adresse?.stadt || '';
 
-    // Kategorie-Label vereinheitlicht
     const rawCat = (item.kategorie||'').toLowerCase();
     let catLabel = rawCat;
     if (rawCat.includes('doener') || rawCat.includes('döner') || rawCat.includes('kebab')) catLabel = 'Döner/Kebab';
     else if (rawCat.includes('pizza')) catLabel = 'Pizza/Pizzeria';
     else if (!catLabel) catLabel = 'Restaurant';
 
-    // KEIN Öffnungszeit-Text mehr, nur City + Kategorie
     sub.innerHTML = `
       <span>${city ? city : ''}</span>
       <span class="badge">${catLabel}</span>
@@ -207,6 +232,7 @@ function render(items){
   });
 }
 
+/* Daten laden + Suche */
 async function loadAndRender(){
   const res = await fetch("/api/entries");
   const all = await res.json();
@@ -233,7 +259,6 @@ const installBtn = document.getElementById('installBtn');
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   deferredPrompt = e;
-  // nur auf Nicht-iOS zeigen (iOS bekommt eigenen Hinweis)
   if (!/iphone|ipad|ipod/i.test(navigator.userAgent)) {
     installBtn.hidden = false;
   }
@@ -253,7 +278,7 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js').catch(()=>{});
 }
 
-/* iOS-Hinweis (Safari zeigt keinen Install-Dialog) */
+/* iOS-Hinweis */
 const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
 const isInStandalone = window.navigator.standalone === true;
 const iosHint = document.getElementById('iosHint');
@@ -263,7 +288,6 @@ if (isIos) {
     iosHint.style.display = 'flex';
   }
 }
-
 iosHint?.querySelector('.close')?.addEventListener('click', () => {
   iosHint.style.display = 'none';
   localStorage.setItem('iosHintClosed', '1');
