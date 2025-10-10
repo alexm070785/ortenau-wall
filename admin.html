@@ -7,22 +7,18 @@
   :root{
     --bg:#f6f6f6; --card:#fff; --text:#222; --muted:#70798C; --radius:12px;
     --border:#d0d0d0; --shadow:0 4px 12px rgba(0,0,0,.08); --tap:48px;
-    --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;padding:16px}
   h1{margin:4px 0 16px}
   .wrap{max-width:960px;margin:auto}
-  .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}
-  .grid{display:grid;gap:12px}
-  .g2{grid-template-columns:1fr 1fr}
-  .g3{grid-template-columns:repeat(3,1fr)}
-  @media (max-width:760px){ .g2,.g3{grid-template-columns:1fr} }
+  .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;margin-bottom:16px}
   label{font-weight:600;display:block;margin:6px 0}
   input,select,textarea{width:100%;padding:12px;border:1px solid var(--border);border-radius:12px;background:#fff;font-size:1rem;min-height:44px}
   textarea{min-height:100px;resize:vertical}
   .muted{color:var(--muted);font-size:.95rem}
-  .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+  .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
   button{border:0;border-radius:12px;padding:12px 16px;cursor:pointer;background:#222;color:#fff;min-height:var(--tap)}
   button.secondary{background:#efefef;color:#222;border:1px solid var(--border)}
   button.danger{background:#8b0000}
@@ -31,36 +27,43 @@
   th{background:#fafafa}
   .right{text-align:right}
   .pill{display:inline-block;padding:4px 10px;border-radius:999px;border:1px solid #ddd;font-size:.9rem;background:#fafafa}
-  /* --- Featured Styles --- */
-  .pill--gold{
-    display:inline-block;
-    padding:4px 10px;
-    border-radius:999px;
-    font-size:.9rem;
-    background:linear-gradient(180deg,#ffefb0,#f6d777);
-    border:1px solid rgba(212,175,55,.65);
-    color:#5b4b1a;
-    box-shadow:0 2px 6px rgba(212,175,55,.15);
-  }
+  /* Featured Style */
+  .pill--gold{display:inline-block;padding:4px 10px;border-radius:999px;font-size:.9rem;background:linear-gradient(180deg,#ffefb0,#f6d777);border:1px solid rgba(212,175,55,.65);color:#5b4b1a;box-shadow:0 2px 6px rgba(212,175,55,.15);}
   .star{font-weight:700;color:#b9931b;}
-  button.ghost{
-    background:#fff;
-    color:#222;
-    border:1px solid #ddd;
-    border-radius:8px;
-    padding:6px 10px;
-    font-size:.85rem;
-    cursor:pointer;
-  }
-  button.ghost.active{
-    border-color:#b9931b;
-    box-shadow:0 0 0 2px rgba(212,175,55,.18) inset;
-  }
+  button.ghost{background:#fff;color:#222;border:1px solid #ddd;border-radius:8px;padding:6px 10px;font-size:.85rem;cursor:pointer;}
+  button.ghost.active{border-color:#b9931b;box-shadow:0 0 0 2px rgba(212,175,55,.18) inset;}
 </style>
 
 <div class="wrap">
-  <h1>Admin – Einträge verwalten</h1>
+  <h1>Admin – Lokale verwalten</h1>
 
+  <!-- Formular zum Erstellen/Bearbeiten -->
+  <div class="card" id="formCard">
+    <label for="titel">Name *</label>
+    <input id="titel" placeholder="z. B. Genc Döner & Pizza">
+    <label for="kategorie">Kategorie *</label>
+    <select id="kategorie">
+      <option value="restaurant">Restaurant</option>
+      <option value="pizzeria">Pizzeria</option>
+      <option value="pizza">Pizza</option>
+      <option value="döner">Döner/Kebab</option>
+      <option value="cafe">Café</option>
+      <option value="imbiss">Imbiss</option>
+      <option value="bäckerei">Bäckerei</option>
+    </select>
+
+    <label for="stadt">Ort / Stadt</label>
+    <input id="stadt" placeholder="Offenburg">
+
+    <label><input type="checkbox" id="featured"> Featured (Top)</label>
+
+    <div class="actions">
+      <button id="save">Speichern</button>
+      <button id="clearForm" class="secondary" type="button">Felder leeren</button>
+    </div>
+  </div>
+
+  <!-- Werkzeuge -->
   <div class="card actions">
     <button id="fetch">Liste laden</button>
     <button id="exportBtn" class="secondary">Export (JSON)</button>
@@ -71,6 +74,7 @@
     <button id="clear" class="danger">ALLE löschen</button>
   </div>
 
+  <!-- Tabelle -->
   <div class="card">
     <table>
       <thead>
@@ -78,136 +82,147 @@
           <th>Titel</th>
           <th>Kategorie</th>
           <th>Ort</th>
-          <th>Telefon</th>
           <th>Featured</th>
-          <th class="right">Links</th>
-          <th></th>
+          <th class="right">Aktionen</th>
         </tr>
       </thead>
-      <tbody id="tbody"><tr><td colspan="7" class="muted">Noch nichts geladen.</td></tr></tbody>
+      <tbody id="tbody"><tr><td colspan="5" class="muted">Noch nichts geladen.</td></tr></tbody>
     </table>
   </div>
 </div>
 
 <script>
-const API = "/api/entries";
-const $ = s => document.querySelector(s);
+const API="/api/entries";
+const $=s=>document.querySelector(s);
+let editingId=null;
 
-function hdrs(){
-  const h = {"Content-Type":"application/json"};
-  return h;
+function hdrs(){return {"Content-Type":"application/json"}}
+
+function toPayload(){
+  return {
+    id: editingId||undefined,
+    titel:$("#titel").value.trim(),
+    kategorie:$("#kategorie").value,
+    stadt:$("#stadt").value.trim(),
+    optionen:{featured:$("#featured").checked}
+  };
 }
 
 async function loadList(){
-  const r = await fetch(API,{cache:"no-store"});
-  const data = await r.json().catch(()=>[]);
+  const r=await fetch(API,{cache:"no-store"});
+  const data=await r.json().catch(()=>[]);
   renderTable(Array.isArray(data)?data:[]);
 }
 
 function renderTable(items){
-  const tb = $("#tbody");
-  tb.innerHTML='';
-
-  if(!items.length){
-    tb.innerHTML='<tr><td colspan="7" class="muted">Keine Einträge gespeichert.</td></tr>';
-    return;
-  }
-
-  const sorted = [...items].sort((a,b)=>{
-    const fa = !!a?.optionen?.featured, fb = !!b?.optionen?.featured;
-    if (fa !== fb) return fa ? -1 : 1;
+  const tb=$("#tbody"); tb.innerHTML="";
+  if(!items.length){tb.innerHTML='<tr><td colspan="5" class="muted">Keine Einträge gespeichert.</td></tr>';return;}
+  const sorted=[...items].sort((a,b)=>{
+    const fa=!!a?.optionen?.featured, fb=!!b?.optionen?.featured;
+    if(fa!==fb)return fa?-1:1;
     return (a.titel||"").localeCompare(b.titel||"");
   });
-
   sorted.forEach(i=>{
-    const tr = document.createElement('tr');
-    const ort = i.stadt || i?.adresse?.stadt || '';
-    const tel = i?.kontakt?.telefon || '';
-    const isFeatured = !!i?.optionen?.featured;
-    const cat = (i.kategorie||'').replace(/doener|döner|kebab/i,'Döner/Kebab');
-
-    tr.innerHTML = `
-      <td>${i.titel || ''}</td>
-      <td><span class="pill">${cat}</span></td>
-      <td>${ort}</td>
-      <td>${tel}</td>
-
+    const tr=document.createElement("tr");
+    const isFeatured=!!i?.optionen?.featured;
+    tr.innerHTML=`
+      <td>${i.titel||""}</td>
+      <td>${i.kategorie||""}</td>
+      <td>${i.stadt||""}</td>
       <td>
-        ${isFeatured ? '<span class="pill--gold">Empfohlen</span>' : '<span class="muted">–</span>'}
+        ${isFeatured?'<span class="pill--gold">Empfohlen</span>':'<span class="muted">–</span>'}
         <div style="margin-top:6px">
           <button class="ghost toggleFeat ${isFeatured?'active':''}" data-id="${i.id||''}">
-            <span class="star">${isFeatured ? '★' : '☆'}</span> ${isFeatured ? 'Entfeaturen' : 'Featuren'}
+            <span class="star">${isFeatured?'★':'☆'}</span> ${isFeatured?'Entfeaturen':'Featuren'}
           </button>
         </div>
       </td>
-
       <td class="right">
-        ${i.url ? `<a href="${i.url}" target="_blank">Seite</a>` : ''}
-        ${i.web?.website ? ` · <a href="${i.web.website}" target="_blank">Website</a>` : ''}
-        ${i.web?.speisekarte ? ` · <a href="${i.web.speisekarte}" target="_blank">Speisekarte</a>` : ''}
-      </td>
-
-      <td class="right">
+        <button class="editBtn secondary" data-id="${i.id||''}">Bearbeiten</button>
         <button class="delBtn danger" data-id="${i.id||''}">Löschen</button>
-      </td>
-    `;
+      </td>`;
     tb.appendChild(tr);
   });
 
-  // Delete
-  tb.querySelectorAll('.delBtn').forEach(btn=>{
-    btn.addEventListener('click', async ()=>{
-      const id = btn.dataset.id;
-      if(!id || !confirm("Wirklich löschen?")) return;
-      await fetch(`${API}?id=${encodeURIComponent(id)}`, {method:"DELETE", headers:hdrs()});
+  tb.querySelectorAll(".delBtn").forEach(btn=>{
+    btn.onclick=async()=>{
+      const id=btn.dataset.id;
+      if(!id||!confirm("Wirklich löschen?"))return;
+      await fetch(`${API}?id=${encodeURIComponent(id)}`,{method:"DELETE",headers:hdrs()});
       loadList();
-    });
+    };
   });
 
-  // Toggle featured
-  tb.querySelectorAll('.toggleFeat').forEach(btn=>{
-    btn.addEventListener('click', async ()=>{
-      const id = btn.dataset.id;
-      const r = await fetch(API,{cache:"no-store"});
-      const data = await r.json().catch(()=>[]);
-      const item = data.find(x=>x.id===id);
-      if(!item) return alert("Nicht gefunden");
-      item.optionen = item.optionen || {};
-      item.optionen.featured = !item.optionen.featured;
+  tb.querySelectorAll(".toggleFeat").forEach(btn=>{
+    btn.onclick=async()=>{
+      const id=btn.dataset.id;
+      const r=await fetch(API,{cache:"no-store"});
+      const data=await r.json().catch(()=>[]);
+      const item=data.find(x=>x.id===id);
+      if(!item)return;
+      item.optionen=item.optionen||{};
+      item.optionen.featured=!item.optionen.featured;
       await fetch(API,{method:"PUT",headers:hdrs(),body:JSON.stringify(item)});
       loadList();
-    });
+    };
+  });
+
+  tb.querySelectorAll(".editBtn").forEach(btn=>{
+    btn.onclick=async()=>{
+      const id=btn.dataset.id;
+      const r=await fetch(API,{cache:"no-store"});
+      const data=await r.json().catch(()=>[]);
+      const item=data.find(x=>x.id===id);
+      if(!item)return alert("Nicht gefunden");
+      editingId=id;
+      $("#titel").value=item.titel||"";
+      $("#kategorie").value=item.kategorie||"restaurant";
+      $("#stadt").value=item.stadt||"";
+      $("#featured").checked=!!item.optionen?.featured;
+      window.scrollTo({top:0,behavior:"smooth"});
+    };
   });
 }
 
-$("#fetch").onclick = loadList;
-
-// Export
-$("#exportBtn").onclick = async ()=>{
-  const r = await fetch(API,{cache:"no-store"});
-  const data = await r.json().catch(()=>[]);
-  const blob = new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
-  const a = Object.assign(document.createElement('a'),{href:URL.createObjectURL(blob),download:"eintraege.json"});
-  document.body.append(a); a.click(); a.remove();
+$("#save").onclick=async()=>{
+  const p=toPayload();
+  if(!p.titel){alert("Titel fehlt");return;}
+  const method=editingId?"PUT":"POST";
+  await fetch(API,{method,headers:hdrs(),body:JSON.stringify(p)});
+  alert(editingId?"Aktualisiert!":"Gespeichert!");
+  editingId=null;
+  $("#titel").value=$("#stadt").value="";
+  $("#featured").checked=false;
+  loadList();
 };
 
-// Import
-$("#importFile").onchange = async e=>{
-  const f = e.target.files[0]; if(!f) return;
-  const text = await f.text();
-  const data = JSON.parse(text);
-  if(!confirm(`Importiere ${data.length} Einträge?`)) return;
+$("#clearForm").onclick=()=>{editingId=null;$("#titel").value=$("#stadt").value="";$("#featured").checked=false;};
+
+$("#fetch").onclick=loadList;
+
+$("#exportBtn").onclick=async()=>{
+  const r=await fetch(API,{cache:"no-store"});
+  const data=await r.json().catch(()=>[]);
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+  const a=Object.assign(document.createElement("a"),{href:URL.createObjectURL(blob),download:"eintraege.json"});
+  document.body.append(a);a.click();a.remove();
+};
+
+$("#importFile").onchange=async e=>{
+  const f=e.target.files[0];if(!f)return;
+  const text=await f.text();
+  const data=JSON.parse(text);
+  if(!confirm(`Importiere ${data.length} Einträge?`))return;
   for(const it of data){
-    const method = it.id ? "PUT" : "POST";
+    const method=it.id?"PUT":"POST";
     await fetch(API,{method,headers:hdrs(),body:JSON.stringify(it)});
   }
   alert("Import abgeschlossen");
   loadList();
 };
 
-// Clear all
-$("#clear").onclick = async ()=>{
-  if(!confirm("ALLE löschen?")) return;
+$("#clear").onclick=async()=>{
+  if(!confirm("ALLE löschen?"))return;
   await fetch(API,{method:"DELETE",headers:hdrs()});
   loadList();
 };
