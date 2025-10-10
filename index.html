@@ -117,9 +117,13 @@
   /* ===== Werbung (Karte) ===== */
   .ad-card{
     position:relative;
-    min-height:96px;
     border:1px solid #e9d88c;
     background:linear-gradient(180deg,#fffdf4,#ffffff);
+    min-height:96px;
+  }
+  /* >>> WICHTIG: Anzeige über 2 Zeilen, damit links 2 kleine Karten bleiben */
+  @media (min-width:640px){
+    .ad-card{ grid-row: span 2; min-height:150px; }
   }
   .ad-card::after{
     content:"WERBUNG";
