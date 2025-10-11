@@ -6,57 +6,116 @@
 
 <style>
   :root{
-    --bg:#f6f6f6; --card:#fff; --text:#222; --muted:#70798C; --radius:12px;
-    --border:#d0d0d0; --shadow:0 4px 12px rgba(0,0,0,.08); --tap:48px;
-    --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    --bg:#f6f6f6; --card:#fff; --text:#222; --muted:#70798C;
+    --radius:10px; --border:#d0d0d0; --shadow:0 3px 10px rgba(0,0,0,.07);
+    --tap:42px; --accent:#222; --accent-weak:#efefef; --danger:#8b0000;
+    --ring:#1e90ff33; --ring-strong:#1e90ff66;
   }
+
   *{box-sizing:border-box}
-  html{font-size:16px}
-  @media (max-width:480px){ html{font-size:17px} }
-  body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;padding:16px}
-  h1{margin:4px 0 16px}
+  html{font-size:15px}               /* minimal kleiner */
+  @media (max-width:480px){ html{font-size:16px} }
+  body{
+    margin:0;background:var(--bg);color:var(--text);
+    font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;
+    padding:14px                         /* leicht kompakter */
+  }
+  h1{margin:2px 0 14px;font-size:1.55rem;letter-spacing:.2px}
+
   .wrap{max-width:980px;margin:auto}
-  .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}
-  .grid{display:grid;gap:12px}
+
+  .card{
+    background:var(--card);border:1px solid var(--border);
+    border-radius:var(--radius);box-shadow:var(--shadow);
+    padding:14px                         /* kompakter */
+  }
+
+  .grid{display:grid;gap:10px}          /* dichter */
   .g2{grid-template-columns:1fr 1fr}
   .g3{grid-template-columns:repeat(3,1fr)}
   @media (max-width:760px){ .g2,.g3{grid-template-columns:1fr} }
-  label{font-weight:600;display:block;margin:6px 0}
-  input,select,textarea{width:100%;padding:12px;border:1px solid var(--border);border-radius:12px;background:#fff;font-size:1rem;min-height:44px}
-  textarea{min-height:100px;resize:vertical}
-  .row{display:grid;gap:12px;grid-template-columns:1fr 1fr}
+
+  label{font-weight:600;display:block;margin:4px 0}
+  input,select,textarea{
+    width:100%;padding:9px 11px;        /* kleiner innen */
+    border:1px solid var(--border);border-radius:10px;
+    background:#fff;font-size:.98rem;min-height:38px; /* niedriger */
+    transition:border-color .15s, box-shadow .15s, background .15s;
+  }
+  input:focus,select:focus,textarea:focus{
+    outline:none;border-color:#9ac7ff; box-shadow:0 0 0 3px var(--ring);
+  }
+  textarea{min-height:92px;resize:vertical}
+
+  .row{display:grid;gap:10px;grid-template-columns:1fr 1fr}
   @media (max-width:760px){ .row{grid-template-columns:1fr} }
-  .muted{color:var(--muted);font-size:.95rem}
-  .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
-  button{border:0;border-radius:12px;padding:12px 16px;cursor:pointer;background:#222;color:#fff;min-height:var(--tap)}
-  button.secondary{background:#efefef;color:#222;border:1px solid var(--border)}
-  button.danger{background:#8b0000}
-  .bar{display:flex;gap:12px;align-items:center;margin:16px 0;flex-wrap:wrap}
-  .bar input{max-width:260px;min-height:var(--tap)}
+
+  .muted{color:var(--muted);font-size:.93rem}
+
+  /* Actions / Buttons – kompakter & hübsch */
+  .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+  button{
+    border:0;border-radius:12px;padding:10px 14px;cursor:pointer;
+    background:var(--accent);color:#fff;min-height:var(--tap);
+    font-weight:600; letter-spacing:.2px; font-size:.98rem;
+    box-shadow:0 2px 8px rgba(0,0,0,.08);
+    transition:transform .08s ease, box-shadow .15s ease, background .15s ease, opacity .15s ease;
+  }
+  button:hover{ transform:translateY(-1px); box-shadow:0 6px 16px rgba(0,0,0,.12) }
+  button:active{ transform:translateY(0); box-shadow:0 2px 8px rgba(0,0,0,.08) }
+  button:focus-visible{ outline:none; box-shadow:0 0 0 3px var(--ring-strong) }
+  button.secondary{
+    background:var(--accent-weak); color:#222; border:1px solid var(--border);
+  }
+  button.secondary:hover{ background:#f6f6f6 }
+  button.danger{background:var(--danger)}
+  button.danger:hover{opacity:.92}
+
+  /* Suchleiste/Toolbar */
+  .bar{display:flex;gap:10px;align-items:center;margin:12px 0;flex-wrap:wrap}
+  .bar input{max-width:240px;min-height:var(--tap)}
+
+  /* Tabelle – dichter + Row-Hover */
   table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden}
-  th,td{padding:10px;border-bottom:1px solid #eee;text-align:left}
-  th{background:#fafafa}
+  th,td{padding:8px 10px;border-bottom:1px solid #eee;text-align:left}
+  th{background:#fafafa;font-size:.95rem}
+  tr:hover td{background:#fafafa}
   .right{text-align:right}
-  .pill{display:inline-block;padding:4px 10px;border-radius:999px;border:1px solid #ddd;font-size:.9rem;background:#fafafa}
+  .pill{display:inline-block;padding:3px 9px;border-radius:999px;border:1px solid #ddd;font-size:.88rem;background:#fafafa}
 
   /* Menü-Vorschau */
   .menu-wrap{grid-column:1/-1}
-  .menu-editor{font-family:var(--mono);min-height:260px}
-  .menu-meta{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-top:6px;flex-wrap:wrap}
-  .menu-preview{background:#fff;border:1px dashed var(--border);border-radius:12px;padding:12px;margin-top:10px;white-space:pre-wrap;line-height:1.5}
+  .menu-editor{font-family:var(--mono);min-height:220px}  /* etwas kleiner */
+  .menu-meta{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-top:6px;flex-wrap:wrap}
+  .menu-preview{background:#fff;border:1px dashed var(--border);border-radius:12px;padding:10px;margin-top:8px;white-space:pre-wrap;line-height:1.5}
   .menu-preview .price{opacity:.9}
 
-  /* Tabs */
-  .tabs{display:flex;gap:8px;margin:0 0 12px}
-  .tab{border:1px solid var(--border);background:#fff;border-radius:10px;padding:10px 14px;cursor:pointer;min-height:var(--tap)}
-  .tab.active{background:#222;color:#fff;border-color:#222}
+  /* Tabs – schickere Optik */
+  .tabs{display:flex;gap:6px;margin:0 0 10px}
+  .tab{
+    border:1px solid var(--border);background:#fff;border-radius:999px;
+    padding:8px 12px;cursor:pointer;min-height:36px;font-weight:700;font-size:.95rem;
+    transition:background .15s, color .15s, border-color .15s, box-shadow .15s;
+  }
+  .tab:hover{ background:#f5f5f5 }
+  .tab.active{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:0 2px 10px rgba(0,0,0,.12)}
   .hidden{display:none}
 
-  /* Featured-Optik in Tabelle */
-  tr.featured-row{background:linear-gradient(180deg,#fffef5,#fff8e1);box-shadow:0 0 10px rgba(212,175,55,.25)}
+  /* Featured-Badge wie gehabt, minimal kompakter */
+  tr.featured-row{background:linear-gradient(180deg,#fffef5,#fff8e1);box-shadow:0 0 10px rgba(212,175,55,.22)}
   tr.featured-row td{border-bottom:1px solid rgba(212,175,55,.25)}
-  .featured-badge{display:inline-block;background:linear-gradient(90deg,#f6d777,#ffefb0);color:#5b4b1a;font-weight:600;border-radius:999px;padding:2px 10px;font-size:.85rem;margin-left:6px;box-shadow:0 2px 4px rgba(212,175,55,.2)}
-  .sm{padding:8px 12px;border-radius:10px;min-height:unset;font-size:.95rem}
+  .featured-badge{
+    display:inline-block;background:linear-gradient(90deg,#f6d777,#ffefb0);
+    color:#5b4b1a;font-weight:600;border-radius:999px;padding:2px 8px;font-size:.82rem;margin-left:6px;box-shadow:0 2px 4px rgba(212,175,55,.2)
+  }
+
+  /* Kleine Buttons in Tabellen */
+  .sm{ padding:7px 10px; border-radius:10px; min-height:unset; font-size:.92rem }
+
+  /* Dezentere Scrollbar (nur WebKit) */
+  ::-webkit-scrollbar{height:10px;width:10px}
+  ::-webkit-scrollbar-thumb{background:#d7d7d7;border-radius:999px}
+  ::-webkit-scrollbar-thumb:hover{background:#c9c9c9}
 </style>
 
 <div class="wrap">
@@ -67,7 +126,7 @@
     <button class="tab" data-tab="ads">Werbung</button>
   </div>
 
-  <!-- ============= TAB: LOKALE (unverändert) ============= -->
+  <!-- ============= TAB: LOKALE (unverändert im Markup/JS) ============= -->
   <section id="tab-lokale">
     <div class="card grid g2" role="form">
       <div>
@@ -521,7 +580,6 @@ function adPayload(){
     title: $("#ad_title").value.trim(),
     text: $("#ad_text").value.trim(),
     image: $("#ad_image").value.trim(),
-    /* WICHTIG: link statt url */
     link: $("#ad_url").value.trim(),
     slot: $("#ad_slot").value,
     active: $("#ad_active").value === "true",
@@ -568,7 +626,6 @@ function renderAds(items){
       $("#ad_title").value = ad.title||"";
       $("#ad_text").value = ad.text||"";
       $("#ad_image").value = ad.image||"";
-      /* Rückwärts-kompatibel: zuerst link, dann evtl. url */
       $("#ad_url").value = ad.link || ad.url || "";
       $("#ad_slot").value = ad.slot||"home_right_mid";
       $("#ad_active").value = ad.active ? "true":"false";
