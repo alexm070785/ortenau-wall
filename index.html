@@ -79,6 +79,12 @@
   .ad-card .emoji img{ width:44px; height:44px; border-radius:8px; object-fit:cover; display:block; }
   .ad-card .meta{ margin-left:60px; }
   .ad-card .ad-text{ margin-top:6px; color:#555; font-size:.95rem; white-space:pre-wrap; }
+
+  /* Platzhalter-Werbung */
+  .ad-placeholder{ border:1px dashed #e2c964; background:linear-gradient(180deg,#fffef8,#ffffff); }
+  .ad-placeholder::after{ content:"WERBEPLATZ"; background:#ffeeb5; }
+  .ad-placeholder .name{ color:#7a5d00 }
+  .ad-placeholder .ad-text{ color:#7a5d00; opacity:.9 }
 </style>
 </head>
 <body>
@@ -174,7 +180,7 @@ function parseDateLooseEnd(v){ // 23:59:59 bei reinen Datumswerten
   return parseDateLoose(v);
 }
 
-/* ===== Werbung ===== */
+/* ===== Werbung: Laden + Auswahl + 3 Slots Rotation ===== */
 async function fetchAds(){
   try{
     const r = await fetch("/api/ads", { cache:"no-store" });
@@ -186,6 +192,8 @@ async function fetchAds(){
   }
 }
 function isAdActiveLoose(ad){
+  // admin-Status tolerieren (active true/false ODER beliebige Felder mit "aktiv/active")
+  if (ad.active === false) return false;
   const status = String(ad.status ?? ad.Status ?? ad.state ?? "").toLowerCase();
   if (status && status !== "aktiv" && status !== "active") return false;
 
@@ -200,11 +208,10 @@ function isAdActiveLoose(ad){
   if (de && de < now) return false;
   return true;
 }
-
-/* URL-Erkennung nochmal robuster */
+/* URL-Erkennung robust */
 function pickUrl(ad){
   const cands = [
-    'url','link','clickUrl','click','klick','klickUrl',
+    'link','url','clickUrl','click','klick','klickUrl',
     'target','targetUrl','target_url','href',
     'ZielURL','ZielUrl','ziel','zielurl','ziel_url'
   ];
@@ -216,18 +223,13 @@ function pickUrl(ad){
   if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
   return u;
 }
-
-function buildAdCard(ad){
-  const title = ad.title ?? ad.titel ?? "Anzeige";
-  const image = ad.image ?? ad.bild ?? ad.img ?? ad.imageUrl ?? ad.bildUrl ?? "";
-  const url   = pickUrl(ad);
-
-  // Debug: zeige Rohdaten + gewählte URL
-  console.log("[ads] raw:", ad);
-  console.log("[ads] chosen:", {title, url});
+function buildAdCard(ad, isPlaceholder=false){
+  const title = isPlaceholder ? "Jetzt werben auf ORTENAU LIEFERT" : (ad.title ?? ad.titel ?? "Anzeige");
+  const image = isPlaceholder ? "" : (ad.image ?? ad.bild ?? ad.img ?? ad.imageUrl ?? ad.bildUrl ?? "");
+  const url   = isPlaceholder ? "/werbung.html" : pickUrl(ad);
 
   const a = document.createElement('a');
-  a.className = 'item ad-card';
+  a.className = 'item ad-card' + (isPlaceholder ? ' ad-placeholder' : '');
 
   if (url){
     a.href = url;
@@ -240,8 +242,8 @@ function buildAdCard(ad){
 
   const emoji = document.createElement('div');
   emoji.className = 'emoji';
-  if (image) emoji.innerHTML = `<img src="${image}" alt="">`;
-  else emoji.textContent = "💡";
+  if (!isPlaceholder && image) emoji.innerHTML = `<img src="${image}" alt="">`;
+  else emoji.textContent = isPlaceholder ? "📣" : "💡";
 
   const meta = document.createElement('div');
   meta.className = 'meta';
@@ -249,32 +251,92 @@ function buildAdCard(ad){
   name.className = 'name';
   name.textContent = title;
 
-  const text  = ad.text  ?? ad.beschreibung ?? "";
-  const txt = document.createElement('div');
-  txt.className = 'ad-text';
-  if (String(text).trim()) txt.innerHTML = String(text).replace(/\n/g,"<br>");
+  const text = document.createElement('div');
+  text.className = 'ad-text';
+  if (isPlaceholder){
+    text.innerHTML = "Ihre Reichweite in der Ortenau!<br>Präsenter Werbeplatz direkt auf der Startseite.<br><b>Klicken</b> und unverbindlich anfragen.";
+  } else {
+    const t = ad.text ?? ad.beschreibung ?? "";
+    if (String(t).trim()) text.innerHTML = String(t).replace(/\n/g,"<br>");
+  }
 
   meta.appendChild(name);
-  if (txt.innerHTML) meta.appendChild(txt);
+  if (text.innerHTML) meta.appendChild(text);
 
   a.appendChild(emoji);
   a.appendChild(meta);
   return a;
 }
 
-async function injectAds(){
-  const listEl = document.getElementById("list");
-  if (!listEl) return;
+/* Rotations-Controller */
+const AD_SLOT_POSITIONS = [3, 9, 15]; // Einfüge-Indizes in der Liste (sanft verteilt)
+const ROTATE_INTERVAL_MS = 15000;
+let adRotation = { list: [], idx: 0, timer: null };
 
-  const ads = (await fetchAds()).filter(isAdActiveLoose);
-  if (!ads.length) return;
+function clearCurrentAdCards(host){
+  host.querySelectorAll('.ad-card').forEach(el => el.remove());
+}
+function pickThree(ads){
+  // Falls weniger als 3 Ads: liefere was da ist
+  if (!ads.length) return [];
+  const out = [];
+  for (let i=0; i<3; i++){
+    const ad = ads[(adRotation.idx + i) % ads.length];
+    if (ad) out.push(ad);
+  }
+  return out;
+}
+function insertAdCards(host, cards){
+  // Einfügen an definierte Indizes; falls Index > Länge -> am Ende anhängen
+  AD_SLOT_POSITIONS.forEach((pos, i) => {
+    const card = cards[i] || buildAdCard(null, true); // Platzhalter, wenn keine Karte
+    const ref = host.children[pos] || null;
+    host.insertBefore(card, ref);
+  });
+}
 
-  const want = "home_right_mid";
-  const pick = ads.find(a => String(a.slot ?? a.slotKey ?? a.position ?? "").includes(want)) ?? ads[0];
+async function initAdRotation(host){
+  // Lade Ads (einmal pro Render-Session)
+  const all = (await fetchAds()).filter(isAdActiveLoose);
+  // Filter nach Slot, fallback auf alle
+  const wantKey = "home_right_mid";
+  const slotMatch = a => {
+    const p = a.positions;
+    const s = a.slot ?? a.slotKey ?? a.position ?? "";
+    if (Array.isArray(p) && p.length) return p.some(x => String(x).includes(wantKey));
+    return String(s).includes(wantKey);
+  };
+  const wanted = all.filter(slotMatch);
+  adRotation.list = (wanted.length ? wanted : all).slice(); // Kopie
+  // Start-Index zufällig, damit nicht immer die gleiche Kombi zuerst kommt
+  if (adRotation.list.length) {
+    adRotation.idx = Math.floor(Math.random() * adRotation.list.length);
+  } else {
+    adRotation.idx = 0;
+  }
 
-  const card = buildAdCard(pick);
-  const insertIndex = Math.min(3, listEl.children.length);
-  listEl.insertBefore(card, listEl.children[insertIndex] || null);
+  // Erste Montage
+  clearCurrentAdCards(host);
+  const three = pickThree(adRotation.list);
+  const cards = three.length
+    ? three.map(a => buildAdCard(a))
+    : [buildAdCard(null,true), buildAdCard(null,true), buildAdCard(null,true)];
+  insertAdCards(host, cards);
+
+  // Rotationstimer (alle drei gleichzeitig)
+  if (adRotation.timer) clearInterval(adRotation.timer);
+  adRotation.timer = setInterval(()=>{
+    if (!adRotation.list.length){
+      // nur Platzhalter
+      clearCurrentAdCards(host);
+      insertAdCards(host, [buildAdCard(null,true), buildAdCard(null,true), buildAdCard(null,true)]);
+      return;
+    }
+    adRotation.idx = (adRotation.idx + 3) % adRotation.list.length; // 3er-Schritt -> neue Dreiergruppe
+    clearCurrentAdCards(host);
+    const nextThree = pickThree(adRotation.list);
+    insertAdCards(host, nextThree.map(a => buildAdCard(a)));
+  }, ROTATE_INTERVAL_MS);
 }
 
 /* ===== Liste rendern ===== */
@@ -324,18 +386,20 @@ async function loadAndRender(){
   const all = await res.json();
   const input = $("#search");
   const clear = $("#clearBtn");
-  function apply(){
+  async function apply(){
     const q = normalize(input.value.trim());
     const filtered = !q ? all : all.filter(item=>{
       const hay = normalize(JSON.stringify(item));
       return q.split(/\s+/).filter(Boolean).every(t=>hay.includes(t));
     });
     render(filtered);
-    injectAds();
+    // Ads initialisieren/neu starten (3 Slots, gleichzeitiges Rotieren)
+    const host = document.getElementById("list");
+    await initAdRotation(host);
   }
   input.oninput = apply;
   clear.onclick = ()=>{ input.value=""; apply(); input.focus(); };
-  apply();
+  await apply();
 }
 loadAndRender();
 </script>
