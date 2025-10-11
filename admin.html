@@ -52,7 +52,7 @@
   .tab.active{background:#222;color:#fff;border-color:#222}
   .hidden{display:none}
 
-  /* Featured-Optik in Tabelle (dein alter Effekt) */
+  /* Featured-Optik in Tabelle */
   tr.featured-row{background:linear-gradient(180deg,#fffef5,#fff8e1);box-shadow:0 0 10px rgba(212,175,55,.25)}
   tr.featured-row td{border-bottom:1px solid rgba(212,175,55,.25)}
   .featured-badge{display:inline-block;background:linear-gradient(90deg,#f6d777,#ffefb0);color:#5b4b1a;font-weight:600;border-radius:999px;padding:2px 10px;font-size:.85rem;margin-left:6px;box-shadow:0 2px 4px rgba(212,175,55,.2)}
@@ -67,7 +67,7 @@
     <button class="tab" data-tab="ads">Werbung</button>
   </div>
 
-  <!-- ============= TAB: LOKALE (DEIN FUNKTIONIERENDER BEREICH UNVERÄNDERT) ============= -->
+  <!-- ============= TAB: LOKALE (unverändert) ============= -->
   <section id="tab-lokale">
     <div class="card grid g2" role="form">
       <div>
@@ -362,7 +362,7 @@ function hdrs(){
   return h;
 }
 
-/* ===== Lokale – Payload/CRUD (UNVERÄNDERT) ===== */
+/* ===== Lokale – Payload/CRUD (unverändert) ===== */
 function toPayload(){
   const titel = $("#titel").value.trim();
   const stadt = $("#stadt").value.trim();
@@ -514,14 +514,15 @@ $("#importFile").onchange = async (ev)=>{
 };
 loadList();
 
-/* ===== Werbung – Payload/CRUD ===== */
+/* ===== Werbung – Payload/CRUD (nur "link" geändert) ===== */
 function adPayload(){
   return {
     id: adEditingId || undefined,
     title: $("#ad_title").value.trim(),
     text: $("#ad_text").value.trim(),
     image: $("#ad_image").value.trim(),
-    url: $("#ad_url").value.trim(),
+    /* WICHTIG: link statt url */
+    link: $("#ad_url").value.trim(),
     slot: $("#ad_slot").value,
     active: $("#ad_active").value === "true",
     start: $("#ad_start").value || null,
@@ -550,7 +551,7 @@ function renderAds(items){
         <td><span class="pill">${a.slot||''}</span></td>
         <td>${a.start||'–'} → ${a.end||'–'}</td>
         <td>${a.active ? '✅' : '⛔️'}</td>
-        <td class="right">${a.url ? `<a href="${a.url}" target="_blank" rel="noopener">Ziel</a>` : ''}</td>
+        <td class="right">${a.link ? `<a href="${a.link}" target="_blank" rel="noopener">Ziel</a>` : ''}</td>
         <td class="right">
           <button data-id="${a.id||''}" class="ad_edit secondary sm">Bearbeiten</button>
           <button data-id="${a.id||''}" class="ad_del danger sm" style="margin-left:6px">Löschen</button>
@@ -567,7 +568,8 @@ function renderAds(items){
       $("#ad_title").value = ad.title||"";
       $("#ad_text").value = ad.text||"";
       $("#ad_image").value = ad.image||"";
-      $("#ad_url").value = ad.url||"";
+      /* Rückwärts-kompatibel: zuerst link, dann evtl. url */
+      $("#ad_url").value = ad.link || ad.url || "";
       $("#ad_slot").value = ad.slot||"home_right_mid";
       $("#ad_active").value = ad.active ? "true":"false";
       $("#ad_start").value = ad.start||"";
