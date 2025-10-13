@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#e7e7e7">
+<title>Werben auf Ortenau liefert</title>
+
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/favicon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Ortenau liefert">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+
+<style>
+  :root{ --accent:#e7e7e7; --text:#333; --bg:#f6f6f6; --card:#fff; --muted:#70798C; --radius:12px; --shadow:0 4px 12px rgba(0,0,0,.08); --border:#d0d0d0; --tap:48px; }
+  *{box-sizing:border-box}
+  html{font-size:16px}
+  @media (max-width:480px){ html{font-size:17px} }
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;background:var(--bg);color:var(--text);line-height:1.45}
+
+  /* Header / Drawer identisch zur Startseite */
+  header.site{position:sticky;top:0;z-index:20;background:var(--accent);border-bottom:1px solid #b0b0b0;}
+  .head{max-width:900px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:10px 16px;}
+  .logo img{height:52px}
+  .hamburger{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:10px;background:#fff;border:1px solid var(--border);cursor:pointer}
+  .hamburger svg{width:24px;height:24px}
+
+  .backdrop{position:fixed;inset:0;background:rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:opacity .2s;z-index:19}
+  .backdrop.show{opacity:1;pointer-events:auto}
+  .drawer{position:fixed;top:0;right:-280px;width:280px;height:100%;background:#fff;border-left:1px solid var(--border);box-shadow:-12px 0 24px rgba(0,0,0,.18);transition:right .25s;z-index:20;display:flex;flex-direction:column}
+  .drawer.show{right:0}
+  .drawer header{border-bottom:1px solid var(--border);padding:12px 14px;font-weight:700}
+  .menu{padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+  .menu a{text-decoration:none;color:var(--text);padding:10px 12px;border-radius:10px;display:block;border:1px solid #eee;background:#fafafa}
+  .menu a:hover{background:#f2f2f2}
+
+  /* Layout */
+  .wrap{max-width:900px;margin:0 auto;padding:12px 16px 72px}
+  .hero{background:linear-gradient(180deg,#ffffff,#fdfdf9);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:16px;margin:12px 0}
+  .hero h1{margin:6px 0 8px}
+  .hero p{margin:0;color:#555}
+
+  .grid{display:grid;gap:12px}
+  .g2{grid-template-columns:1fr 1fr}
+  @media (max-width:760px){ .g2{grid-template-columns:1fr} }
+
+  .card{background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:16px}
+  .card h2{margin:4px 0 8px;font-size:1.15rem}
+  .muted{color:var(--muted)}
+  .pill{display:inline-block;padding:4px 10px;border-radius:999px;border:1px solid #ddd;background:#fafafa;font-size:.9rem}
+
+  /* Preise / Slots */
+  .price{font-size:1.6rem;font-weight:800}
+  .slot{display:flex;justify-content:space-between;align-items:center;border:1px solid #eee;border-radius:12px;padding:10px 12px;background:#fafafa}
+  .slot small{color:#777}
+
+  /* Beispielanzeige wie auf Startseite */
+  .ad-preview{position:relative;border:1px solid #e9d88c;background:linear-gradient(180deg,#fffdf4,#ffffff);border-radius:12px;padding:12px;min-height:100px}
+  .ad-preview::after{content:"WERBUNG";position:absolute;top:8px;right:10px;font-size:.72rem;color:#7a5d00;background:#fff5bf;border:1px solid #ecd972;border-radius:999px;padding:2px 8px}
+  .ad-preview .thumb{position:absolute;top:12px;left:12px;width:44px;height:44px;border-radius:8px;background:#eee;overflow:hidden}
+  .ad-preview .thumb img{width:100%;height:100%;object-fit:cover}
+  .ad-preview .meta{margin-left:64px}
+  .ad-preview .title{font-weight:700}
+  .ad-preview .text{margin-top:6px;color:#555}
+
+  /* Formular */
+  form label{font-weight:600;display:block;margin:6px 0}
+  input,select,textarea{width:100%;padding:12px;border:1px solid var(--border);border-radius:12px;background:#fff;font-size:1rem;min-height:44px}
+  textarea{min-height:100px;resize:vertical}
+  .row{display:grid;gap:12px;grid-template-columns:1fr 1fr}
+  @media (max-width:760px){ .row{grid-template-columns:1fr} }
+
+  .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+  .btn{border:0;border-radius:12px;padding:12px 16px;cursor:pointer;min-height:var(--tap);font-weight:700}
+  .btn.primary{background:#222;color:#fff}
+  .btn.secondary{background:#efefef;color:#222;border:1px solid var(--border)}
+  .btn:hover{filter:brightness(.95);transform:translateY(-1px)}
+  .btn:active{transform:translateY(0)}
+
+  footer{position:fixed;bottom:0;left:0;width:100%;height:56px;background:var(--accent);color:#595959;border-top:1px solid #b0b0b0;font-size:.95rem}
+  .footer-inner{max-width:900px;margin:0 auto;height:100%;display:flex;justify-content:center;align-items:center;padding:0 12px}
+</style>
+</head>
+<body>
+<header class="site">
+  <div class="head">
+    <div class="logo"><a href="index.html" aria-label="Zur Startseite"><img src="header.png" alt="Ortenau liefert"></a></div>
+    <button class="hamburger" id="menuBtn" aria-label="Menü öffnen" aria-expanded="false" aria-controls="drawer">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#333" d="M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h18v2H3v-2z"/></svg>
+    </button>
+  </div>
+</header>
+
+<div class="backdrop" id="backdrop" hidden></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-hidden="true">
+  <header>Menü</header>
+  <nav class="menu">
+    <a href="index.html">Startseite</a>
+    <a href="werbung.html">Werben</a>
+    <a href="kontakt.html">Kontakt</a>
+    <a href="impressum.html">Impressum</a>
+    <a href="agb.html">AGB</a>
+    <a href="datenschutz.html">Datenschutz</a>
+  </nav>
+</aside>
+
+<main class="wrap">
+  <section class="hero">
+    <h1>Werben auf <span class="pill">Ortenau liefert</span></h1>
+    <p class="muted">Erreiche hungrige Menschen genau dann, wenn sie nach Essen & Lieferangeboten suchen – direkt in unserer Startliste.</p>
+  </section>
+
+  <section class="grid g2">
+    <div class="card">
+      <h2>Platzierung & Preise</h2>
+      <div class="slot"><div><b>Startseite · rechte Spalte (Oben)</b><br><small>Slot: <code>home_right_top</code></small></div><div class="price">ab 49€ / Woche</div></div>
+      <div class="slot" style="margin-top:8px"><div><b>Startseite · rechte Spalte (Mitte)</b><br><small>Slot: <code>home_right_mid</code></small></div><div class="price">ab 39€ / Woche</div></div>
+      <div class="slot" style="margin-top:8px"><div><b>Startseite · rechte Spalte (Unten)</b><br><small>Slot: <code>home_right_bottom</code></small></div><div class="price">ab 29€ / Woche</div></div>
+      <p class="muted" style="margin-top:10px">Rotation aktiv: Pro Seite bis zu 3 Anzeigen, fair verteilt.</p>
+    </div>
+
+    <div class="card">
+      <h2>Format & Spezifikationen</h2>
+      <ul style="margin:6px 0 0 18px">
+        <li>Bild: 1:1 (empfohlen 600×600) oder 4:3 – <b>max. 500 KB</b></li>
+        <li>Kurztext: 120–160 Zeichen</li>
+        <li>Klickziel (Link) – Website, Bestellseite oder Social</li>
+        <li>Optional: Laufzeit (Start/Ende), Stadt-Targeting</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="grid g2" style="margin-top:12px">
+    <div class="card">
+      <h2>So sieht’s aus</h2>
+      <div class="ad-preview" aria-label="Beispielanzeige">
+        <div class="thumb"><img src="https://images.unsplash.com/photo-1606756790138-261d2b21cd8e?q=80&w=600&auto=format&fit=crop" alt=""></div>
+        <div class="meta">
+          <div class="title">🍕 2×1 Pizza-Deal – nur diese Woche</div>
+          <div class="text">Steinofenpizza nach Wahl. Jetzt bestellen & sparen!</div>
+        </div>
+      </div>
+      <p class="muted" style="margin-top:8px">Design orientiert sich an deinen bestehenden Karten – mit „WERBUNG“-Label.</p>
+    </div>
+
+    <div class="card">
+      <h2>Schnell-Anfrage</h2>
+      <!-- Netlify Forms -->
+      <form name="ad-inquiry" method="POST" data-netlify="true" netlify-honeypot="bot-field">
+        <input type="hidden" name="form-name" value="ad-inquiry">
+        <p style="display:none">
+          <label>Bitte leer lassen: <input name="bot-field"></label>
+        </p>
+
+        <label>Firma / Lokal *</label>
+        <input name="company" required placeholder="z. B. Genc Döner & Pizza">
+
+        <div class="row">
+          <div>
+            <label>Ansprechpartner *</label>
+            <input name="contact" required placeholder="Max Mustermann">
+          </div>
+          <div>
+            <label>E-Mail *</label>
+            <input name="email" type="email" required placeholder="name@beispiel.de">
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label>Telefon</label>
+            <input name="phone" inputmode="tel" placeholder="+49 …">
+          </div>
+          <div>
+            <label>Stadt (optional)</label>
+            <input name="city" placeholder="z. B. Offenburg">
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label>Gewünschter Slot</label>
+            <select name="slot">
+              <option value="home_right_top">Startseite · rechte Spalte (Oben)</option>
+              <option value="home_right_mid" selected>Startseite · rechte Spalte (Mitte)</option>
+              <option value="home_right_bottom">Startseite · rechte Spalte (Unten)</option>
+            </select>
+          </div>
+          <div>
+            <label>Laufzeit</label>
+            <input name="duration" placeholder="z. B. 2 Wochen ab 01.11.">
+          </div>
+        </div>
+
+        <label>Link-Ziel</label>
+        <input name="link" placeholder="https://… (Website/Bestellung/Instagram)">
+
+        <label>Nachricht / Text für die Anzeige</label>
+        <textarea name="message" placeholder="Kurzer Text für die Anzeige …"></textarea>
+
+        <div class="actions">
+          <button class="btn primary" type="submit">Anfrage senden</button>
+          <a class="btn secondary" href="mailto:info@deine-domain.de?subject=Werbung%20auf%20Ortenau%20liefert">Oder per E-Mail</a>
+        </div>
+        <p class="muted" style="margin-top:6px">Mit dem Absenden akzeptierst du unsere <a href="agb.html">AGB</a> & <a href="datenschutz.html">Datenschutz</a>.</p>
+      </form>
+    </div>
+  </section>
+
+  <section class="card" style="margin-top:12px">
+    <h2>FAQ</h2>
+    <p><b>Wie schnell ist meine Anzeige online?</b><br>In der Regel innerhalb von 24 Stunden nach Freigabe und Zahlungseingang.</p>
+    <p><b>Kann ich das Motiv ändern?</b><br>Ja, 1× pro Woche kostenfrei. Weitere Änderungen nach Absprache.</p>
+    <p><b>Tracking?</b><br>Wir liefern Klickzahlen und Sichtbarkeits-Schätzungen pro Slot.</p>
+  </section>
+</main>
+
+<footer><div class="footer-inner">© <span id="jahr"></span> Ortenau liefert</div></footer>
+
+<script>
+document.getElementById("jahr").textContent = new Date().getFullYear();
+
+/* Drawer wie auf der Startseite */
+(function(){
+  const menuBtn = document.getElementById('menuBtn');
+  const drawer = document.getElementById('drawer');
+  const backdrop = document.getElementById('backdrop');
+  function open(){ drawer.classList.add('show'); drawer.setAttribute('aria-hidden','false'); backdrop.hidden=false; requestAnimationFrame(()=>backdrop.classList.add('show')); menuBtn.setAttribute('aria-expanded','true'); }
+  function close(){ drawer.classList.remove('show'); drawer.setAttribute('aria-hidden','true'); backdrop.classList.remove('show'); menuBtn.setAttribute('aria-expanded','false'); setTimeout(()=>backdrop.hidden=true,200); }
+  menuBtn.addEventListener('click', open);
+  backdrop.addEventListener('click', close);
+  window.addEventListener('keydown', e=>{ if(e.key==='Escape') close(); });
+})();
+</script>
+</body>
+</html>
