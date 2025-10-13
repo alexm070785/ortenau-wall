@@ -33,6 +33,7 @@
   h2{margin:18px 0 8px;font-size:1.1rem}
   p{margin:8px 0}
   a{color:#0066cc}
+  ul{margin:8px 0 8px 20px;padding:0}
   footer{position:fixed;bottom:0;left:0;width:100%;height:56px;background:var(--accent);color:#595959;border-top:1px solid #b0b0b0;font-size:.95rem}
   .footer-inner{max-width:1360px;margin:0 auto;height:100%;display:flex;justify-content:center;align-items:center;padding:0 12px}
 </style>
@@ -63,37 +64,67 @@
     <p>Stand: <span id="lastUpdate"></span></p>
 
     <h2>1. Verantwortlicher</h2>
-    <p>Alexander Müller<br>
-       Straßburgerstr. 5<br>
-       77704 Oberkirch<br>
-       E-Mail: <a href="mailto:info@ortenau-liefert.de">info@ortenau-liefert.de</a></p>
+    <p>Alexander Müller · Straßburgerstr. 5 · 77704 Oberkirch · 
+      E-Mail: <a href="mailto:info@ortenau-liefert.de">info@ortenau-liefert.de</a></p>
 
-    <h2>2. Hosting</h2>
-    <p>Diese Website wird über <strong>Netlify</strong> (Netlify, Inc., 2325 3rd Street, Suite 296, San Francisco, USA) gehostet.  
-    Beim Besuch der Website werden automatisch technische Daten (IP-Adresse, Zeitpunkt, Browsertyp) verarbeitet, um die Seite bereitzustellen und die Sicherheit zu gewährleisten.  
-    Netlify speichert keine personenbezogenen Nutzungsprofile.</p>
+    <h2>2. Hosting & Bereitstellung der Website</h2>
+    <p>Die Website wird über <strong>Netlify</strong> (Netlify, Inc., 2325 3rd Street, Suite 296, San Francisco, USA) gehostet und ausgeliefert. 
+    Dabei werden serverseitig technisch notwendige Daten (z. B. IP-Adresse, Datum/Uhrzeit, User-Agent, angeforderte Ressourcen, Referrer) verarbeitet, 
+    um die Seite auszuliefern und die IT-Sicherheit zu gewährleisten (Art. 6 Abs. 1 lit. f DSGVO – berechtigtes Interesse). 
+    Eine längerfristige Erstellung personenbezogener Nutzungsprofile findet nicht statt. Die Übermittlung in die USA erfolgt auf Basis geeigneter Garantien 
+    (z. B. Standardvertragsklauseln von Netlify). Weitere Informationen beim Anbieter.</p>
 
-    <h2>3. Lokale Speicherung (LocalStorage / PWA)</h2>
-    <p>Die Website verwendet LocalStorage und den Browser-Cache, um technische Funktionen zu ermöglichen (z. B. Installation als App, Offline-Betrieb, oder das Ausblenden bestimmter Hinweise).  
-    Diese Daten werden ausschließlich lokal auf deinem Gerät gespeichert und nicht an den Betreiber übertragen.</p>
+    <h2>3. Service Worker / PWA / lokale Speicherung</h2>
+    <p>Zur Verbesserung der Ladezeiten und optionalen Offline-Nutzung werden ein Service Worker und der Browser-Cache eingesetzt. 
+    Außerdem speichert die Seite ggf. Einstellungen (z. B. Install-Hinweise ausblenden) in <strong>LocalStorage</strong>. 
+    Diese Daten verbleiben auf deinem Gerät und werden nicht an uns übermittelt. Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO.</p>
 
-    <h2>4. Keine Cookies / Kein Tracking</h2>
-    <p>Diese Seite verwendet keine Cookies zu Analyse- oder Marketingzwecken und keine Tools wie Google Analytics oder Facebook Pixel.</p>
+    <h2>4. Keine Cookies zu Analyse- oder Marketingzwecken</h2>
+    <p>Es werden <strong>keine</strong> Tracking-Cookies, kein Google Analytics und keine vergleichbaren Marketing-Tools eingesetzt.</p>
 
-    <h2>5. Kontaktaufnahme</h2>
-    <p>Wenn du per E-Mail Kontakt aufnimmst, werden die von dir übermittelten Daten ausschließlich zur Bearbeitung deiner Anfrage verwendet.  
-    Eine Weitergabe an Dritte erfolgt nicht.</p>
+    <h2>5. Kontakt per E-Mail</h2>
+    <p>Wenn du uns per E-Mail kontaktierst, verarbeiten wir die angegebenen Daten ausschließlich zur Bearbeitung deiner Anfrage 
+    (Art. 6 Abs. 1 lit. b oder lit. f DSGVO). Die Daten werden gelöscht, sobald die Anfrage abschließend bearbeitet wurde, 
+    sofern keine gesetzlichen Aufbewahrungspflichten bestehen.</p>
 
-    <h2>6. Rechte der betroffenen Personen</h2>
+    <h2>6. Angaben zu Betrieben / Quellen</h2>
+    <p>Die in den Einträgen angezeigten Betriebsdaten stammen aus öffentlich zugänglichen Quellen oder von den Betrieben selbst. 
+    Auf Wunsch der Inhaber:innen passen wir Einträge an oder löschen sie (siehe AGB). Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO.</p>
+
+    <h2>7. Werbekunden (Anzeigenbuchung)</h2>
+    <p>Bei Buchung von Werbeanzeigen verarbeiten wir die zur Abwicklung notwendigen Kontaktdaten und Inhalte (Anzeigenmotive, Links, Laufzeiten). 
+    Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO (Vertragserfüllung). Daten werden nur solange gespeichert, wie es zur Abwicklung, 
+    Abrechnung und zur Erfüllung gesetzlicher Aufbewahrungspflichten erforderlich ist.</p>
+
+    <h2>8. Empfänger / Auftragsverarbeiter</h2>
     <ul>
-      <li>Auskunft über gespeicherte Daten</li>
-      <li>Berichtigung unrichtiger Daten</li>
-      <li>Löschung, soweit gesetzlich zulässig</li>
-      <li>Beschwerderecht bei einer Datenschutzaufsichtsbehörde</li>
+      <li>Hosting/Content-Delivery: Netlify (USA) – siehe oben</li>
+      <li>Weitere Empfänger nur, sofern zur Vertragserfüllung erforderlich (z. B. Zahlungsdienst; aktuell nicht im Einsatz)</li>
     </ul>
 
-    <h2>7. Änderungen dieser Erklärung</h2>
-    <p>Diese Datenschutzerklärung kann bei Bedarf angepasst werden, z. B. bei der Einführung neuer Funktionen.</p>
+    <h2>9. Speicherdauer</h2>
+    <p>Server-Logs werden durch den Hoster nach dessen eigenen Fristen gelöscht. E-Mail-Anfragen speichern wir bis zur abschließenden Bearbeitung 
+    und gemäß gesetzlichen Aufbewahrungsfristen. Lokale Browser-Speicherungen (PWA/LocalStorage) kannst du jederzeit selbst in deinem Browser löschen.</p>
+
+    <h2>10. Rechte der betroffenen Personen</h2>
+    <ul>
+      <li>Auskunft (Art. 15 DSGVO)</li>
+      <li>Berichtigung (Art. 16 DSGVO)</li>
+      <li>Löschung (Art. 17 DSGVO)</li>
+      <li>Einschränkung der Verarbeitung (Art. 18 DSGVO)</li>
+      <li>Datenübertragbarkeit (Art. 20 DSGVO)</li>
+      <li>Widerspruch gegen Verarbeitungen auf Basis berechtigter Interessen (Art. 21 DSGVO)</li>
+    </ul>
+    <p>Zur Ausübung deiner Rechte genügt eine E-Mail an 
+      <a href="mailto:info@ortenau-liefert.de">info@ortenau-liefert.de</a>.</p>
+
+    <h2>11. Beschwerderecht</h2>
+    <p>Du hast das Recht, dich bei einer Datenschutz-Aufsichtsbehörde zu beschweren, etwa beim 
+      Landesbeauftragten für den Datenschutz und die Informationsfreiheit Baden-Württemberg.</p>
+
+    <h2>12. Änderungen dieser Erklärung</h2>
+    <p>Wir passen diese Datenschutzerklärung an, wenn dies aufgrund technischer oder rechtlicher Änderungen erforderlich ist. 
+    Es gilt die jeweils auf dieser Seite veröffentlichte Fassung.</p>
   </article>
 </main>
 
@@ -103,9 +134,9 @@
 document.getElementById('jahr').textContent = new Date().getFullYear();
 document.getElementById('lastUpdate').textContent = new Date().toLocaleDateString('de-DE');
 const btn=document.getElementById('menuBtn'),drawer=document.getElementById('drawer'),backdrop=document.getElementById('backdrop');
-btn.onclick=()=>{drawer.classList.add('show');backdrop.hidden=false;requestAnimationFrame(()=>backdrop.classList.add('show'));}
-backdrop.onclick=()=>{drawer.classList.remove('show');backdrop.classList.remove('show');setTimeout(()=>backdrop.hidden=true,200);}
-window.onkeydown=e=>{if(e.key==='Escape'){drawer.classList.remove('show');backdrop.classList.remove('show');setTimeout(()=>backdrop.hidden=true,200);}}
+btn.onclick=()=>{drawer.classList.add('show');backdrop.hidden=false;requestAnimationFrame(()=>backdrop.classList.add('show'));};
+backdrop.onclick=()=>{drawer.classList.remove('show');backdrop.classList.remove('show');setTimeout(()=>backdrop.hidden=true,200);};
+window.onkeydown=e=>{if(e.key==='Escape'){drawer.classList.remove('show');backdrop.classList.remove('show');setTimeout(()=>backdrop.hidden=true,200);}};
 </script>
 </body>
 </html>
